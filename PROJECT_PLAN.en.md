@@ -1,6 +1,6 @@
 # DroidMentor — Project Plan and Timeline
 
-**Team:** PastaGPT
+**Author:** Luca Raona (student no. 55603) — solo project, name PastaGPT retained
 **Course:** Mobile Devices Programming (PDM) — Instituto Superior de Engenharia de Lisboa
 **Academic year:** 2026/2027 — Winter Semester
 **Professors:** Prof. Paulo Pereira, Prof. Diogo Cardoso
@@ -9,7 +9,7 @@
 
 | Version | Date | Author | Status | Notes |
 |---|---|---|---|---|
-| 1.0 | 18/09/2026 | Team PastaGPT | Approved for M1 | Initial version delivered with `mentor_1` |
+| 1.0 | 18/09/2026 | Luca Raona | Approved for M1 | Initial version delivered with `mentor_1` |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -20,7 +20,7 @@
 ## Table of contents
 
 1. [Executive summary](#1-executive-summary)
-2. [Team composition, roles and responsibilities](#2-team-composition-roles-and-responsibilities)
+2. [Solo delivery: what S1, S2 and S3 mean now](#2-solo-delivery-what-s1-s2-and-s3-mean-now)
 3. [Non-negotiable technical constraints](#3-non-negotiable-technical-constraints)
 4. [Reference architecture](#4-reference-architecture)
 5. [Working conventions and process](#5-working-conventions-and-process)
@@ -58,39 +58,33 @@ The plan is organised across **four milestones** and follows an incremental life
 
 ---
 
-## 2. Team composition, roles and responsibilities
+## 2. Solo delivery: what S1, S2 and S3 mean now
 
-Roles are **areas of primary responsibility**, not silos: every member reviews the others' code and, in case of absence, the designated backup takes over. Replace the placeholders with the real names before the final Milestone 1 commit.
+DroidMentor is built by a single student, **Luca Raona** (student no. 55603), under the project name **PastaGPT**. There is no team to split work across, so this plan keeps the **S1 / S2 / S3 labels used throughout every WBS table below**, but redefines what they mean: they are no longer people, they are **workstreams** — areas of the codebase that call for a different kind of attention. Reading a task's assignee column as "which hat am I wearing for this" is still useful solo; reading it as "who does this" is not, so that meaning is dropped.
 
-| Code | Member | Student number | Primary role | Areas of responsibility | Backup |
-|---|---|---|---|---|---|
-| **S1** | `[Student Name 1]` | `[00000]` | Tech Lead / Architecture and Networking | Service locator, Ktor client, DTOs and serialisation, stateless payload construction, HTTP error mapping, retry policy | S2 |
-| **S2** | `[Student Name 2]` | `[00000]` | Data & Persistence Lead | Room schema and migrations, DAOs, DataStore, offline-first repository, rewrite transactions, image file management | S1 |
-| **S3** | `[Student Name 3]` | `[00000]` | UI/UX & Delivery Lead | Compose, navigation, design system, accessibility, presentation state management, video editing, README | S2 |
-
-> **Two-person team.** If the group has two members, merge **S3** into **S1** (who then owns both UI and networking) and move delivery/video ownership to **S2**. Estimates must be rescaled accordingly (~1.5× the weekly per-person load) and 🔴 tasks must *always* be done in pair programming.
-
-**Condensed RACI matrix**
-
-| Activity | S1 | S2 | S3 |
+| Code | Workstream | What it covers | Mindset while wearing this hat |
 |---|---|---|---|
-| Architectural decisions | **A/R** | C | C |
-| Data schema and migrations | C | **A/R** | I |
-| Gemini API integration | **A/R** | C | I |
-| User interface and navigation | C | I | **A/R** |
-| Verification strategy and CI | **A** | R | R |
-| Deliveries, tags and videos | I | C | **A/R** |
+| **S1** | Architecture & Networking | Service locator, Ktor client, DTOs and serialisation, stateless payload construction, HTTP error mapping, retry policy | Precision: this is where the assignment's hardest constraints live |
+| **S2** | Data & Persistence | Room schema and migrations, DAOs, DataStore, offline-first repository, rewrite transactions, image file management | Carefulness: a mistake here is silent data corruption, not a crash |
+| **S3** | UI/UX & Delivery | Compose, navigation, design system, accessibility, video editing, README | Momentum: this is the visible, demoable surface |
 
-*A = Accountable, R = Responsible, C = Consulted, I = Informed.*
+A row marked **S1+S2** or **All** means "this task needs both hats at once" — do the architectural thinking and the persistence thinking in the same sitting, since there is no second person to hand it off to for a second opinion.
 
-**Ceremonies**
+**What changes with no teammate, concretely:**
+
+- **No pull-request review by someone else.** §5.2's "reviewed and approved by another member" cannot happen literally. The substitute is **self-review after a cooling-off period**: open the diff the next morning, not the moment you finish writing it — reviewing your own code immediately catches almost nothing, because you still remember what you meant to write rather than seeing what you actually wrote.
+- **No pair programming on 🔴 tasks.** §6's difficulty legend calls for pairing on the highest-risk tasks. Solo, the substitute is **writing the tests before the implementation** for exactly those tasks (`HistoryPayloadBuilder`, the rewrite transaction, the retry policy) — not identical to a second pair of eyes, but the closer solo equivalent.
+- **No backup if you're unavailable near a deadline.** The mitigation is structural, not social: keep `main` always in a working state (§5.1), keep tasks small enough that losing a day never loses more than a day's work, and treat the code-freeze buffer in the timeline as real, not optional (§13, risk R9).
+- **All ~248 estimated hours fall on one person.** §7 spells out what this means week by week — read it before committing to the sprint-by-sprint pace; some milestones are heavier than they look once you're the only one carrying them.
+
+**Ceremonies**, adapted to a personal cadence instead of team meetings:
 
 | Ceremony | Cadence | Duration | Content |
 |---|---|---|---|
-| Sprint planning | Monday | 30 min | Select the sprint's tasks from the WBS, confirm estimates |
-| Asynchronous stand-up | Wed./Fri. | 10 min | Written message: done / in progress / blockers |
-| Internal demo + retrospective | Sunday | 45 min | Check the Definition of Done, update the plan |
-| Milestone review | End of milestone | 90 min | Acceptance checklist, video recording, tag |
+| Sprint planning | Monday | 15 min | Pick this sprint's tasks from the WBS, confirm the estimate still looks right |
+| Progress log | Wed./Fri. | 5 min | One written line: done / in progress / blocked — useful raw material for the milestone video script later |
+| Self-review + retrospective | Sunday | 30 min | Re-read the week's diffs cold, check them against the Definition of Done, adjust next week's plan |
+| Milestone review | End of milestone | 60 min | Run the acceptance checklist end to end, record the video, tag |
 
 ---
 
@@ -190,7 +184,7 @@ This choice satisfies V3, V5 and V7 simultaneously and makes the offline-reading
 - **Branch naming:** `feat/<task-id>-<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
   Example: `feat/m2-08-history-payload-builder`.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`), message in English, task reference in the body.
-- **Pull requests:** mandatory for every merge into `main`, with at least **one** approval from another member. Recommended maximum PR size: ~400 changed lines.
+- **Pull requests:** used as a self-review checkpoint even solo — open a PR from the feature branch, let the constraint checklist template run against it, and merge only after re-reading the diff once yourself, ideally the next day. Recommended maximum PR size: ~400 changed lines.
 - **Tags:** annotated and explicitly pushed.
   ```bash
   git tag -a mentor_1 -m "Milestone 1 - Project plan"
@@ -204,7 +198,7 @@ A task is *Done* only if all of the following hold:
 - ☐ The code compiles with no new warnings and passes `./gradlew lint`.
 - ☐ The tests required by the verification strategy for that level are in place.
 - ☐ The full suite (`./gradlew test connectedAndroidTest`) is green locally and in CI.
-- ☐ The PR has been reviewed and approved by another member.
+- ☐ The diff has been re-read in full, after a break, before merging (see §2 on self-review).
 - ☐ No constraint from section 3 has been violated (explicitly checked during review).
 - ☐ No secret, key or token has reached the repository or the logs.
 - ☐ The affected documentation (README, ADR, this plan) is updated in the same commit.
@@ -214,7 +208,7 @@ A task is *Done* only if all of the following hold:
 - ☐ All planned tasks are *Done* or formally rescheduled with a written justification.
 - ☐ The application installs and is usable on a physical device and on an emulator.
 - ☐ The video (where required) is **5–7 minutes** long and covers every required point.
-- ☐ The root `README.md` contains the group members and the video link.
+- ☐ The root `README.md` contains your identification and the video link.
 - ☐ The `mentor_X` tag is created **and pushed** by the deadline.
 - ☐ The milestone's acceptance checklist is filled in within this document.
 
@@ -228,7 +222,7 @@ A task is *Done* only if all of the following hold:
 |---|---|---|
 | 🟢 | Low | Straightforward work, well-known APIs, negligible technical risk. Can be done solo. |
 | 🟡 | Medium | Requires design work or integration across several components. Careful review advised. |
-| 🔴 | High | Critical logic, high risk of regression or conceptual error. **Pair programming and dedicated tests are mandatory.** |
+| 🔴 | High | Critical logic, high risk of regression or conceptual error. **Tests written before the implementation are mandatory** (the solo substitute for pair programming — see §2). |
 
 **Priority**
 
@@ -252,7 +246,9 @@ A task is *Done* only if all of the following hold:
 | **Milestone 2** | 22/09 → **12/10/2026** | Sprints 1–3 | Architecture, stateless networking, persistence, complete vertical slice, verification strategy | ~92 h |
 | **Milestone 3** | 13/10 → **16/11/2026** | Sprints 4–8 | Deletion, conversation rewrite, active session, resilience, images | ~83 h |
 | **Final Milestone** | 17/11 → **12/12/2026** | Sprints 9–12 | Integration, hardening, UX, regression, delivery | ~62 h |
-| | | | **Total** | **~248 h** (~83 h/person on a three-person team) |
+| | | | **Total** | **~248 h, all solo** (~21 ideal h/week over 12 weeks ≈ 29 calendar h/week at the 1.4× factor) |
+
+> **Workload check.** 248 ideal hours solo over the ~12 weeks to 12/12/2026 is about 21 ideal hours a week — roughly 29 calendar hours a week once the 1.4× factor from §6 is applied. That is a substantial load on top of whatever else is running this semester, and it is not evenly spread: Milestone 2 alone is heavier than this average (see its own total below). If the pace does not hold against your real timetable, the place to cut is the *Could* tasks (the optional image requirement, M3-11…M3-15, MF-01) and the *Should* tasks, not the *Must* ones — see §13, risk R4.
 
 ### 7.1 Sprint goals
 
@@ -276,7 +272,7 @@ A task is *Done* only if all of the following hold:
 
 ```mermaid
 gantt
-    title DroidMentor - Team PastaGPT - 2026 Timeline
+    title DroidMentor - PastaGPT (solo, Luca Raona) - 2026 Timeline
     dateFormat YYYY-MM-DD
     axisFormat %d/%m
 
@@ -429,7 +425,7 @@ Pay particular attention to the fact that Milestone 2 explicitly requires the vi
 | M2-30 | Milestone 2 video | **5–7 minute** recording following the Appendix D script: demonstration of the implemented functionalities, discussion of the most relevant decisions (manual service locator, stateless design, offline-first), **description of the verification strategy**, current project status. Upload to a platform with a stable link, access verified in a private browsing window. | S3 | M | 🟡 | 4 h | all M2 | ☐ |
 | M2-31 | `mentor_2` tag | Add the video link to the `README.md`, commit, annotated tag, push. | S3 | M | 🟢 | 0.5 h | M2-30 | ☐ |
 
-**Estimated Milestone 2 total:** ~92 ideal hours (~31 h/person over 3 weeks).
+**Estimated Milestone 2 total:** ~92 ideal hours, all solo — about 31 ideal hours a week over the 3 weeks (≈43 calendar hours a week at the 1.4× factor). This is the heaviest sprint block in the whole plan; see the workload note in §7.
 
 ### 9.9 Acceptance checklist (Milestone 2)
 
@@ -498,7 +494,7 @@ Implement the requirements with the highest logical complexity — conversation 
 | M3-18 | Milestone 3 video | **5–7 minute** recording: demonstration of the functionalities (with emphasis on rewrite, deletion, session restore, images if present), discussion of the relevant decisions, project status. | S3 | M | 🟡 | 4 h | all M3 | ☐ |
 | M3-19 | `mentor_3` tag | Video link in the `README.md`, commit, annotated tag, push. | S3 | M | 🟢 | 0.5 h | M3-18 | ☐ |
 
-**Estimated Milestone 3 total:** ~83 ideal hours (~28 h/person over 5 weeks).
+**Estimated Milestone 3 total:** ~83 ideal hours, all solo — about 17 ideal hours a week over the 5 weeks (≈23 calendar hours a week at the 1.4× factor).
 
 ### 10.6 Acceptance checklist (Milestone 3)
 
@@ -542,7 +538,7 @@ No new functionality after Sprint 9, except completing the optional requirement.
 | MF-11 | Final video | **5–7 minute** recording clearly showing the application in action: all screens, the complete conversational flow, rewrite, deletion, offline behaviour, error handling, images if implemented. | S3 | M | 🟡 | 5 h | MF-07 | ☐ |
 | MF-12 | `mentor_f` delivery | Video link in the `README.md`, point-by-point verification of **every** acceptance criterion, final commit, annotated `mentor_f` tag, push. Visual confirmation on GitHub that the tag is on the remote. | S3 | M | 🟢 | 1 h | MF-11 | ☐ |
 
-**Estimated Final Milestone total:** ~53 ideal hours, plus the buffer of Sprint 12.
+**Estimated Final Milestone total:** ~53 ideal hours, all solo — about 13–15 ideal hours a week over the ~4 weeks, plus the buffer of Sprint 12.
 
 ### 11.3 Acceptance checklist (Final Milestone)
 
@@ -628,15 +624,15 @@ No new functionality after Sprint 9, except completing the optional requirement.
 
 | ID | Risk | Prob. | Impact | Mitigation strategy | Owner |
 |---|---|---|---|---|---|
-| R1 | Exhausting the API free quota during development or, worse, while recording the video | High | Medium | Multiple keys (one per member) with rotation; use `MockEngine` in day-to-day development; **rehearse the demo with a fresh quota and record during low-traffic hours**; backup footage recorded in advance | S1 |
+| R1 | Exhausting the API free quota during development or, worse, while recording the video | High | Medium | Multiple keys (e.g. a second Google account) with rotation; use `MockEngine` in day-to-day development; **rehearse the demo with a fresh quota and record during low-traffic hours**; backup footage recorded in advance | S1 |
 | R2 | The Gemini endpoint/model changes or is deprecated during the semester | Medium | High | Model name and API version in **a single constant**; tolerant DTOs (`ignoreUnknownKeys = true`); monthly check of the official documentation. **Stay on `generateContent`: the statement explicitly forbids server-side stateful variants** | S1 |
-| R3 | Underestimating the conversation rewrite (M3-03) | High | High | Prototype the truncation logic alone in unit tests **before** touching the UI; pair programming; one sprint of buffer | S1+S2 |
+| R3 | Underestimating the conversation rewrite (M3-03) | High | High | Prototype the truncation logic alone in unit tests **before** touching the UI; tests written before the implementation (§2); one sprint of buffer | S1+S2 |
 | R4 | Overlap with exams and other projects | High | High | Estimates in ideal hours with a 1.4× factor; code freeze brought forward to 08/12; *Could* tasks are the first to be sacrificed if late | All |
 | R5 | Regressions introduced by the 🔴 tasks of Milestone 3 | Medium | High | Green automated suite as a merge precondition; mandatory CI; no direct merges into `main` | S2 |
-| R6 | Compose merge conflicts caused by parallel work on the same screen | Medium | Medium | Fine-grained componentisation; short-lived branches; clear per-file ownership via `CODEOWNERS` | S3 |
+| R6 | Forgetting, weeks later, why a past decision was made — with no teammate to ask | Medium | Medium | Conventional Commits with the *why* in the body, not just the *what*; keep `AGENTS.md` and this plan's notes updated as decisions are made, not after | S1 |
 | R7 | Accidentally committing the API key | Low | Very high | Complete `.gitignore`, `git-secrets` or a local pre-commit scan, checklist in the PR template, immediate key revocation if exposed | S1 |
-| R8 | Video out of the required duration or missing required points | Medium | Medium | Timed script (Appendix D), dry run before recording, cross-review by a member who is not recording | S3 |
-| R9 | A member absent or unavailable close to a deadline | Medium | High | Backup roles defined in §2; shared knowledge through code review; no critical component known by one person only | All |
+| R8 | Video out of the required duration or missing required points | Medium | Medium | Timed script (Appendix D), at least one full dry run with a stopwatch before the real recording | S3 |
+| R9 | Illness or unavailability close to a deadline, with no teammate to absorb the load | High | Very high | No backup is possible solo — the only real mitigation is the slack already built into the timeline (the 08/12 code freeze leaves four days before `mentor_f`). Treat that slack as reserved for this risk, not as extra feature time, and apply the same logic before each earlier tag | All |
 | R10 | Professor access to the repository not correctly configured | Low | Very high | Explicit check at the end of **every** milestone, included in the acceptance checklists | S3 |
 
 ---
@@ -759,13 +755,13 @@ Every migration must come with a `MigrationTestHelper` test and with an update o
 BYOK Android LLM client, developed for the Mobile Devices Programming course
 (ISEL, Winter Semester 2026/2027).
 
-## Group PastaGPT
+## Author
 
-| Name | Number | Email | GitHub |
+| Name | Student number | Email | GitHub |
 |---|---|---|---|
-| [Student Name 1] | [00000] | [email] | [@handle] |
-| [Student Name 2] | [00000] | [email] | [@handle] |
-| [Student Name 3] | [00000] | [email] | [@handle] |
+| Luca Raona | 55603 | [email] | [@handle] |
+
+Solo project, developed under the name **PastaGPT**.
 
 ## Deliveries
 
@@ -792,7 +788,7 @@ BYOK Android LLM client, developed for the Mobile Devices Programming course
 
 | Time | Section | Content | Present in |
 |---|---|---|---|
-| 0:00–0:30 | Opening | Group name, members, purpose of the video | M2, M3, Final |
+| 0:00–0:30 | Opening | Your name, project name (PastaGPT), purpose of the video | M2, M3, Final |
 | 0:30–3:00 | Demonstration | Real use of the app on a device: complete flow, features new since the previous milestone, offline and error behaviour | M2, M3, Final |
 | 3:00–4:30 | Relevant decisions | Manual service locator instead of Hilt, stateless history management, Room as the source of truth, HTTP error handling | M2, M3 |
 | 4:30–5:30 | Verification strategy | Test pyramid, `MockEngine`, in-memory Room, CI | **M2 (mandatory)** |
@@ -828,4 +824,4 @@ BYOK Android LLM client, developed for the Mobile Devices Programming course
 
 ---
 
-*Document written for Milestone 1 of the Mobile Devices Programming practical assignment — ISEL, Winter Semester 2026/2027. Team PastaGPT.*
+*Document written for Milestone 1 of the Mobile Devices Programming practical assignment — ISEL, Winter Semester 2026/2027. Luca Raona — PastaGPT.*

@@ -1,6 +1,6 @@
 # DroidMentor — Piano di Progetto e Timeline
 
-**Team:** PastaGPT
+**Autore:** Luca Raona (matricola 55603) — progetto individuale, nome PastaGPT mantenuto
 **Corso:** Mobile Devices Programming (PDM) — Instituto Superior de Engenharia de Lisboa
 **Anno accademico:** 2026/2027 — Semestre invernale
 **Docenti:** Prof. Paulo Pereira, Prof. Diogo Cardoso
@@ -9,7 +9,7 @@
 
 | Versione | Data | Autore | Stato | Note |
 |---|---|---|---|---|
-| 1.0 | 18/09/2026 | Team PastaGPT | Approvato per M1 | Versione iniziale consegnata con `mentor_1` |
+| 1.0 | 18/09/2026 | Luca Raona | Approvato per M1 | Versione iniziale consegnata con `mentor_1` |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -20,7 +20,7 @@
 ## Indice
 
 1. [Sintesi esecutiva](#1-sintesi-esecutiva)
-2. [Composizione del team, ruoli e responsabilità](#2-composizione-del-team-ruoli-e-responsabilità)
+2. [Autore e metodo di lavoro](#2-autore-e-metodo-di-lavoro)
 3. [Vincoli tecnici non negoziabili](#3-vincoli-tecnici-non-negoziabili)
 4. [Architettura di riferimento](#4-architettura-di-riferimento)
 5. [Convenzioni operative e processo](#5-convenzioni-operative-e-processo)
@@ -58,39 +58,24 @@ Il piano si articola su **quattro milestone** e adotta un ciclo di vita incremen
 
 ---
 
-## 2. Composizione del team, ruoli e responsabilità
+## 2. Autore e metodo di lavoro
 
-I ruoli sono **aree di responsabilità primaria**, non compartimenti stagni: ogni membro rivede il codice degli altri e, in caso di assenza, il *backup* indicato subentra. Sostituire i segnaposto con i nominativi reali prima del commit finale della Milestone 1.
+DroidMentor è un progetto individuale: lo realizzo io, **Luca Raona** (matricola 55603), sotto il nome di progetto **PastaGPT**.
 
-| Sigla | Membro | Numero studente | Ruolo primario | Aree di responsabilità | Backup |
-|---|---|---|---|---|---|
-| **S1** | `[Nome Studente 1]` | `[00000]` | Tech Lead / Architettura e Rete | Service locator, client Ktor, DTO e serializzazione, costruzione del payload stateless, mappatura errori HTTP, retry policy | S2 |
-| **S2** | `[Nome Studente 2]` | `[00000]` | Data & Persistence Lead | Schema e migrazioni Room, DAO, DataStore, repository offline-first, transazioni di riscrittura, gestione file immagini | S1 |
-| **S3** | `[Nome Studente 3]` | `[00000]` | UI/UX & Delivery Lead | Compose, navigazione, design system, accessibilità, gestione dello stato di presentazione, montaggio video, README | S2 |
+**Organizzazione del lavoro.** Le tabelle WBS più sotto raggruppano i task per area tecnica (Rete, Persistenza, UI, Connettività, Verifica, Consegna) — è un raggruppamento tematico per orientarsi nel lavoro, non un'assegnazione a persone diverse. Un task che tocca più aree insieme va affrontato nella stessa sessione, senza interruzioni nel mezzo, così il ragionamento resta coerente dall'inizio alla fine.
 
-> **Team da due persone.** Se il gruppo è composto da due membri, si accorpi **S3** in **S1** (che assume UI e rete) e si sposti la gestione della delivery/video su **S2**. Le stime totali vanno riscalate di conseguenza (~1,5× il carico settimanale pro capite) e i task marcati 🔴 devono essere svolti *sempre* in pair programming.
+**Metodo di verifica.** Sui task a rischio più alto (marcati 🔴 in §6) scrivo i test prima dell'implementazione, non dopo: è il modo più affidabile per non scoprire un errore concettuale a metà lavoro. Su ogni pull request, rileggo il diff per intero il giorno successivo a quando l'ho scritto, non subito dopo — a distanza di qualche ora si notano errori che a caldo restano invisibili.
 
-**Matrice RACI sintetica**
+**Gestione del rischio.** Il margine del code freeze (§7, §13) non è tempo extra per nuove funzionalità: è la riserva per un imprevisto — un'influenza, un altro esame che si sovrappone — perché non c'è nessun altro che possa assorbire un ritardo al posto mio.
 
-| Attività | S1 | S2 | S3 |
-|---|---|---|---|
-| Decisioni architetturali | **A/R** | C | C |
-| Schema dati e migrazioni | C | **A/R** | I |
-| Integrazione API Gemini | **A/R** | C | I |
-| Interfaccia utente e navigazione | C | I | **A/R** |
-| Strategia di verifica e CI | **A** | R | R |
-| Consegne, tag e video | I | C | **A/R** |
-
-*A = Accountable, R = Responsible, C = Consulted, I = Informed.*
-
-**Ceremonies**
+**Ritmo di lavoro**
 
 | Rito | Cadenza | Durata | Contenuto |
 |---|---|---|---|
-| Sprint planning | Lunedì | 30 min | Selezione dei task dello sprint dalla WBS, conferma stime |
-| Stand-up asincrono | Merc./Ven. | 10 min | Messaggio scritto: fatto / in corso / impedimenti |
-| Demo interna + retrospettiva | Domenica | 45 min | Verifica della Definition of Done, aggiornamento del piano |
-| Revisione di milestone | Fine milestone | 90 min | Checklist di accettazione, registrazione video, tag |
+| Pianificazione sprint | Lunedì | 15 min | Scelgo i task dello sprint dalla WBS, confermo che la stima regga ancora |
+| Diario di avanzamento | Merc./Ven. | 5 min | Una riga scritta: fatto / in corso / bloccato — utile come materiale grezzo per la scaletta del video di milestone |
+| Autoreview + retrospettiva | Domenica | 30 min | Rileggo a mente fredda i diff della settimana, li verifico contro la Definition of Done, aggiusto il piano della settimana successiva |
+| Revisione di milestone | Fine milestone | 60 min | Eseguo la checklist di accettazione dall'inizio alla fine, registro il video, creo il tag |
 
 ---
 
@@ -109,7 +94,7 @@ Questi vincoli derivano direttamente dall'enunciato dell'assignment e hanno valo
 | V7 | **Esperienza offline-first.** | Room è l'unica sorgente di verità per la UI; verifica della connettività *prima* della chiamata; messaggio esplicito quando si è offline. | Schermate che dipendono dalla risposta di rete per popolarsi; `try/catch` silenzioso che lascia la UI vuota. | M2-15, M2-23, M2-24 |
 | V8 | **Gestione graziosa degli errori HTTP** (es. 429, 500). | Mappatura tipizzata `sealed interface` degli esiti; nessuna eccezione propagata alla UI; feedback comprensibile all'utente. | Crash su `ClientRequestException`; messaggi tecnici grezzi mostrati all'utente. | M2-09, M3-08, M3-09 |
 | V9 | **Immagini (requisito opzionale valorizzato):** in Room si persiste **solo l'URI/percorso del file**. | File salvati in storage locale dell'app; codifica `inline_data` in Base64 costruita **in memoria** al solo momento della richiesta e mai scritta su DB. | Colonna `TEXT` contenente la stringa Base64; `BLOB` con i byte dell'immagine. | M3-11 … M3-15 |
-| V10 | **Consegne tramite tag Git** `mentor_X` sul repository di gruppo, con accesso completo ai docenti e `README.md` in radice con i membri. | Tag annotati e pushati; README aggiornato a ogni milestone con il link al video. | Tag leggeri creati localmente e mai pushati; README mancante o incompleto. | M1-01, M1-02, M1-09, M2-31, M3-18, MF-11 |
+| V10 | **Consegne tramite tag Git** `mentor_X` sul repository, con accesso completo ai docenti e `README.md` in radice con la tua identificazione. | Tag annotati e pushati; README aggiornato a ogni milestone con il link al video. | Tag leggeri creati localmente e mai pushati; README mancante o incompleto. | M1-01, M1-02, M1-09, M2-31, M3-18, MF-11 |
 
 ---
 
@@ -190,7 +175,7 @@ Questa scelta soddisfa contemporaneamente V3, V5 e V7 e rende banale il requisit
 - **Nomenclatura branch:** `feat/<id-task>-<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`.
   Esempio: `feat/m2-08-history-payload-builder`.
 - **Commit:** Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`), messaggio in inglese, riferimento al task nel corpo.
-- **Pull request:** obbligatoria per ogni merge su `main`, con almeno **una** approvazione di un altro membro. PR di dimensione massima consigliata: ~400 righe modificate.
+- **Pull request:** usata come checkpoint di autoreview anche da solo — apri una PR dal branch della feature, lascia che il template con la checklist dei vincoli giri su di essa, e fai merge solo dopo aver riletto il diff una volta per intero, idealmente il giorno dopo. PR di dimensione massima consigliata: ~400 righe modificate.
 - **Tag:** annotati e pushati esplicitamente.
   ```bash
   git tag -a mentor_1 -m "Milestone 1 - Project plan"
@@ -204,7 +189,7 @@ Un task è *Done* solo se tutte le condizioni seguenti sono soddisfatte:
 - ☐ Il codice compila senza warning nuovi e supera `./gradlew lint`.
 - ☐ Sono presenti i test previsti dalla strategia di verifica per quel livello.
 - ☐ La suite completa (`./gradlew test connectedAndroidTest`) è verde in locale e in CI.
-- ☐ La PR è stata revisionata e approvata da un altro membro.
+- ☐ Il diff è stato riletto per intero, dopo una pausa, prima del merge (vedi §2 sull'autoreview).
 - ☐ Nessun vincolo della sezione 3 è stato violato (verifica esplicita in fase di review).
 - ☐ Nessun segreto, chiave o token è finito nel repository o nei log.
 - ☐ La documentazione impattata (README, ADR, questo piano) è aggiornata nello stesso commit.
@@ -214,7 +199,7 @@ Un task è *Done* solo se tutte le condizioni seguenti sono soddisfatte:
 - ☐ Tutti i task pianificati sono *Done* o formalmente rischedulati con motivazione scritta.
 - ☐ L'applicazione si installa ed è utilizzabile su un dispositivo fisico e su emulatore.
 - ☐ Il video (ove previsto) rispetta la durata di **5–7 minuti** e copre tutti i punti richiesti.
-- ☐ Il `README.md` di radice contiene i membri del gruppo e il link al video.
+- ☐ Il `README.md` di radice contiene la tua identificazione e il link al video.
 - ☐ Il tag `mentor_X` è creato **e pushato** entro la data di scadenza.
 - ☐ La checklist di accettazione della milestone è compilata in questo documento.
 
@@ -228,7 +213,7 @@ Un task è *Done* solo se tutte le condizioni seguenti sono soddisfatte:
 |---|---|---|
 | 🟢 | Bassa | Attività lineare, API note, rischio tecnico trascurabile. Eseguibile in autonomia. |
 | 🟡 | Media | Richiede progettazione o integrazione fra più componenti. Review attenta consigliata. |
-| 🔴 | Alta | Logica critica, alto rischio di regressione o di errore concettuale. **Pair programming e test dedicati obbligatori.** |
+| 🔴 | Alta | Logica critica, alto rischio di regressione o di errore concettuale. **Test scritti prima dell'implementazione obbligatori** (il sostituto solitario del pair programming — vedi §2). |
 
 **Priorità**
 
@@ -252,7 +237,9 @@ Un task è *Done* solo se tutte le condizioni seguenti sono soddisfatte:
 | **Milestone 2** | 22/09 → **12/10/2026** | Sprint 1–3 | Architettura, rete stateless, persistenza, slice verticale completa, strategia di verifica | ~92 h |
 | **Milestone 3** | 13/10 → **16/11/2026** | Sprint 4–8 | Cancellazione, riscrittura conversazione, sessione attiva, resilienza, immagini | ~83 h |
 | **Final Milestone** | 17/11 → **12/12/2026** | Sprint 9–12 | Integrazione, hardening, UX, regressione, consegna | ~62 h |
-| | | | **Totale** | **~248 h** (~83 h/persona su team di 3) |
+| | | | **Totale** | **~248 h, tutte da solo** (~21 h ideali/settimana su 12 settimane ≈ 29 h di calendario/settimana con il fattore 1,4×) |
+
+> **Verifica di sostenibilità.** 248 ore ideali da solo sulle ~12 settimane fino al 12/12/2026 sono circa 21 ore ideali a settimana — circa 29 ore di calendario a settimana applicando il fattore 1,4× del §6. È un carico consistente sopra a qualunque altro corso tu abbia in questo semestre, e non è distribuito uniformemente: la Milestone 2 da sola è più pesante di questa media (vedi il suo totale più sotto). Se il ritmo non regge contro il tuo orario reale, il punto da tagliare sono i task *Could* (il requisito opzionale delle immagini, M3-11…M3-15, MF-01) e i *Should*, non i *Must* — vedi §13, rischio R4.
 
 ### 7.1 Obiettivi di sprint
 
@@ -276,7 +263,7 @@ Un task è *Done* solo se tutte le condizioni seguenti sono soddisfatte:
 
 ```mermaid
 gantt
-    title DroidMentor - Team PastaGPT - Timeline 2026
+    title DroidMentor - PastaGPT (da solo, Luca Raona) - Timeline 2026
     dateFormat YYYY-MM-DD
     axisFormat %d/%m
 
@@ -320,17 +307,17 @@ Consegnare il piano di progetto richiesto dall'enunciato e predisporre l'infrast
 
 ### 8.2 WBS — Work Breakdown Structure
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M1-01 | Creazione repository | Repo GitHub `pastagpt-droidmentor`, privato. Invito ai Prof. Paulo Pereira e Diogo Cardoso con **accesso completo**. `.gitignore` per Android/Kotlin/IDEA. | S3 | M | 🟢 | 0,5 h | — | ☐ |
-| M1-02 | `README.md` di radice | Identificazione dei membri del gruppo: nome completo, numero studente, indirizzo istituzionale, handle GitHub. Titolo del progetto e riferimento al corso. Segnaposto per i link ai video delle milestone. | S3 | M | 🟢 | 0,5 h | M1-01 | ☐ |
-| M1-03 | Piano di progetto | Redazione e revisione di questo documento (`PROJECT_PLAN.md`), con timeline, task, assegnatari e criteri di accettazione. Link in evidenza dal README. | S1 | M | 🟡 | 3 h | M1-01 | ☐ |
-| M1-04 | Convenzioni di lavoro | `CONTRIBUTING.md` con branching, commit convention, policy di review. `.github/pull_request_template.md` con la checklist dei vincoli della sezione 3. `CODEOWNERS`. | S1 | S | 🟢 | 1 h | M1-01 | ☐ |
-| M1-05 | Board di progetto | GitHub Projects con colonne *Backlog / Sprint / In review / Done*. Import dei task di questo piano come issue, con label per milestone e difficoltà. | S3 | S | 🟢 | 1 h | M1-03 | ☐ |
-| M1-06 | Scaffolding progetto *(anticipo su M2)* | Progetto Android Studio: Kotlin, Compose, `minSdk 26`, package `pt.isel.pdm.droidmentor`. Verifica che l'app vuota si avvii su emulatore. | S2 | S | 🟡 | 2 h | M1-01 | ☐ |
-| M1-07 | Version catalog *(anticipo su M2)* | `gradle/libs.versions.toml` con Compose BOM, Navigation, Ktor (core, engine, content-negotiation, logging), kotlinx-serialization, Room (runtime, ktx, compiler KSP), DataStore Preferences, Coil, librerie di test. Sincronizzazione riuscita. | S2 | S | 🟡 | 1,5 h | M1-06 | ☐ |
-| M1-08 | Provisioning chiavi Gemini | Una chiave API per membro da Google AI Studio. Verifica dei limiti del piano gratuito e annotazione delle quote (rilevante per i test del percorso HTTP 429). **Nessuna chiave committata.** | S1 | M | 🟢 | 0,5 h | — | ☐ |
-| M1-09 | Tag `mentor_1` | Commit finale, tag annotato, push del tag. Verifica su GitHub che il tag sia visibile e che i docenti abbiano accesso. | S3 | M | 🟢 | 0,25 h | M1-02, M1-03 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M1-01 | Creazione repository | Repo GitHub `pastagpt-droidmentor`, privato. Invito ai Prof. Paulo Pereira e Diogo Cardoso con **accesso completo**. `.gitignore` per Android/Kotlin/IDEA. | M | 🟢 | 0,5 h | — | ☐ |
+| M1-02 | `README.md` di radice | La tua identificazione: nome completo, numero studente, indirizzo istituzionale, handle GitHub. Titolo del progetto e riferimento al corso. Segnaposto per i link ai video delle milestone. | M | 🟢 | 0,5 h | M1-01 | ☐ |
+| M1-03 | Piano di progetto | Redazione e revisione di questo documento (`PROJECT_PLAN.md`), con timeline, task e criteri di accettazione. L'enunciato chiede anche "a chi sono assegnati" i task: essendo un progetto individuale, l'assegnazione è implicita — sono tutti miei. Link in evidenza dal README. | M | 🟡 | 3 h | M1-01 | ☐ |
+| M1-04 | Convenzioni di lavoro | `CONTRIBUTING.md` con branching, commit convention, policy di review. `.github/pull_request_template.md` con la checklist dei vincoli della sezione 3. `CODEOWNERS`. | S | 🟢 | 1 h | M1-01 | ☐ |
+| M1-05 | Board di progetto | GitHub Projects con colonne *Backlog / Sprint / In review / Done*. Import dei task di questo piano come issue, con label per milestone e difficoltà. | S | 🟢 | 1 h | M1-03 | ☐ |
+| M1-06 | Scaffolding progetto *(anticipo su M2)* | Progetto Android Studio: Kotlin, Compose, `minSdk 26`, package `pt.isel.pdm.droidmentor`. Verifica che l'app vuota si avvii su emulatore. | S | 🟡 | 2 h | M1-01 | ☐ |
+| M1-07 | Version catalog *(anticipo su M2)* | `gradle/libs.versions.toml` con Compose BOM, Navigation, Ktor (core, engine, content-negotiation, logging), kotlinx-serialization, Room (runtime, ktx, compiler KSP), DataStore Preferences, Coil, librerie di test. Sincronizzazione riuscita. | S | 🟡 | 1,5 h | M1-06 | ☐ |
+| M1-08 | Provisioning chiave Gemini | Una chiave API da Google AI Studio (idealmente una seconda di riserva da un account diverso). Verifica dei limiti del piano gratuito e annotazione delle quote (rilevante per i test del percorso HTTP 429). **Nessuna chiave committata.** | M | 🟢 | 0,5 h | — | ☐ |
+| M1-09 | Tag `mentor_1` | Commit finale, tag annotato, push del tag. Verifica su GitHub che il tag sia visibile e che i docenti abbiano accesso. | M | 🟢 | 0,25 h | M1-02, M1-03 | ☐ |
 
 **Totale stimato:** ~10,25 ore ideali.
 
@@ -339,10 +326,10 @@ Consegnare il piano di progetto richiesto dall'enunciato e predisporre l'infrast
 Derivata letteralmente dagli *Acceptance criteria* dell'enunciato:
 
 - ☐ Il repository è correttamente taggato **`mentor_1`** ed il tag è stato pushato sul remoto.
-- ☐ Il repository contiene la **timeline del piano di progetto** con l'indicazione dei task pianificati **e dei relativi assegnatari**.
-- ☐ Il file **`README.md` in radice** contiene l'identificazione dei membri del gruppo.
+- ☐ Il repository contiene la **timeline del piano di progetto** con l'indicazione dei task pianificati (l'assegnazione richiesta dall'enunciato è implicita: progetto individuale, sono tutti miei).
+- ☐ Il file **`README.md` in radice** contiene la tua identificazione.
 - ☐ Entrambi i docenti dispongono di **accesso completo** al repository (verifica in *Settings → Collaborators*).
-- ☐ I segnaposto `[Nome Studente N]` e `[00000]` sono stati sostituiti con i dati reali.
+- ☐ I segnaposto `[email]` ed `[@handle]` nel template del README (Appendice C) sono stati sostituiti con i tuoi dati reali.
 
 ### 8.4 Rischi specifici della milestone
 
@@ -365,76 +352,76 @@ Attenzione particolare al fatto che la Milestone 2 richiede esplicitamente, nel 
 
 ### 9.2 WBS — Workstream A: Fondazioni e dependency injection manuale
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-01 | Service locator | `DroidMentorApplication : Application` che espone, con `by lazy`, il database Room, il DataStore, l'`HttpClient` Ktor e i repository. Extension `val Context.app: DroidMentorApplication`. **Nessuna traccia di Hilt/Dagger (V1).** | S1 | M | 🟡 | 4 h | M1-07 | ☐ |
-| M2-02 | Factory dei ViewModel | Interfaccia `DependencyContainer` implementata dalla `Application`, così da poterla sostituire con un fake nei test. `ViewModelProvider.Factory` costruite con `viewModelFactory { initializer { … } }`. | S1 | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-03 | Struttura a package e design system | Package `data/{local,remote,repository}`, `domain`, `ui/{screens,components,theme,navigation}`. Tema Material 3, palette, tipografia, spaziature, supporto tema chiaro/scuro. | S3 | S | 🟢 | 2 h | M1-06 | ☐ |
-| M2-04 | Modello di dominio | `Chat(id, title, createdAt, updatedAt)`, `Message(id, chatId, role, text, imagePath?, seq, status, createdAt)`, `enum Role { USER, MODEL }`, `enum MessageStatus { SENDING, SENT, FAILED }`. Kotlin puro, senza dipendenze da Android. | S2 | M | 🟢 | 2 h | — | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-01 | Service locator | `DroidMentorApplication : Application` che espone, con `by lazy`, il database Room, il DataStore, l'`HttpClient` Ktor e i repository. Extension `val Context.app: DroidMentorApplication`. **Nessuna traccia di Hilt/Dagger (V1).** | M | 🟡 | 4 h | M1-07 | ☐ |
+| M2-02 | Factory dei ViewModel | Interfaccia `DependencyContainer` implementata dalla `Application`, così da poterla sostituire con un fake nei test. `ViewModelProvider.Factory` costruite con `viewModelFactory { initializer { … } }`. | M | 🟡 | 3 h | M2-01 | ☐ |
+| M2-03 | Struttura a package e design system | Package `data/{local,remote,repository}`, `domain`, `ui/{screens,components,theme,navigation}`. Tema Material 3, palette, tipografia, spaziature, supporto tema chiaro/scuro. | S | 🟢 | 2 h | M1-06 | ☐ |
+| M2-04 | Modello di dominio | `Chat(id, title, createdAt, updatedAt)`, `Message(id, chatId, role, text, imagePath?, seq, status, createdAt)`, `enum Role { USER, MODEL }`, `enum MessageStatus { SENDING, SENT, FAILED }`. Kotlin puro, senza dipendenze da Android. | M | 🟢 | 2 h | — | ☐ |
 
 ### 9.3 WBS — Workstream B: Rete (Ktor + Kotlinx Serialization)
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-05 | Configurazione `HttpClient` | Engine OkHttp; `ContentNegotiation` con `Json { ignoreUnknownKeys = true; explicitNulls = false }`; `HttpTimeout` (connect 10 s, socket 60 s); `DefaultRequest` con base URL `https://generativelanguage.googleapis.com/`; plugin `Logging` **attivo solo in debug** e configurato per non stampare header né corpo contenenti la chiave. | S1 | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-06 | DTO Gemini | `@Serializable` per `GenerateContentRequest(systemInstruction, contents, generationConfig)`, `Content(role, parts)`, `Part(text, inlineData?)`, `GenerateContentResponse(candidates, usageMetadata)`, `Candidate(content, finishReason)`, `ApiErrorEnvelope(error)`. Uso di `@SerialName` per i campi in snake_case (es. `system_instruction`, `inline_data`, `mime_type`). | S1 | M | 🟡 | 4 h | M2-05 | ☐ |
-| M2-07 | `GeminiRemoteDataSource` | `suspend fun generateContent(history, systemInstruction, apiKey): ApiResult<String>`. `POST /v1beta/models/{model}:generateContent` con header `x-goog-api-key`. Modello configurabile da costante unica. **Nessun identificativo di sessione (V5).** | S1 | M | 🔴 | 5 h | M2-06 | ☐ |
-| M2-08 | `HistoryPayloadBuilder` | Componente di dominio puro che trasforma `List<Message>` in `List<Content>` garantendo: alternanza rigorosa `user`/`model`, esclusione dei messaggi in stato `FAILED`, troncamento configurabile dei turni più vecchi per contenere il costo in token, preservazione dell'ordine tramite `seq`. **Cuore del requisito stateless: da testare in modo esaustivo.** | S1 | M | 🔴 | 5 h | M2-04 | ☐ |
-| M2-09 | Mappatura degli errori | `sealed interface ApiResult<out T>` con `Success`, `InvalidApiKey` (401/403), `BadRequest` (400), `RateLimited(retryAfterSeconds)` (429), `ServerError` (5xx), `NetworkUnavailable` (`IOException`), `MalformedResponse` (`SerializationException`), `Unknown`. Nessuna eccezione oltrepassa il data source (V8). | S1 | M | 🟡 | 4 h | M2-07 | ☐ |
-| M2-10 | `system_instruction` della persona | Testo unico che definisce il mentore Android senior: tono, ambito di competenza, preferenza per le best practice ufficiali, richiesta di esempi in Kotlin. Centralizzato in `MentorPersona.kt` (V6). | S3 | M | 🟢 | 1 h | M2-06 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-05 | Configurazione `HttpClient` | Engine OkHttp; `ContentNegotiation` con `Json { ignoreUnknownKeys = true; explicitNulls = false }`; `HttpTimeout` (connect 10 s, socket 60 s); `DefaultRequest` con base URL `https://generativelanguage.googleapis.com/`; plugin `Logging` **attivo solo in debug** e configurato per non stampare header né corpo contenenti la chiave. | M | 🟡 | 3 h | M2-01 | ☐ |
+| M2-06 | DTO Gemini | `@Serializable` per `GenerateContentRequest(systemInstruction, contents, generationConfig)`, `Content(role, parts)`, `Part(text, inlineData?)`, `GenerateContentResponse(candidates, usageMetadata)`, `Candidate(content, finishReason)`, `ApiErrorEnvelope(error)`. Uso di `@SerialName` per i campi in snake_case (es. `system_instruction`, `inline_data`, `mime_type`). | M | 🟡 | 4 h | M2-05 | ☐ |
+| M2-07 | `GeminiRemoteDataSource` | `suspend fun generateContent(history, systemInstruction, apiKey): ApiResult<String>`. `POST /v1beta/models/{model}:generateContent` con header `x-goog-api-key`. Modello configurabile da costante unica. **Nessun identificativo di sessione (V5).** | M | 🔴 | 5 h | M2-06 | ☐ |
+| M2-08 | `HistoryPayloadBuilder` | Componente di dominio puro che trasforma `List<Message>` in `List<Content>` garantendo: alternanza rigorosa `user`/`model`, esclusione dei messaggi in stato `FAILED`, troncamento configurabile dei turni più vecchi per contenere il costo in token, preservazione dell'ordine tramite `seq`. **Cuore del requisito stateless: da testare in modo esaustivo.** | M | 🔴 | 5 h | M2-04 | ☐ |
+| M2-09 | Mappatura degli errori | `sealed interface ApiResult<out T>` con `Success`, `InvalidApiKey` (401/403), `BadRequest` (400), `RateLimited(retryAfterSeconds)` (429), `ServerError` (5xx), `NetworkUnavailable` (`IOException`), `MalformedResponse` (`SerializationException`), `Unknown`. Nessuna eccezione oltrepassa il data source (V8). | M | 🟡 | 4 h | M2-07 | ☐ |
+| M2-10 | `system_instruction` della persona | Testo unico che definisce il mentore Android senior: tono, ambito di competenza, preferenza per le best practice ufficiali, richiesta di esempi in Kotlin. Centralizzato in `MentorPersona.kt` (V6). | M | 🟢 | 1 h | M2-06 | ☐ |
 
 ### 9.4 WBS — Workstream C: Persistenza (Room + DataStore)
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-11 | Entità Room | `ChatEntity(id, title, createdAt, updatedAt)` e `MessageEntity(id, chatId, role, text, imagePath, seq, status, createdAt)` con `@ForeignKey(onDelete = CASCADE)` e `@Index("chatId")`. Converter per gli enum. | S2 | M | 🟡 | 4 h | M2-04 | ☐ |
-| M2-12 | DAO | `ChatDao`: `observeChats(): Flow<List<ChatWithLastMessage>>`, `insert`, `updateTitle`, `deleteById`. `MessageDao`: `observeMessages(chatId): Flow<List<MessageEntity>>`, `insert`, `updateStatus`, `deleteFromSeq(chatId, seq)`, `nextSeq(chatId)`. Query di relazione con `@Transaction` + `@Relation`. | S2 | M | 🟡 | 4 h | M2-11 | ☐ |
-| M2-13 | Database | `DroidMentorDatabase : RoomDatabase` versione 1, export dello schema in `app/schemas` **versionato su Git** (indispensabile per testare le migrazioni successive). | S2 | M | 🟢 | 2 h | M2-12 | ☐ |
-| M2-14 | `SettingsRepository` | Preferences DataStore dedicato: `apiKey: Flow<String?>`, `saveApiKey`, `clearApiKey`. La chiave non viene mai loggata né inclusa in report di crash (V4). | S2 | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-15 | `ChatRepository` offline-first | Orchestrazione del ciclo descritto in §4.2: inserimento ottimistico, verifica connettività, costruzione del payload, chiamata, scrittura dell'esito. La UI osserva **solo** Room (V7). | S1+S2 | M | 🔴 | 5 h | M2-09, M2-12, M2-23 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-11 | Entità Room | `ChatEntity(id, title, createdAt, updatedAt)` e `MessageEntity(id, chatId, role, text, imagePath, seq, status, createdAt)` con `@ForeignKey(onDelete = CASCADE)` e `@Index("chatId")`. Converter per gli enum. | M | 🟡 | 4 h | M2-04 | ☐ |
+| M2-12 | DAO | `ChatDao`: `observeChats(): Flow<List<ChatWithLastMessage>>`, `insert`, `updateTitle`, `deleteById`. `MessageDao`: `observeMessages(chatId): Flow<List<MessageEntity>>`, `insert`, `updateStatus`, `deleteFromSeq(chatId, seq)`, `nextSeq(chatId)`. Query di relazione con `@Transaction` + `@Relation`. | M | 🟡 | 4 h | M2-11 | ☐ |
+| M2-13 | Database | `DroidMentorDatabase : RoomDatabase` versione 1, export dello schema in `app/schemas` **versionato su Git** (indispensabile per testare le migrazioni successive). | M | 🟢 | 2 h | M2-12 | ☐ |
+| M2-14 | `SettingsRepository` | Preferences DataStore dedicato: `apiKey: Flow<String?>`, `saveApiKey`, `clearApiKey`. La chiave non viene mai loggata né inclusa in report di crash (V4). | M | 🟡 | 3 h | M2-01 | ☐ |
+| M2-15 | `ChatRepository` offline-first | Orchestrazione del ciclo descritto in §4.2: inserimento ottimistico, verifica connettività, costruzione del payload, chiamata, scrittura dell'esito. La UI osserva **solo** Room (V7). | M | 🔴 | 5 h | M2-09, M2-12, M2-23 | ☐ |
 
 ### 9.5 WBS — Workstream D: Interfaccia utente e navigazione
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-16 | Grafo di navigazione | `NavHost` con rotte `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, conformi alla Figura 1 dell'enunciato (compresi i percorsi di ritorno). Gestione del back stack. | S3 | M | 🟡 | 4 h | M2-03 | ☐ |
-| M2-17 | Title Screen | Menu principale: logo/titolo, voci *Conversazioni*, *Impostazioni*, *Informazioni*. Punto di ingresso dell'app quando non esiste una chat attiva. | S3 | M | 🟢 | 2 h | M2-16 | ☐ |
-| M2-18 | About Screen | Nome dell'applicazione, versione, membri del gruppo, corso e istituzione, crediti delle librerie di terze parti. | S3 | M | 🟢 | 1,5 h | M2-16 | ☐ |
-| M2-19 | Settings Screen | Campo per la chiave API con `PasswordVisualTransformation` e toggle di visibilità, salvataggio, cancellazione, indicatore *chiave configurata / non configurata*, validazione di formato non vuoto, feedback tramite snackbar. | S3 | M | 🟡 | 4 h | M2-14, M2-16 | ☐ |
-| M2-20 | Chat History Screen | `LazyColumn` alimentata dal `Flow` di Room: titolo, anteprima dell'ultimo messaggio, data relativa. Stato vuoto illustrato. FAB *Nuova conversazione*. | S3 | M | 🟡 | 4 h | M2-12, M2-16 | ☐ |
-| M2-21 | Active Chat Screen | Lista dei messaggi con bubble differenziate per ruolo, barra di input con invio, auto-scroll all'ultimo messaggio, indicatore *il mentore sta scrivendo*, gestione dell'`imePadding`. | S3 | M | 🔴 | 6 h | M2-15, M2-16 | ☐ |
-| M2-22 | ViewModel e UiState | Un ViewModel per schermata con `UiState` immutabile esposto come `StateFlow`; eventi one-shot (snackbar, navigazione) tramite `Channel`/`SharedFlow`. Nessuna logica di business nei Composable. | S1+S3 | M | 🟡 | 4 h | M2-02, M2-15 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-16 | Grafo di navigazione | `NavHost` con rotte `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, conformi alla Figura 1 dell'enunciato (compresi i percorsi di ritorno). Gestione del back stack. | M | 🟡 | 4 h | M2-03 | ☐ |
+| M2-17 | Title Screen | Menu principale: logo/titolo, voci *Conversazioni*, *Impostazioni*, *Informazioni*. Punto di ingresso dell'app quando non esiste una chat attiva. | M | 🟢 | 2 h | M2-16 | ☐ |
+| M2-18 | About Screen | Nome dell'applicazione, versione, il tuo nome, corso e istituzione, crediti delle librerie di terze parti. | M | 🟢 | 1,5 h | M2-16 | ☐ |
+| M2-19 | Settings Screen | Campo per la chiave API con `PasswordVisualTransformation` e toggle di visibilità, salvataggio, cancellazione, indicatore *chiave configurata / non configurata*, validazione di formato non vuoto, feedback tramite snackbar. | M | 🟡 | 4 h | M2-14, M2-16 | ☐ |
+| M2-20 | Chat History Screen | `LazyColumn` alimentata dal `Flow` di Room: titolo, anteprima dell'ultimo messaggio, data relativa. Stato vuoto illustrato. FAB *Nuova conversazione*. | M | 🟡 | 4 h | M2-12, M2-16 | ☐ |
+| M2-21 | Active Chat Screen | Lista dei messaggi con bubble differenziate per ruolo, barra di input con invio, auto-scroll all'ultimo messaggio, indicatore *il mentore sta scrivendo*, gestione dell'`imePadding`. | M | 🔴 | 6 h | M2-15, M2-16 | ☐ |
+| M2-22 | ViewModel e UiState | Un ViewModel per schermata con `UiState` immutabile esposto come `StateFlow`; eventi one-shot (snackbar, navigazione) tramite `Channel`/`SharedFlow`. Nessuna logica di business nei Composable. | M | 🟡 | 4 h | M2-02, M2-15 | ☐ |
 
 ### 9.6 WBS — Workstream E: Connettività
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-23 | `ConnectivityObserver` | Wrapper su `ConnectivityManager.registerNetworkCallback` esposto come `Flow<ConnectivityStatus>`, con verifica di `NET_CAPABILITY_VALIDATED`. Registrato nel service locator. | S2 | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-24 | Gating offline | Verifica della connettività **prima** di ogni chiamata (V7). Se offline: input di invio disabilitato, banner persistente e comprensibile in cima alla Active Chat, cronologia comunque interamente consultabile. | S3 | M | 🟡 | 3 h | M2-21, M2-23 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-23 | `ConnectivityObserver` | Wrapper su `ConnectivityManager.registerNetworkCallback` esposto come `Flow<ConnectivityStatus>`, con verifica di `NET_CAPABILITY_VALIDATED`. Registrato nel service locator. | M | 🟡 | 3 h | M2-01 | ☐ |
+| M2-24 | Gating offline | Verifica della connettività **prima** di ogni chiamata (V7). Se offline: input di invio disabilitato, banner persistente e comprensibile in cima alla Active Chat, cronologia comunque interamente consultabile. | M | 🟡 | 3 h | M2-21, M2-23 | ☐ |
 
 ### 9.7 WBS — Workstream F: Verifica *(richiesta esplicitamente nel video M2)*
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-25 | Documento `VERIFICATION.md` | Formalizzazione della strategia descritta nella sezione 12: livelli, strumenti, criteri di uscita, matrice dispositivi. È la fonte da cui si costruisce la parte del video dedicata alla verifica. | S1 | M | 🟡 | 2 h | — | ☐ |
-| M2-26 | Test di `HistoryPayloadBuilder` | Casi: conversazione vuota, singolo turno, N turni alternati, messaggi `FAILED` esclusi, troncamento oltre soglia, assenza di qualsiasi identificativo di sessione nel payload prodotto. | S1 | M | 🟡 | 3 h | M2-08 | ☐ |
-| M2-27 | Test di rete con `MockEngine` | Simulazione di 200 con payload valido, 400, 401, 429 con header `Retry-After`, 500, JSON malformato, timeout. Verifica della mappatura su `ApiResult` e dell'assenza di eccezioni propagate. | S1 | M | 🟡 | 4 h | M2-09 | ☐ |
-| M2-28 | Test strumentati dei DAO | Room in-memory: inserimenti, osservazione dei `Flow`, cancellazione a cascata, monotonia di `seq`. | S2 | M | 🟡 | 3 h | M2-12 | ☐ |
-| M2-29 | Continuous Integration | Workflow GitHub Actions su `push` e `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Badge di stato nel README. | S2 | S | 🟡 | 2 h | M1-07 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-25 | Documento `VERIFICATION.md` | Formalizzazione della strategia descritta nella sezione 12: livelli, strumenti, criteri di uscita, matrice dispositivi. È la fonte da cui si costruisce la parte del video dedicata alla verifica. | M | 🟡 | 2 h | — | ☐ |
+| M2-26 | Test di `HistoryPayloadBuilder` | Casi: conversazione vuota, singolo turno, N turni alternati, messaggi `FAILED` esclusi, troncamento oltre soglia, assenza di qualsiasi identificativo di sessione nel payload prodotto. | M | 🟡 | 3 h | M2-08 | ☐ |
+| M2-27 | Test di rete con `MockEngine` | Simulazione di 200 con payload valido, 400, 401, 429 con header `Retry-After`, 500, JSON malformato, timeout. Verifica della mappatura su `ApiResult` e dell'assenza di eccezioni propagate. | M | 🟡 | 4 h | M2-09 | ☐ |
+| M2-28 | Test strumentati dei DAO | Room in-memory: inserimenti, osservazione dei `Flow`, cancellazione a cascata, monotonia di `seq`. | M | 🟡 | 3 h | M2-12 | ☐ |
+| M2-29 | Continuous Integration | Workflow GitHub Actions su `push` e `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Badge di stato nel README. | S | 🟡 | 2 h | M1-07 | ☐ |
 
 ### 9.8 WBS — Workstream G: Consegna
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M2-30 | Video Milestone 2 | Registrazione **5–7 minuti** secondo la scaletta dell'Appendice D: dimostrazione delle funzionalità implementate, discussione delle decisioni più rilevanti (service locator manuale, stateless, offline-first), **descrizione della strategia di verifica**, stato attuale del progetto. Upload su piattaforma con link stabile e accesso verificato in incognito. | S3 | M | 🟡 | 4 h | tutti M2 | ☐ |
-| M2-31 | Tag `mentor_2` | Inserimento del link al video nel `README.md`, commit, tag annotato, push. | S3 | M | 🟢 | 0,5 h | M2-30 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M2-30 | Video Milestone 2 | Registrazione **5–7 minuti** secondo la scaletta dell'Appendice D: dimostrazione delle funzionalità implementate, discussione delle decisioni più rilevanti (service locator manuale, stateless, offline-first), **descrizione della strategia di verifica**, stato attuale del progetto. Upload su piattaforma con link stabile e accesso verificato in incognito. | M | 🟡 | 4 h | tutti M2 | ☐ |
+| M2-31 | Tag `mentor_2` | Inserimento del link al video nel `README.md`, commit, tag annotato, push. | M | 🟢 | 0,5 h | M2-30 | ☐ |
 
-**Totale stimato Milestone 2:** ~92 ore ideali (~31 h/persona su 3 settimane).
+**Totale stimato Milestone 2:** ~92 ore ideali, tutte da solo — circa 31 ore ideali a settimana sulle 3 settimane (≈43 ore di calendario a settimana con il fattore 1,4×). È il blocco più pesante di tutto il piano; vedi la nota di sostenibilità al §7.
 
 ### 9.9 Checklist di accettazione (Milestone 2)
 
 - ☐ Il repository è correttamente taggato **`mentor_2`** e il tag è stato pushato.
-- ☐ Il `README.md` contiene il **link al video**, verificato come accessibile da un account esterno al gruppo.
+- ☐ Il `README.md` contiene il **link al video**, verificato come accessibile da un account esterno.
 - ☐ Il video dura **tra 5 e 7 minuti**.
 - ☐ Il video **dimostra le funzionalità implementate**.
 - ☐ Il video **discute le decisioni più rilevanti**.
@@ -459,46 +446,46 @@ Implementare i requisiti a più alta complessità logica — cancellazione delle
 
 ### 10.2 WBS — Gestione delle conversazioni
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M3-01 | Cancellazione conversazioni | Gesto di swipe e/o menu contestuale nella Chat History, dialog di conferma, cancellazione con `CASCADE` sui messaggi, snackbar con azione *Annulla* (finestra di 5 s prima della cancellazione effettiva dei file associati). | S2 | M | 🟡 | 4 h | M2-12, M2-20 | ☐ |
-| M3-02 | Titolazione delle conversazioni | Titolo generato automaticamente dai primi caratteri del primo messaggio utente, con possibilità di rinomina manuale. | S3 | S | 🟢 | 2 h | M3-01 | ☐ |
-| M3-03 | **Riscrittura della conversazione** | L'utente modifica un proprio messaggio in **qualsiasi posizione**. Transazione Room atomica: aggiornamento del testo, `deleteFromSeq(chatId, seq + 1)` che invalida ed elimina tutti gli scambi successivi, ricostruzione del payload sulla cronologia troncata e reinvio all'API. In caso di fallimento di rete, lo stato precedente al reinvio deve restare coerente. | S1+S2 | M | 🔴 | 8 h | M2-15, M3-05 | ☐ |
-| M3-04 | UI di riscrittura | Long-press su una bubble utente → menu contestuale (*Modifica*, *Copia*, *Elimina*). In modifica: dialog o barra di input precompilata con avviso esplicito che i messaggi successivi verranno eliminati; conferma richiesta. | S3 | M | 🔴 | 5 h | M3-03 | ☐ |
-| M3-05 | Ordinamento deterministico | Introduzione del campo `seq` monotono per chat, popolato in transazione. **Non affidarsi ai timestamp**: due messaggi inseriti nello stesso millisecondo renderebbero non deterministico l'ordine e corromperebbero l'alternanza dei ruoli nel payload. Migrazione Room 1 → 2 con test. | S2 | M | 🟡 | 3 h | M2-13 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M3-01 | Cancellazione conversazioni | Gesto di swipe e/o menu contestuale nella Chat History, dialog di conferma, cancellazione con `CASCADE` sui messaggi, snackbar con azione *Annulla* (finestra di 5 s prima della cancellazione effettiva dei file associati). | M | 🟡 | 4 h | M2-12, M2-20 | ☐ |
+| M3-02 | Titolazione delle conversazioni | Titolo generato automaticamente dai primi caratteri del primo messaggio utente, con possibilità di rinomina manuale. | S | 🟢 | 2 h | M3-01 | ☐ |
+| M3-03 | **Riscrittura della conversazione** | L'utente modifica un proprio messaggio in **qualsiasi posizione**. Transazione Room atomica: aggiornamento del testo, `deleteFromSeq(chatId, seq + 1)` che invalida ed elimina tutti gli scambi successivi, ricostruzione del payload sulla cronologia troncata e reinvio all'API. In caso di fallimento di rete, lo stato precedente al reinvio deve restare coerente. | M | 🔴 | 8 h | M2-15, M3-05 | ☐ |
+| M3-04 | UI di riscrittura | Long-press su una bubble utente → menu contestuale (*Modifica*, *Copia*, *Elimina*). In modifica: dialog o barra di input precompilata con avviso esplicito che i messaggi successivi verranno eliminati; conferma richiesta. | M | 🔴 | 5 h | M3-03 | ☐ |
+| M3-05 | Ordinamento deterministico | Introduzione del campo `seq` monotono per chat, popolato in transazione. **Non affidarsi ai timestamp**: due messaggi inseriti nello stesso millisecondo renderebbero non deterministico l'ordine e corromperebbero l'alternanza dei ruoli nel payload. Migrazione Room 1 → 2 con test. | M | 🟡 | 3 h | M2-13 | ☐ |
 
 ### 10.3 WBS — Gestione dello stato e ciclo di vita
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M3-06 | Ripristino della sessione attiva | `activeChatId` salvato in DataStore all'ingresso nella Active Chat e **cancellato solo** su uscita esplicita (back, chiusura della conversazione). Al lancio, routing condizionale: se presente → Active Chat, altrimenti → Title. Implementa la semantica dell'enunciato ("*un utente è considerato precedentemente impegnato se non ha esplicitamente chiuso o abbandonato la conversazione attiva prima della terminazione dell'applicazione*"). | S1 | M | 🔴 | 5 h | M2-14, M2-16 | ☐ |
-| M3-07 | Sopravvivenza a process death | `SavedStateHandle` per la bozza di testo non inviata e per la posizione di scroll. Verifica con l'opzione *Non mantenere le attività* e con `adb shell am kill`. | S1 | S | 🟡 | 4 h | M2-22 | ☐ |
-| M3-08 | Politica di ritentativi | Backoff esponenziale con jitter per 429 e 503, lettura dell'header `Retry-After` quando presente, massimo 3 tentativi, operazione annullabile dall'utente, nessun ritentativo su 400/401/403. | S1 | M | 🔴 | 5 h | M2-09 | ☐ |
-| M3-09 | Stato per singolo messaggio | Rendering differenziato per `SENDING` (indicatore di attesa), `SENT`, `FAILED` (icona + azione *Riprova* sulla bubble). Il reinvio riusa il payload ricostruito dalla cronologia corrente. | S3 | M | 🟡 | 4 h | M3-08 | ☐ |
-| M3-10 | Chiave mancante o non valida | Se la chiave è assente o l'API risponde 401/403: messaggio contestuale e azione diretta che porta alla schermata Settings, senza vicoli ciechi. | S3 | M | 🟡 | 3 h | M2-19, M2-09 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M3-06 | Ripristino della sessione attiva | `activeChatId` salvato in DataStore all'ingresso nella Active Chat e **cancellato solo** su uscita esplicita (back, chiusura della conversazione). Al lancio, routing condizionale: se presente → Active Chat, altrimenti → Title. Implementa la semantica dell'enunciato ("*un utente è considerato precedentemente impegnato se non ha esplicitamente chiuso o abbandonato la conversazione attiva prima della terminazione dell'applicazione*"). | M | 🔴 | 5 h | M2-14, M2-16 | ☐ |
+| M3-07 | Sopravvivenza a process death | `SavedStateHandle` per la bozza di testo non inviata e per la posizione di scroll. Verifica con l'opzione *Non mantenere le attività* e con `adb shell am kill`. | S | 🟡 | 4 h | M2-22 | ☐ |
+| M3-08 | Politica di ritentativi | Backoff esponenziale con jitter per 429 e 503, lettura dell'header `Retry-After` quando presente, massimo 3 tentativi, operazione annullabile dall'utente, nessun ritentativo su 400/401/403. | M | 🔴 | 5 h | M2-09 | ☐ |
+| M3-09 | Stato per singolo messaggio | Rendering differenziato per `SENDING` (indicatore di attesa), `SENT`, `FAILED` (icona + azione *Riprova* sulla bubble). Il reinvio riusa il payload ricostruito dalla cronologia corrente. | M | 🟡 | 4 h | M3-08 | ☐ |
+| M3-10 | Chiave mancante o non valida | Se la chiave è assente o l'API risponde 401/403: messaggio contestuale e azione diretta che porta alla schermata Settings, senza vicoli ciechi. | M | 🟡 | 3 h | M2-19, M2-09 | ☐ |
 
 ### 10.4 WBS — Requisito opzionale: immagini nella conversazione
 
 > Requisito **facoltativo ma valorizzato**. Da avviare solo se i task *Must* della milestone sono a buon punto entro lo Sprint 6. Il vincolo V9 è tassativo.
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M3-11 | Selezione dalla galleria | `ActivityResultContracts.PickVisualMedia` (Photo Picker): non richiede permessi di runtime. Copia del file selezionato in `filesDir/images/` con nome univoco. | S2 | C | 🟡 | 4 h | M2-21 | ☐ |
-| M3-12 | Cattura da fotocamera | `ActivityResultContracts.TakePicture` con `FileProvider` configurato in `file_paths.xml`; gestione del permesso `CAMERA` con relativa spiegazione (*rationale*) e del diniego permanente. | S2 | C | 🔴 | 6 h | M3-11 | ☐ |
-| M3-13 | Persistenza conforme al vincolo | Colonna `imagePath` (percorso **relativo**, per resistere ai cambi di sandbox) in `messages`. Migrazione Room 2 → 3. La codifica Base64 `inline_data` viene prodotta **in memoria** solo al momento della costruzione della richiesta e non viene **mai** scritta su database (V9). | S2 | C | 🔴 | 5 h | M3-11, M2-08 | ☐ |
-| M3-14 | Rendering nella conversazione | Anteprima nella bubble con Coil, placeholder di caricamento, gestione del caso *file non più presente*, apertura a schermo intero. | S3 | C | 🟡 | 4 h | M3-13 | ☐ |
-| M3-15 | Ciclo di vita dei file | Cancellazione del file su eliminazione del messaggio o della conversazione; eliminazione su riscrittura che invalida il messaggio; routine di pulizia degli orfani all'avvio; ridimensionamento/compressione prima dell'invio per contenere il payload. | S2 | C | 🟡 | 4 h | M3-13, M3-01 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M3-11 | Selezione dalla galleria | `ActivityResultContracts.PickVisualMedia` (Photo Picker): non richiede permessi di runtime. Copia del file selezionato in `filesDir/images/` con nome univoco. | C | 🟡 | 4 h | M2-21 | ☐ |
+| M3-12 | Cattura da fotocamera | `ActivityResultContracts.TakePicture` con `FileProvider` configurato in `file_paths.xml`; gestione del permesso `CAMERA` con relativa spiegazione (*rationale*) e del diniego permanente. | C | 🔴 | 6 h | M3-11 | ☐ |
+| M3-13 | Persistenza conforme al vincolo | Colonna `imagePath` (percorso **relativo**, per resistere ai cambi di sandbox) in `messages`. Migrazione Room 2 → 3. La codifica Base64 `inline_data` viene prodotta **in memoria** solo al momento della costruzione della richiesta e non viene **mai** scritta su database (V9). | C | 🔴 | 5 h | M3-11, M2-08 | ☐ |
+| M3-14 | Rendering nella conversazione | Anteprima nella bubble con Coil, placeholder di caricamento, gestione del caso *file non più presente*, apertura a schermo intero. | C | 🟡 | 4 h | M3-13 | ☐ |
+| M3-15 | Ciclo di vita dei file | Cancellazione del file su eliminazione del messaggio o della conversazione; eliminazione su riscrittura che invalida il messaggio; routine di pulizia degli orfani all'avvio; ridimensionamento/compressione prima dell'invio per contenere il payload. | C | 🟡 | 4 h | M3-13, M3-01 | ☐ |
 
 ### 10.5 WBS — Qualità e consegna
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| M3-16 | Accessibilità e rifinitura UI | `contentDescription` su tutti gli elementi non testuali, aree tattili ≥ 48 dp, contrasto verificato, tema scuro completo, comportamento corretto in rotazione. | S3 | S | 🟡 | 4 h | M2-21 | ☐ |
-| M3-17 | Estensione della suite di test | Test della riscrittura (troncamento corretto, payload risultante), dei ritentativi, delle migrazioni Room 1→2→3, test di UI Compose sui flussi principali. | S1+S2 | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
-| M3-18 | Video Milestone 3 | Registrazione **5–7 minuti**: dimostrazione delle funzionalità (con enfasi su riscrittura, cancellazione, ripristino sessione, immagini se presenti), discussione delle decisioni rilevanti, stato del progetto. | S3 | M | 🟡 | 4 h | tutti M3 | ☐ |
-| M3-19 | Tag `mentor_3` | Link al video nel `README.md`, commit, tag annotato, push. | S3 | M | 🟢 | 0,5 h | M3-18 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| M3-16 | Accessibilità e rifinitura UI | `contentDescription` su tutti gli elementi non testuali, aree tattili ≥ 48 dp, contrasto verificato, tema scuro completo, comportamento corretto in rotazione. | S | 🟡 | 4 h | M2-21 | ☐ |
+| M3-17 | Estensione della suite di test | Test della riscrittura (troncamento corretto, payload risultante), dei ritentativi, delle migrazioni Room 1→2→3, test di UI Compose sui flussi principali. | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
+| M3-18 | Video Milestone 3 | Registrazione **5–7 minuti**: dimostrazione delle funzionalità (con enfasi su riscrittura, cancellazione, ripristino sessione, immagini se presenti), discussione delle decisioni rilevanti, stato del progetto. | M | 🟡 | 4 h | tutti M3 | ☐ |
+| M3-19 | Tag `mentor_3` | Link al video nel `README.md`, commit, tag annotato, push. | M | 🟢 | 0,5 h | M3-18 | ☐ |
 
-**Totale stimato Milestone 3:** ~83 ore ideali (~28 h/persona su 5 settimane).
+**Totale stimato Milestone 3:** ~83 ore ideali, tutte da solo — circa 17 ore ideali a settimana sulle 5 settimane (≈23 ore di calendario a settimana con il fattore 1,4×).
 
 ### 10.6 Checklist di accettazione (Milestone 3)
 
@@ -527,22 +514,22 @@ Nessuna nuova funzionalità dopo lo Sprint 9, salvo il completamento del requisi
 
 ### 11.2 WBS
 
-| ID | Task | Descrizione operativa | Assegnatario | Pri. | Diff. | Stima | Dip. | Stato |
-|---|---|---|---|---|---|---|---|---|
-| MF-01 | Chiusura del requisito immagini | Completamento di eventuali task M3-11…M3-15 rimasti aperti, con test dedicati. Se si decide di non includere il requisito, va rimosso ogni codice morto e riferimento nella UI. | S2 | C | 🔴 | 8 h | M3-15 | ☐ |
-| MF-02 | Hardening della gestione errori | Revisione sistematica di ogni percorso di errore: chiave assente, chiave revocata, quota esaurita, risposta bloccata dai filtri di sicurezza (`finishReason = SAFETY`), risposta vuota, timeout, perdita di rete a metà chiamata. Ogni caso produce un messaggio comprensibile e uno stato coerente in Room. | S1 | M | 🟡 | 6 h | M3-08 | ☐ |
-| MF-03 | Revisione UX | Audit ispirato a *Don't Make Me Think* di Steve Krug (riferimento suggerito dall'enunciato): riduzione del carico cognitivo, etichette non ambigue, eliminazione dei vicoli ciechi, obiettivi principali raggiungibili in ≤ 3 tap dalla Title. Test di usabilità con due persone esterne al gruppo. | S3 | S | 🟡 | 5 h | — | ☐ |
-| MF-04 | Adattività e orientamento | Comportamento corretto in portrait e landscape su tutte le schermate, gestione della tastiera, `WindowSizeClass` per tablet, nessun troncamento di testo. | S3 | S | 🟡 | 5 h | MF-03 | ☐ |
-| MF-05 | Performance | Chiavi stabili nelle `LazyColumn`, audit delle ricomposizioni con Layout Inspector, verifica della fluidità su conversazioni con 300+ messaggi, eventuale paginazione. Nessuna operazione di I/O sul main thread (verifica con StrictMode). | S1 | S | 🔴 | 5 h | — | ☐ |
-| MF-06 | Sicurezza e build di rilascio | Plugin `Logging` di Ktor disattivato in release; nessun log della chiave in alcun ambiente; regole R8/ProGuard con verifica del funzionamento della serializzazione dopo l'offuscamento; esclusione della chiave dal backup automatico (`dataExtractionRules`, `allowBackup`). | S1 | M | 🔴 | 5 h | — | ☐ |
-| MF-07 | Regressione completa | Esecuzione integrale della matrice di test manuali (Appendice E) su almeno due livelli di API e su un dispositivo fisico. Registrazione degli esiti in una tabella di *test report*. | Tutti | M | 🟡 | 6 h | MF-02 | ☐ |
-| MF-08 | Documentazione finale | `README.md` completo: descrizione, screenshot, istruzioni di build, procedura per ottenere e configurare la propria chiave BYOK, architettura sintetica, elenco delle librerie, membri del gruppo, link ai quattro video. KDoc sui componenti pubblici. | S3 | M | 🟡 | 4 h | — | ☐ |
-| MF-09 | Build di rilascio | APK firmato generato e installato *ex novo* su dispositivo pulito, per validare il primo avvio senza chiave configurata. Allegato alla release GitHub. | S2 | S | 🟡 | 3 h | MF-06 | ☐ |
-| MF-10 | Code freeze (08/12) | Da questa data si accettano solo correzioni di bug bloccanti, ciascuna con PR, review e regressione mirata. | Tutti | M | 🟢 | — | — | ☐ |
-| MF-11 | Video finale | Registrazione **5–7 minuti** che mostri chiaramente l'applicazione in funzione: tutte le schermate, il flusso conversazionale completo, riscrittura, cancellazione, comportamento offline, gestione degli errori, immagini se implementate. | S3 | M | 🟡 | 5 h | MF-07 | ☐ |
-| MF-12 | Consegna `mentor_f` | Link al video nel `README.md`, verifica puntuale di **ogni** criterio di accettazione, commit finale, tag annotato `mentor_f`, push. Conferma visiva su GitHub che il tag è presente sul remoto. | S3 | M | 🟢 | 1 h | MF-11 | ☐ |
+| ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
+|---|---|---|---|---|---|---|---|
+| MF-01 | Chiusura del requisito immagini | Completamento di eventuali task M3-11…M3-15 rimasti aperti, con test dedicati. Se si decide di non includere il requisito, va rimosso ogni codice morto e riferimento nella UI. | C | 🔴 | 8 h | M3-15 | ☐ |
+| MF-02 | Hardening della gestione errori | Revisione sistematica di ogni percorso di errore: chiave assente, chiave revocata, quota esaurita, risposta bloccata dai filtri di sicurezza (`finishReason = SAFETY`), risposta vuota, timeout, perdita di rete a metà chiamata. Ogni caso produce un messaggio comprensibile e uno stato coerente in Room. | M | 🟡 | 6 h | M3-08 | ☐ |
+| MF-03 | Revisione UX | Audit ispirato a *Don't Make Me Think* di Steve Krug (riferimento suggerito dall'enunciato): riduzione del carico cognitivo, etichette non ambigue, eliminazione dei vicoli ciechi, obiettivi principali raggiungibili in ≤ 3 tap dalla Title. Test di usabilità con due persone che non hanno lavorato al progetto. | S | 🟡 | 5 h | — | ☐ |
+| MF-04 | Adattività e orientamento | Comportamento corretto in portrait e landscape su tutte le schermate, gestione della tastiera, `WindowSizeClass` per tablet, nessun troncamento di testo. | S | 🟡 | 5 h | MF-03 | ☐ |
+| MF-05 | Performance | Chiavi stabili nelle `LazyColumn`, audit delle ricomposizioni con Layout Inspector, verifica della fluidità su conversazioni con 300+ messaggi, eventuale paginazione. Nessuna operazione di I/O sul main thread (verifica con StrictMode). | S | 🔴 | 5 h | — | ☐ |
+| MF-06 | Sicurezza e build di rilascio | Plugin `Logging` di Ktor disattivato in release; nessun log della chiave in alcun ambiente; regole R8/ProGuard con verifica del funzionamento della serializzazione dopo l'offuscamento; esclusione della chiave dal backup automatico (`dataExtractionRules`, `allowBackup`). | M | 🔴 | 5 h | — | ☐ |
+| MF-07 | Regressione completa | Esecuzione integrale della matrice di test manuali (Appendice E) su almeno due livelli di API e su un dispositivo fisico. Registrazione degli esiti in una tabella di *test report*. | M | 🟡 | 6 h | MF-02 | ☐ |
+| MF-08 | Documentazione finale | `README.md` completo: descrizione, screenshot, istruzioni di build, procedura per ottenere e configurare la propria chiave BYOK, architettura sintetica, elenco delle librerie, la tua identificazione, link ai quattro video. KDoc sui componenti pubblici. | M | 🟡 | 4 h | — | ☐ |
+| MF-09 | Build di rilascio | APK firmato generato e installato *ex novo* su dispositivo pulito, per validare il primo avvio senza chiave configurata. Allegato alla release GitHub. | S | 🟡 | 3 h | MF-06 | ☐ |
+| MF-10 | Code freeze (08/12) | Da questa data si accettano solo correzioni di bug bloccanti, ciascuna con PR, review e regressione mirata. | M | 🟢 | — | — | ☐ |
+| MF-11 | Video finale | Registrazione **5–7 minuti** che mostri chiaramente l'applicazione in funzione: tutte le schermate, il flusso conversazionale completo, riscrittura, cancellazione, comportamento offline, gestione degli errori, immagini se implementate. | M | 🟡 | 5 h | MF-07 | ☐ |
+| MF-12 | Consegna `mentor_f` | Link al video nel `README.md`, verifica puntuale di **ogni** criterio di accettazione, commit finale, tag annotato `mentor_f`, push. Conferma visiva su GitHub che il tag è presente sul remoto. | M | 🟢 | 1 h | MF-11 | ☐ |
 
-**Totale stimato Final Milestone:** ~53 ore ideali, più il margine di riserva dello Sprint 12.
+**Totale stimato Final Milestone:** ~53 ore ideali, tutte da solo — circa 13–15 ore ideali a settimana sulle ~4 settimane, più il margine di riserva dello Sprint 12.
 
 ### 11.3 Checklist di accettazione (Final Milestone)
 
@@ -612,7 +599,7 @@ Nessuna nuova funzionalità dopo lo Sprint 9, salvo il completamento del requisi
 |---|---|---|---|
 | Baseline di sviluppo | Emulatore Pixel | Ultima stabile | Ogni sprint |
 | API minima | Emulatore | 26 | Fine M2, fine M3, MF-07 |
-| Dispositivo fisico | `[modello del gruppo]` | `[livello]` | Fine di ogni milestone |
+| Dispositivo fisico | `[il tuo modello]` | `[livello]` | Fine di ogni milestone |
 | Tablet / landscape | Emulatore tablet | Recente | MF-04 |
 
 ### 12.4 Criteri di uscita
@@ -626,18 +613,18 @@ Nessuna nuova funzionalità dopo lo Sprint 9, salvo il completamento del requisi
 
 ## 13. Registro dei rischi
 
-| ID | Rischio | Prob. | Impatto | Strategia di mitigazione | Owner |
-|---|---|---|---|---|---|
-| R1 | Esaurimento della quota gratuita dell'API durante lo sviluppo o, peggio, durante la registrazione del video | Alta | Medio | Chiavi multiple (una per membro) con rotazione; uso di `MockEngine` nello sviluppo quotidiano; **prova della demo con quota fresca e registrazione in orario a basso traffico**; sequenza di riserva registrata in anticipo | S1 |
-| R2 | Modifica o deprecazione dell'endpoint/modello Gemini durante il semestre | Media | Alto | Nome del modello e versione dell'API in **un'unica costante**; DTO tolleranti (`ignoreUnknownKeys = true`); verifica mensile della documentazione ufficiale. **Restare su `generateContent`: l'enunciato vieta esplicitamente le varianti con stato lato server** | S1 |
-| R3 | Sottostima della riscrittura della conversazione (M3-03) | Alta | Alto | Prototipo della sola logica di troncamento in test unitari **prima** di toccare la UI; pair programming; buffer di uno sprint | S1+S2 |
-| R4 | Sovrapposizione con esami e altri progetti | Alta | Alto | Stime in ore ideali con fattore 1,4×; code freeze anticipato al 08/12; task *Could* sacrificabili per primi in caso di ritardo | Tutti |
-| R5 | Regressioni introdotte dai task 🔴 della Milestone 3 | Media | Alto | Suite automatica verde come precondizione di merge; CI obbligatoria; nessun merge diretto su `main` | S2 |
-| R6 | Conflitti di merge su Compose dovuti a lavoro parallelo sulla stessa schermata | Media | Medio | Componentizzazione fine; branch a vita breve; proprietà chiara per file tramite `CODEOWNERS` | S3 |
-| R7 | Perdita accidentale della chiave API in un commit | Bassa | Molto alto | `.gitignore` completo, `git-secrets` o scansione locale pre-commit, checklist nella PR template, revoca immediata della chiave in caso di esposizione | S1 |
-| R8 | Video fuori durata o carente rispetto ai punti richiesti | Media | Medio | Scaletta cronometrata (Appendice D), prova a vuoto prima della registrazione, revisione incrociata da parte di un membro non registrante | S3 |
-| R9 | Assenza o indisponibilità di un membro in prossimità di una scadenza | Media | Alto | Ruoli di backup definiti in §2; conoscenza condivisa tramite code review; nessun componente critico con un solo conoscitore | Tutti |
-| R10 | Accesso dei docenti al repository non correttamente configurato | Bassa | Molto alto | Verifica esplicita al termine di **ogni** milestone, inserita nelle checklist di accettazione | S3 |
+| ID | Rischio | Prob. | Impatto | Strategia di mitigazione |
+|---|---|---|---|---|
+| R1 | Esaurimento della quota gratuita dell'API durante lo sviluppo o, peggio, durante la registrazione del video | Alta | Medio | Chiavi multiple (es. un secondo account Google) con rotazione; uso di `MockEngine` nello sviluppo quotidiano; **prova della demo con quota fresca e registrazione in orario a basso traffico**; sequenza di riserva registrata in anticipo |
+| R2 | Modifica o deprecazione dell'endpoint/modello Gemini durante il semestre | Media | Alto | Nome del modello e versione dell'API in **un'unica costante**; DTO tolleranti (`ignoreUnknownKeys = true`); verifica mensile della documentazione ufficiale. **Restare su `generateContent`: l'enunciato vieta esplicitamente le varianti con stato lato server** |
+| R3 | Sottostima della riscrittura della conversazione (M3-03) | Alta | Alto | Prototipo della sola logica di troncamento in test unitari **prima** di toccare la UI; test scritti prima dell'implementazione (§2); buffer di uno sprint |
+| R4 | Sovrapposizione con esami e altri progetti | Alta | Alto | Stime in ore ideali con fattore 1,4×; code freeze anticipato al 08/12; task *Could* sacrificabili per primi in caso di ritardo |
+| R5 | Regressioni introdotte dai task 🔴 della Milestone 3 | Media | Alto | Suite automatica verde come precondizione di merge; CI obbligatoria; nessun merge diretto su `main` |
+| R6 | Dimenticare, settimane dopo, perché è stata presa una certa decisione — senza nessuno a cui chiederlo | Media | Medio | Conventional Commits con il *perché* nel corpo, non solo il *cosa*; tenere `AGENTS.md` e le note di questo piano aggiornate quando la decisione viene presa, non dopo |
+| R7 | Perdita accidentale della chiave API in un commit | Bassa | Molto alto | `.gitignore` completo, `git-secrets` o scansione locale pre-commit, checklist nella PR template, revoca immediata della chiave in caso di esposizione |
+| R8 | Video fuori durata o carente rispetto ai punti richiesti | Media | Medio | Scaletta cronometrata (Appendice D), almeno una prova a vuoto con il cronometro prima della registrazione vera |
+| R9 | Malattia o indisponibilità vicino a una scadenza, senza nessun compagno di squadra ad assorbire il carico | Alta | Molto alto | Nessun backup è possibile da solo — l'unica mitigazione reale è il margine già previsto nella timeline (il code freeze dell'08/12 lascia quattro giorni prima di `mentor_f`). Tratta quel margine come riservato a questo rischio, non come tempo extra per nuove funzionalità, e applica la stessa logica prima di ogni tag precedente |
+| R10 | Accesso dei docenti al repository non correttamente configurato | Bassa | Molto alto | Verifica esplicita al termine di **ogni** milestone, inserita nelle checklist di accettazione |
 
 ---
 
@@ -669,7 +656,7 @@ Ogni requisito dell'enunciato è associato ai task che lo realizzano e alla mile
 | Riscrittura della conversazione, in qualsiasi posizione, con invalidazione degli scambi successivi | M3-03, M3-04, M3-05 | M3 |
 | *(Opzionale)* Immagini da galleria o fotocamera | M3-11, M3-12 | M3 |
 | *(Opzionale)* Solo URI/percorso in Room, Base64 vietato | M3-13, M3-15 | M3 |
-| `README.md` con l'identificazione dei membri | M1-02 | M1 |
+| `README.md` con la tua identificazione | M1-02 | M1 |
 | Accesso completo concesso ai docenti | M1-01 | M1 |
 | Tag `mentor_1` con piano e timeline | M1-03, M1-09 | M1 |
 | Tag `mentor_2` con video 5–7 min (funzionalità, decisioni, verifica, stato) | M2-30, M2-31 | M2 |
@@ -759,13 +746,13 @@ Ogni migrazione deve essere accompagnata da un test con `MigrationTestHelper` e 
 Client Android BYOK per LLM, sviluppato per il corso di Mobile Devices Programming
 (ISEL, semestre invernale 2026/2027).
 
-## Gruppo PastaGPT
+## Autore
 
-| Nome | Numero | Email | GitHub |
+| Nome | Matricola | Email | GitHub |
 |---|---|---|---|
-| [Nome Studente 1] | [00000] | [email] | [@handle] |
-| [Nome Studente 2] | [00000] | [email] | [@handle] |
-| [Nome Studente 3] | [00000] | [email] | [@handle] |
+| Luca Raona | 55603 | [email] | [@handle] |
+
+Progetto individuale, sviluppato sotto il nome **PastaGPT**.
 
 ## Consegne
 
@@ -792,7 +779,7 @@ Client Android BYOK per LLM, sviluppato per il corso di Mobile Devices Programmi
 
 | Tempo | Sezione | Contenuto | Presente in |
 |---|---|---|---|
-| 0:00–0:30 | Apertura | Nome del gruppo, membri, obiettivo del video | M2, M3, Finale |
+| 0:00–0:30 | Apertura | Il tuo nome, nome del progetto (PastaGPT), obiettivo del video | M2, M3, Finale |
 | 0:30–3:00 | Dimostrazione | Uso reale dell'app sul dispositivo: flusso completo, funzionalità nuove rispetto alla milestone precedente, comportamento offline e in errore | M2, M3, Finale |
 | 3:00–4:30 | Decisioni rilevanti | Service locator manuale al posto di Hilt, gestione stateless della cronologia, Room come sorgente di verità, gestione degli errori HTTP | M2, M3 |
 | 4:30–5:30 | Strategia di verifica | Piramide dei test, `MockEngine`, Room in-memory, CI | **M2 (obbligatorio)** |
@@ -828,4 +815,4 @@ Client Android BYOK per LLM, sviluppato per il corso di Mobile Devices Programmi
 
 ---
 
-*Documento redatto per la Milestone 1 del progetto pratico di Mobile Devices Programming — ISEL, semestre invernale 2026/2027. Team PastaGPT.*
+*Documento redatto per la Milestone 1 del progetto pratico di Mobile Devices Programming — ISEL, semestre invernale 2026/2027. Luca Raona — PastaGPT.*

@@ -317,7 +317,7 @@ Consegnare il piano di progetto richiesto dall'enunciato e predisporre l'infrast
 | M1-06 | Scaffolding progetto *(anticipo su M2)* | Progetto Android Studio: Kotlin, Compose, `minSdk 26`, package `pt.isel.pdm.droidmentor`. Verifica che l'app vuota si avvii su emulatore. | S | 🟡 | 2 h | M1-01 | ☑ |
 | M1-07 | Version catalog *(anticipo su M2)* | `gradle/libs.versions.toml` con Compose BOM, Navigation, Ktor (core, engine, content-negotiation, logging), kotlinx-serialization, Room (runtime, ktx, compiler KSP), DataStore Preferences, Coil, librerie di test. Sincronizzazione riuscita. | S | 🟡 | 1,5 h | M1-06 | ☑ |
 | M1-08 | Provisioning chiave Gemini | Una chiave API da Google AI Studio (idealmente una seconda di riserva da un account diverso). Verifica dei limiti del piano gratuito e annotazione delle quote (rilevante per i test del percorso HTTP 429). **Nessuna chiave committata.** | M | 🟢 | 0,5 h | — | ☑ |
-| M1-09 | Tag `mentor_1` | Commit finale, tag annotato, push del tag. Verifica su GitHub che il tag sia visibile e che i docenti abbiano accesso. | M | 🟢 | 0,25 h | M1-02, M1-03 | ☐ |
+| M1-09 | Tag `mentor_1` | Commit finale, tag annotato, push del tag. Verifica su GitHub che il tag sia visibile e che i docenti abbiano accesso. | M | 🟢 | 0,25 h | M1-02, M1-03 | ☑ |
 
 **Totale stimato:** ~10,25 ore ideali.
 
@@ -325,7 +325,7 @@ Consegnare il piano di progetto richiesto dall'enunciato e predisporre l'infrast
 
 Derivata letteralmente dagli *Acceptance criteria* dell'enunciato:
 
-- ☐ Il repository è correttamente taggato **`mentor_1`** ed il tag è stato pushato sul remoto.
+- ☑ Il repository è correttamente taggato **`mentor_1`** ed il tag è stato pushato sul remoto.
 - ☑ Il repository contiene la **timeline del piano di progetto** con l'indicazione dei task pianificati (l'assegnazione richiesta dall'enunciato è implicita: progetto individuale, sono tutti miei).
 - ☑ Il file **`README.md` in radice** contiene la tua identificazione.
 - ☐ Entrambi i docenti dispongono di **accesso completo** al repository (verifica in *Settings → Collaborators*).

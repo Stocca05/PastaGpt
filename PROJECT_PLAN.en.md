@@ -317,7 +317,7 @@ Deliver the project plan required by the statement and set up the working infras
 | M1-06 | Project scaffolding *(pulled forward from M2)* | Android Studio project: Kotlin, Compose, `minSdk 26`, package `pt.isel.pdm.droidmentor`. Verify the empty app launches on an emulator. | S | 🟡 | 2 h | M1-01 | ☑ |
 | M1-07 | Version catalog *(pulled forward from M2)* | `gradle/libs.versions.toml` with Compose BOM, Navigation, Ktor (core, engine, content-negotiation, logging), kotlinx-serialization, Room (runtime, ktx, KSP compiler), DataStore Preferences, Coil, test libraries. Successful Gradle sync. | S | 🟡 | 1.5 h | M1-06 | ☑ |
 | M1-08 | Gemini key provisioning | One API key from Google AI Studio (ideally a second, spare one from a different account). Check the free-tier limits and note the quotas (relevant for testing the HTTP 429 path). **No key committed.** | M | 🟢 | 0.5 h | — | ☑ |
-| M1-09 | `mentor_1` tag | Final commit, annotated tag, tag push. Verify on GitHub that the tag is visible and that the professors have access. | M | 🟢 | 0.25 h | M1-02, M1-03 | ☐ |
+| M1-09 | `mentor_1` tag | Final commit, annotated tag, tag push. Verify on GitHub that the tag is visible and that the professors have access. | M | 🟢 | 0.25 h | M1-02, M1-03 | ☑ |
 
 **Estimated total:** ~10.25 ideal hours.
 
@@ -325,7 +325,7 @@ Deliver the project plan required by the statement and set up the working infras
 
 Derived literally from the statement's *Acceptance criteria*:
 
-- ☐ The repository is correctly tagged **`mentor_1`** and the tag has been pushed to the remote.
+- ☑ The repository is correctly tagged **`mentor_1`** and the tag has been pushed to the remote.
 - ☑ The repository contains the **project plan timeline** indicating the planned tasks (the assignment the statement asks for is implicit: solo project, every task is mine).
 - ☑ The **root `README.md`** contains your identification.
 - ☐ Both professors have **full access** to the repository (verify in *Settings → Collaborators*).

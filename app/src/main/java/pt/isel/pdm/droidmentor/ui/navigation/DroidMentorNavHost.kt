@@ -11,16 +11,16 @@ import androidx.navigation.compose.NavHost // Registers destinations and integra
 import androidx.navigation.compose.composable // Adds each Compose destination to the graph.
 import androidx.navigation.compose.rememberNavController // Retains navigation state across recomposition and saved-state restoration.
 import androidx.navigation.navArgument // Describes the active conversation's required route argument.
-import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
 import pt.isel.pdm.droidmentor.ui.screens.about.AboutScreen // Supplies the public app information without repository access.
-import pt.isel.pdm.droidmentor.ui.screens.settings.SettingsScreen // Supplies owner-scoped key configuration through its manual ViewModel.
-import pt.isel.pdm.droidmentor.ui.screens.chathistory.ChatHistoryScreen // Supplies the saved Room-backed conversation list.
 import pt.isel.pdm.droidmentor.ui.screens.activechat.ActiveChatScreen // Supplies the selected conversation's Room-derived messages.
+import pt.isel.pdm.droidmentor.ui.screens.chathistory.ChatHistoryScreen // Supplies the saved Room-backed conversation list.
+import pt.isel.pdm.droidmentor.ui.screens.settings.SettingsScreen // Supplies owner-scoped key configuration through its manual ViewModel.
+import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the stateless main menu and its three navigation actions.
 
 /**
  * Hosts the M2 graph with Title as its initial destination and callbacks matching the assignment's Figure 1.
  *
- * Content slots keep this task limited to navigation: tests can replace screen content without duplicating the graph.
+ * Screen content slots allow isolated graph tests without duplicating navigation logic.
  * Screens receive events and a local chat ID, never the controller or a network result.
  * @param navController The host's controller; normally created and saved by Compose.
  * @param titleContent Content receiving history, settings and about navigation callbacks, in that order.

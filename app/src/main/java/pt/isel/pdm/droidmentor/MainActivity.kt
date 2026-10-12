@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() { // Our main screen inherits the Andro
         enableEdgeToEdge() // Allows the background to fill the screen behind the system bars.
         setContent { // Starts the Compose content displayed by this Activity.
             DroidMentorTheme { // Uses our colours and text styles for the content below.
-                DroidMentorNavHost() // Displays Title through the graph until the separate screen tasks provide their content.
+                DroidMentorNavHost() // Displays the five-screen graph, starting at the main menu.
             } // Ends this block.
         } // Ends this block.
     } // Ends this block.
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() { // Our main screen inherits the Andro
 @Composable // This function describes UI that Compose can draw.
 private fun LightThemePreview() { // Defines the content used by the light preview.
     DroidMentorTheme(darkTheme = false) { // Forces light colours for this preview.
-        DroidMentorNavHost() // Displays Title through the graph until the separate screen tasks provide their content.
+        DroidMentorNavHost() // Displays the five-screen graph, starting at the main menu.
     } // Ends this block.
 } // Ends this block.
 
@@ -35,6 +35,6 @@ private fun LightThemePreview() { // Defines the content used by the light previ
 @Composable // This function describes UI that Compose can draw.
 private fun DarkThemePreview() { // Defines the content used by the dark preview.
     DroidMentorTheme(darkTheme = true) { // Forces dark colours for this preview.
-        DroidMentorNavHost() // Displays Title through the graph until the separate screen tasks provide their content.
+        DroidMentorNavHost() // Displays the five-screen graph, starting at the main menu.
     } // Ends this block.
 } // Ends this block.

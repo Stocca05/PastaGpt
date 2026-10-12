@@ -4,12 +4,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Android creates this Application as the manual dependency service locator. -->
     <application
+        android:name=".DroidMentorApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="DroidMentor"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DroidMentor">
         <activity
             android:name=".MainActivity"
             android:exported="true">

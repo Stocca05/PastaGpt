@@ -34,6 +34,7 @@
 | 1.0.22 | 12/10/2026 | Luca Raona | M2-19 | Key form with password masking, in-memory visibility, DataStore save/clear, configured status and typed snackbars. |
 | 1.0.23 | 12/10/2026 | Luca Raona | M2-20 | Room list with stable IDs, preview and relative date, illustrated empty state and local new-chat FAB. |
 | 1.0.24 | 12/10/2026 | Luca Raona | M2-21 | Room chat with role bubbles, multiline input, guarded sending, waiting indicator, same-row retry, persisted errors and keyboard handling; placeholders removed. |
+| 1.0.25 | 12/10/2026 | Luca Raona | M2-24 | Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -455,6 +456,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verification M2-21 — 12/10/2026.** Room chat with role bubbles, multiline input, guarded sending, waiting indicator, same-row retry, persisted errors and keyboard handling; placeholders removed. Local build/unit/lint/APK verification: BUILD SUCCESSFUL in 58s. After adjustResize manifest configuration, debug build/lint passed in 29s. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verification M2-24 — 12/10/2026.** Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. Local verification: BUILD SUCCESSFUL in 1m 6s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Foundations and manual dependency injection
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
@@ -502,7 +505,7 @@ pt/isel/pdm/droidmentor/
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
 | M2-23 | `ConnectivityObserver` | Wrapper over the default `ConnectivityManager` network using `registerDefaultNetworkCallback`, `Flow<ConnectivityStatus>`, INTERNET and VALIDATED checks and callback cleanup. Fresh suspend check on IO. Instance to expose in service locator M2-01. | M | 🟡 | 3 h | M2-01 | ☑ |
-| M2-24 | Offline gating | Connectivity check **before** every call (V7) and key check in the repository. When offline or the key is missing: sending blocked with understandable feedback; editable draft and fully readable history. Persistent offline banner in Active Chat. | M | 🟡 | 3 h | M2-21, M2-23 | ☐ |
+| M2-24 | Offline gating | Connectivity check **before** every call (V7) and key check in the repository. When offline or the key is missing: sending blocked with understandable feedback; editable draft and fully readable history. Persistent offline banner in Active Chat. | M | 🟡 | 3 h | M2-21, M2-23 | ☑ |
 
 ### 9.7 WBS — Workstream F: Verification *(explicitly required in the M2 video)*
 

@@ -67,6 +67,14 @@ fun ActiveChatScreen(chatId: String, onBack: () -> Unit) { // Receives only the 
                 .consumeWindowInsets(padding) // Marks the reserved insets as already handled.
                 .imePadding(), // Moves input above the keyboard without doubling navigation-bar padding.
         ) { // Displays local loading, error or message state before the draft controls.
+            if (!state.connected) { // Keeps the offline notice visible independently of saved history.
+                Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) { // Uses readable theme-provided contrast for the persistent banner.
+                    Text(stringResource(R.string.notice_offline), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Explains that new interactions are unavailable while history stays visible.
+                } // Ends the offline banner.
+            } // Ends connectivity feedback.
+            if (state.settingsError || !state.hasKey) { // Explains the separate key prerequisite without reading its value.
+                Text(stringResource(if (state.settingsError) R.string.notice_settings_error else R.string.notice_missing_key), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Keeps configuration feedback visible while the draft remains editable.
+            } // Ends key-status feedback.
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { // Gives the saved message body the remaining screen height.
                 when { // Keeps storage errors and missing conversations distinct from empty messages.
                     state.loading -> CircularProgressIndicator() // Waits for the initial Room snapshots.
@@ -82,7 +90,8 @@ fun ActiveChatScreen(chatId: String, onBack: () -> Unit) { // Receives only the 
                         items(state.messages, key = { it.id }) { message -> // Renders only rows obtained from Room observation.
                             MessageBubble( // Keeps bubble layout separate from screen and command logic.
                                 message = message, // Supplies saved text, role, status and error category.
-                                retryAvailable = message.id == state.messages.lastOrNull()?.id && !state.working && !state.pending, // Allows retry only for the final row while no command owns the chat.
+                                showRetry = message.id == state.messages.lastOrNull()?.id, // Displays the action only beside the final saved row.
+                                retryEnabled = state.canRetry, // Shares the ViewModel's current key, connection and ownership guard.
                                 onRetry = model::retry, // Delegates same-row retry validation to the ViewModel and repository.
                             ) // Ends this saved message bubble.
                         } // Ends the Room-derived message items.
@@ -117,7 +126,7 @@ fun ActiveChatScreen(chatId: String, onBack: () -> Unit) { // Receives only the 
 } // Ends the active chat screen.
 
 @Composable // Renders one saved row without owning networking or persistence.
-private fun MessageBubble(message: Message, retryAvailable: Boolean, onRetry: () -> Unit) { // Receives the same-row retry callback from the screen.
+private fun MessageBubble(message: Message, showRetry: Boolean, retryEnabled: Boolean, onRetry: () -> Unit) { // Receives the same-row retry callback from the screen.
     val user = message.role == Role.USER // Chooses author alignment and theme colours.
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (user) Arrangement.End else Arrangement.Start) { // Separates user and mentor sides.
         Surface( // Draws one role-specific saved text bubble.
@@ -130,7 +139,7 @@ private fun MessageBubble(message: Message, retryAvailable: Boolean, onRetry: ()
                 Text(message.text) // Displays full saved message text without altering history.
                 if (user && message.status == MessageStatus.FAILED) { // Reads failures from Room rather than a network event.
                     Text(stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource())) // Translates the saved category into safe readable feedback.
-                    if (retryAvailable) Button(onClick = onRetry) { Text(stringResource(R.string.chat_retry)) } // Retries the same final failed row through the repository.
+                    if (showRetry) Button(onClick = onRetry, enabled = retryEnabled) { Text(stringResource(R.string.chat_retry)) } // Retries the same final failed row through the repository.
                 } // Ends persisted error content.
             } // Ends bubble content.
         } // Ends the role-specific bubble surface.

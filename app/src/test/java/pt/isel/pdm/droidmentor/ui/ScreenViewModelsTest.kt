@@ -176,6 +176,62 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertEquals("A later draft", model.state.value.draft) // Checks retry did not consume a new draft.
     } // Ends saved-row retry verification.
 
+    /** Checks losing validated connectivity blocks send and retry while retaining an editable draft. */
+    @Test // Covers the UI gate independently of the repository's fresh preflight check.
+    fun offlineStatusBlocksCommandsButKeepsDraftEditing() = runTest { // Changes a controlled status stream after initial loading.
+        val fake = FakeChats() // Supplies locally readable history.
+        val settings = FakeSettings() // Supplies a configured in-memory preferences contract.
+        settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Generates a fictitious value without a file.
+        val network = MutableStateFlow(ConnectivityStatus.CONNECTED) // Starts with a validated UI status.
+        val model = own(ActiveChatViewModel("saved", fake, settings, network)) // Injects the controlled status stream by hand.
+        advanceUntilIdle() // Loads the initial snapshots and prerequisites.
+        network.value = ConnectivityStatus.DISCONNECTED // Simulates losing validation before the next event.
+        advanceUntilIdle() // Applies the disconnected status to immutable state.
+        model.updateDraft("Editable offline draft") // Keeps typing available without a connection.
+        model.send() // Attempts the guarded event while offline.
+        assertFalse(model.state.value.canSend) // Checks the screen's Send action can be disabled.
+        assertEquals(0, fake.sends) // Checks the ViewModel never invoked the repository.
+        fake.messages.value = ChatReadResult.Success(listOf(Message("failed-row", "saved", Role.USER, "Saved question", 0, MessageStatus.FAILED, 1, MessageErrorCategory.NETWORK_UNAVAILABLE))) // Publishes locally saved failure content while offline.
+        advanceUntilIdle() // Applies the saved failure without needing an API result.
+        model.retry() // Attempts the same-row event while prerequisites remain unavailable.
+        assertFalse(model.state.value.canRetry) // Checks the visible retry action shares the gate.
+        assertTrue(fake.retriedId == null) // Checks no retry repository command was started.
+        assertEquals("Editable offline draft", model.state.value.draft) // Checks saved history changes did not discard unsent input.
+    } // Ends offline command gating verification.
+
+    /** Checks clearing the configured key disables new sends without deleting saved history or a draft. */
+    @Test // Covers preference changes observed after the conversation screen was opened.
+    fun clearingTheKeyBlocksNewInteractions() = runTest { // Changes presence while connectivity remains validated.
+        val fake = FakeChats() // Supplies saved conversation metadata.
+        val settings = FakeSettings() // Supplies a controllable preference stream.
+        settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Starts with generated in-memory configuration.
+        val model = own(ActiveChatViewModel("saved", fake, settings, MutableStateFlow(ConnectivityStatus.CONNECTED))) // Creates one selected-conversation owner.
+        advanceUntilIdle() // Loads the configured state.
+        model.updateDraft("Keep this unsent text") // Supplies an editable draft.
+        assertTrue(model.state.value.canSend) // Checks the initially available interaction.
+        settings.read.value = SettingsReadResult.Success(null) // Simulates an explicit successful key clear.
+        advanceUntilIdle() // Applies absence to the UI prerequisite gate.
+        model.send() // Requests a send after configuration was removed.
+        assertFalse(model.state.value.canSend) // Checks the screen and event share current presence status.
+        assertEquals(0, fake.sends) // Checks the repository was not invoked with absent prerequisites.
+        assertEquals("Keep this unsent text", model.state.value.draft) // Checks the draft remains available after reconfiguration.
+    } // Ends missing-key command gating verification.
+
+    /** Checks unreadable preferences are reported separately and block sends conservatively. */
+    @Test // Covers a failed preference stream while local Room history remains readable.
+    fun settingsReadFailureBlocksSending() = runTest { // Publishes the existing typed settings error.
+        val fake = FakeChats() // Keeps the saved conversation available.
+        val settings = FakeSettings() // Supplies an initially unconfigured preferences stream.
+        settings.read.value = SettingsReadResult.StorageError // Simulates a read failure without raw exception details.
+        val model = own(ActiveChatViewModel("saved", fake, settings, MutableStateFlow(ConnectivityStatus.CONNECTED))) // Keeps connectivity independent of preferences.
+        advanceUntilIdle() // Applies all initial local snapshots.
+        model.updateDraft("Retain the draft") // Allows typing despite unavailable key storage.
+        model.send() // Attempts a send through the conservative UI gate.
+        assertTrue(model.state.value.settingsError) // Checks the screen can explain the actual prerequisite failure.
+        assertFalse(model.state.value.canSend) // Checks unreadable settings are not treated as valid configuration.
+        assertEquals(0, fake.sends) // Checks no interaction was started.
+    } // Ends unreadable-settings gating verification.
+
     private fun active(fake: FakeChats): ActiveChatViewModel { // Supplies simple fake dependencies for active-chat cases.
         val settings = FakeSettings() // Creates a preferences contract without a file.
         settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Represents a configured key without a source constant.

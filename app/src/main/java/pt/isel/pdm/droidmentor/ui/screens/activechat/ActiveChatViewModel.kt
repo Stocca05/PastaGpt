@@ -45,7 +45,19 @@ data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from 
     val failed: Boolean get() = messages.any { it.status == MessageStatus.FAILED } // Keeps full-history validation consistent with the repository.
 
     /** Whether the current draft may start a new explicit send. */
-    val canSend: Boolean get() = !loading && !storageError && chat != null && !working && !pending && !failed && draft.isNotBlank() // Adds UI offline/key gating in its separate M2-24 task; the repository already checks both.
+    val canSend: Boolean // Derives availability from the complete local snapshot.
+        get() = !loading && !storageError && chat != null // Requires readable saved conversation metadata.
+            && connected && hasKey && !settingsError // Blocks new interactions while offline or unconfigured.
+            && !working && !pending && !failed // Rejects concurrent and unresolved turns.
+            && draft.isNotBlank() // Requires actual user input.
+
+    /** Whether the final saved failed user row can be retried now. */
+    val canRetry: Boolean // Shares the same guard between the visible action and its event.
+        get() = !loading && !storageError && chat != null // Requires readable saved history.
+            && connected && hasKey && !settingsError // Requires usable prerequisites before calling the repository.
+            && !working && !pending // Prevents a second operation from owning the same chat.
+            && messages.lastOrNull()?.role == Role.USER // Selects only the final user turn.
+            && messages.lastOrNull()?.status == MessageStatus.FAILED // Selects only an unresolved failed row.
 
     /** Hides drafts and message content in accidental diagnostic output. */
     override fun toString(): String = "ActiveChatUiState(content=<hidden>)" // Avoids printing an unsent draft that could contain sensitive input.
@@ -110,8 +122,8 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
     /** Retries only the final failed user row, preserving its ID and the current unsent draft. */
     fun retry() { // Never appends a duplicate user message from the ViewModel.
         val snapshot = state.value // Captures one coherent selection and operation state.
-        val message = snapshot.messages.lastOrNull() // Selects only the final persisted turn.
-        if (snapshot.loading || snapshot.storageError || snapshot.working || snapshot.pending || message?.role != Role.USER || message.status != MessageStatus.FAILED) return // Rejects invalid or concurrently owned retry targets.
+        if (!snapshot.canRetry) return // Applies the same prerequisite and ownership guard as the screen.
+        val message = snapshot.messages.lastOrNull() ?: return // Reads the final saved target without an unsafe assertion.
         perform(clearDraft = false) { repository.retryMessage(chatId, message.id) } // Sends the same saved row through the repository's guarded retry command.
     } // Ends explicit retry.
 

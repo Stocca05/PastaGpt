@@ -48,7 +48,7 @@ import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Reuses the shared 
 @Composable // Keeps networking and persistence inside the injected ViewModel and repository.
 fun ActiveChatScreen(chatId: String, onBack: () -> Unit) { // Receives only the local navigation argument and return event.
     val factory = remember(chatId) { ActiveChatViewModel.factory(chatId) } // Captures the ID in a manually written constructor binding.
-    val model: ActiveChatViewModel = viewModel(factory = factory) // Uses this destination's owner rather than a global chat ViewModel.
+    val model: ActiveChatViewModel = viewModel(key = chatId, factory = factory) // Keeps different local IDs separate even if Navigation reuses the top destination owner.
     val state by model.state.collectAsStateWithLifecycle() // Observes only immutable Room-derived message state.
     val snackbar = remember { SnackbarHostState() } // Owns local feedback for this conversation.
     val context = LocalContext.current // Resolves safe labels without putting Context in the ViewModel.

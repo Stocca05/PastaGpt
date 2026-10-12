@@ -4,7 +4,7 @@ DroidMentor uses local unit tests for pure logic and simulated networking, and A
 
 ## Scope and current evidence
 
-The current code implements the five screens, manual factories, repositories and offline UI guards. On 2026-10-12, the latest local check passed with 108 debug unit tests, no failures/errors/skips, and lint with 0 errors and 59 existing warnings. The instrumentation APK compiled successfully. No emulator or device was opened or used in this session, as requested.
+The current code implements the five screens, manual factories, repositories and offline UI guards. On 2026-10-12, the latest local check passed with 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, and lint with 0 errors and 59 existing warnings. The instrumentation APK compiled successfully. No emulator or device was opened or used in this session, as requested.
 
 The previous device run on 2026-10-11 passed 73 tests before the real M2 screens were added. It remains evidence for unchanged Room, DataStore, connectivity and repository implementations. It does **not** establish that the new screens have passed device or visual testing. No real Gemini request or real credential has been used in these checks.
 
@@ -141,3 +141,7 @@ The existing device suites cover the planned DAO requirements. Room implementati
 | Exported schema and real persistence | `exportedSchemaMatchesTheInitialDatabaseContract`, disk close/reopen cases |
 
 Fresh device regression for the new screens remains pending in the manual checklist; unchanged DAO coverage is not evidence of tested new UI interactions.
+
+## Selected-chat ownership check — 2026-10-12
+
+Active Chat now supplies its local ID as the Compose ViewModel key. A new factory test checks that two selections under the same owner preserve different captured IDs, while revisiting an existing key reuses its original instance. Final local debug/release builds, both unit suites, lint and instrumentation APK compilation passed with `BUILD SUCCESSFUL in 43s`: 109 tests per variant, no failures/errors/skips. No device test was run.

@@ -104,6 +104,29 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
         assertSame(expected, actual) // Checks the factory did not swallow or replace the failure.
     } // Ends construction error verification.
 
+    /** Checks two conversation keys keep their constructor arguments separate under a reused owner. */
+    @Test // Covers the key-based ownership used when Navigation replaces the top active-chat arguments.
+    fun differentChatKeysKeepTheirSelectedIds() { // Uses one store with factories capturing different harmless local IDs.
+        val dependencies = FakeDependencyContainer() // Shares the same repository contracts across both selections.
+        val store = ViewModelStore() // Simulates a top destination owner reused by Navigation.
+        try { // Clears both selected models even when an assertion fails.
+            val firstFactory = dependencyViewModelFactory(dependencies) { SelectedChatViewModel("first") } // Captures the first local selection.
+            val secondFactory = dependencyViewModelFactory(dependencies) { SelectedChatViewModel("second") } // Captures the second local selection.
+            val firstProvider = ViewModelProvider.create(store, firstFactory, CreationExtras.Empty) // Uses the same owner with the first constructor.
+            val secondProvider = ViewModelProvider.create(store, secondFactory, CreationExtras.Empty) // Uses the same owner with a different constructor argument.
+            val first = firstProvider.get("first", SelectedChatViewModel::class.java) // Looks up the first ID-specific model key.
+            val second = secondProvider.get("second", SelectedChatViewModel::class.java) // Looks up the second ID-specific model key.
+            assertNotSame(first, second) // Checks different conversations do not share a model instance.
+            assertEquals("first", first.chatId) // Checks the first constructor argument was preserved.
+            assertEquals("second", second.chatId) // Checks the second constructor argument was preserved.
+            assertSame(first, secondProvider.get("first", SelectedChatViewModel::class.java)) // Checks revisiting an existing key uses its original model, regardless of a later factory.
+        } finally { // Releases the test-owned model lifetime.
+            store.clear() // Clears only this test's owner and models.
+        } // Ends selected-model cleanup.
+    } // Ends conversation-key ownership verification.
+
+    private class SelectedChatViewModel(val chatId: String) : ViewModel() // Holds only a harmless selected local ID for the key-based ownership check.
+
     private class RepositoryViewModel(dependencies: DependencyContainer) : ViewModel() { // Exists only in tests and implements no future screen behaviour.
         val chatRepository = dependencies.chatRepository // Selects the fake chat contract explicitly.
         val settingsRepository = dependencies.settingsRepository // Selects the fake settings contract explicitly.

@@ -31,6 +31,7 @@
 | 1.0.19 | 12/10/2026 | Luca Raona | M2-17 | Menu principale con logo, titolo e tre azioni; layout semplice e scorrevole. |
 | 1.0.20 | 12/10/2026 | Luca Raona | M2-18 | Schermata Informazioni con versione Gradle, autore, corso, ISEL e crediti; frame Material condiviso. |
 | 1.0.21 | 12/10/2026 | Luca Raona | M2-22 | Tre ViewModel manuali con StateFlow immutabile, eventi Channel e otto test di stato; Title/About statiche senza ViewModel vuoti. |
+| 1.0.22 | 12/10/2026 | Luca Raona | M2-19 | Form della chiave con password, visibilità solo in memoria, salvataggio/cancellazione DataStore, stato configurato e snackbar tipizzate. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -446,6 +447,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verifica M2-22 — 12/10/2026.** Tre ViewModel manuali con StateFlow immutabile, eventi Channel e otto test di stato; Title/About statiche senza ViewModel vuoti. Build/APK compilation passed in 1m 2s. Final local unit/lint verification: BUILD SUCCESSFUL in 34s; eight new ViewModel tests passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verifica M2-19 — 12/10/2026.** Form della chiave con password, visibilità solo in memoria, salvataggio/cancellazione DataStore, stato configurato e snackbar tipizzate. Local verification: BUILD SUCCESSFUL in 58s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Fondazioni e dependency injection manuale
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
@@ -483,7 +486,7 @@ pt/isel/pdm/droidmentor/
 | M2-16 | Grafo di navigazione | `NavHost` con rotte `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, conformi alla Figura 1 dell'enunciato (compresi i percorsi di ritorno). Gestione del back stack. | M | 🟡 | 4 h | M2-03 | ☑ |
 | M2-17 | Title Screen | Menu principale: logo/titolo, voci *Conversazioni*, *Impostazioni*, *Informazioni*. Punto di ingresso dell'app quando non esiste una chat attiva. | M | 🟢 | 2 h | M2-16 | ☑ |
 | M2-18 | About Screen | Nome dell'applicazione, versione, il tuo nome, corso e istituzione, crediti delle librerie di terze parti. | M | 🟢 | 1,5 h | M2-16 | ☑ |
-| M2-19 | Settings Screen | Campo per la chiave API con `PasswordVisualTransformation` e toggle di visibilità, salvataggio, cancellazione, indicatore *chiave configurata / non configurata*, validazione di formato non vuoto, feedback tramite snackbar. | M | 🟡 | 4 h | M2-14, M2-16 | ☐ |
+| M2-19 | Settings Screen | Campo per la chiave API con `PasswordVisualTransformation` e toggle di visibilità, salvataggio, cancellazione, indicatore *chiave configurata / non configurata*, validazione di formato non vuoto, feedback tramite snackbar. | M | 🟡 | 4 h | M2-14, M2-16 | ☑ |
 | M2-20 | Chat History Screen | `LazyColumn` alimentata dal `Flow` di Room: titolo, anteprima dell'ultimo messaggio, data relativa. Stato vuoto illustrato. FAB *Nuova conversazione*. | M | 🟡 | 4 h | M2-12, M2-16 | ☐ |
 | M2-21 | Active Chat Screen | Lista dei messaggi con bubble differenziate per ruolo, barra di input, invio disabilitato durante una richiesta o finché un messaggio fallito resta irrisolto, azione minima *Riprova*, auto-scroll, indicatore di attesa e gestione di `imePadding`. Testo di errore derivato dalla categoria in Room. | M | 🔴 | 6 h | M2-15, M2-16 | ☐ |
 | M2-22 | ViewModel e UiState | Un ViewModel per schermata con stato dinamico e `UiState` immutabile esposto come `StateFlow`; eventi one-shot (snackbar, navigazione) tramite `Channel`/`SharedFlow`. Nessuna logica di business nei Composable. | M | 🟡 | 4 h | M2-02, M2-15 | ☑ |

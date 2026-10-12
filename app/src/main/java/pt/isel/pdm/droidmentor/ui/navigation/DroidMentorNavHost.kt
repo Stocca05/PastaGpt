@@ -22,6 +22,7 @@ import androidx.navigation.navArgument // Describes the active conversation's re
 import pt.isel.pdm.droidmentor.R // Resolves app and destination label resources.
 import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
 import pt.isel.pdm.droidmentor.ui.screens.about.AboutScreen // Supplies the public app information without repository access.
+import pt.isel.pdm.droidmentor.ui.screens.settings.SettingsScreen // Supplies owner-scoped key configuration through its manual ViewModel.
 import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing shared spacing values.
 
 /**
@@ -51,9 +52,9 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
     aboutContent: @Composable (() -> Unit) -> Unit = { onBack -> // Supplies the information screen with its existing return event.
         AboutScreen(onBack) // Keeps public app metadata in its own screen package.
     }, // Ends the real About content.
-    settingsContent: @Composable (() -> Unit) -> Unit = { onBack -> // Reserves key editing for its separate settings task.
-        NavigationPlaceholder(stringResource(R.string.navigation_settings), onBack) // Reads no credential and performs no preference operation.
-    }, // Ends the temporary Settings content.
+    settingsContent: @Composable (() -> Unit) -> Unit = { onBack -> // Supplies the form with its existing return event.
+        SettingsScreen(onBack) // Uses only the destination-scoped ViewModel and its injected settings contract.
+    }, // Ends the real Settings content.
 ) { // Starts the shared navigation graph.
     Surface( // Applies the existing Material theme behind every destination.
         modifier = Modifier.fillMaxSize(), // Fills the Activity's Compose area.

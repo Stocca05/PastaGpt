@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController // Retains navigation s
 import androidx.navigation.navArgument // Describes the active conversation's required route argument.
 import pt.isel.pdm.droidmentor.R // Resolves app and destination label resources.
 import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
+import pt.isel.pdm.droidmentor.ui.screens.about.AboutScreen // Supplies the public app information without repository access.
 import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing shared spacing values.
 
 /**
@@ -47,9 +48,9 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
     activeChatContent: @Composable (String, () -> Unit) -> Unit = { _, onBack -> // Reserves the chat ID for the future message screen and ViewModel.
         NavigationPlaceholder(stringResource(R.string.navigation_active_chat), onBack) // Displays no invented messages or sample conversation data.
     }, // Ends the temporary active conversation content.
-    aboutContent: @Composable (() -> Unit) -> Unit = { onBack -> // Reserves information content for its separate screen task.
-        NavigationPlaceholder(stringResource(R.string.navigation_about), onBack) // Keeps the return path available without adding future app credits.
-    }, // Ends the temporary About content.
+    aboutContent: @Composable (() -> Unit) -> Unit = { onBack -> // Supplies the information screen with its existing return event.
+        AboutScreen(onBack) // Keeps public app metadata in its own screen package.
+    }, // Ends the real About content.
     settingsContent: @Composable (() -> Unit) -> Unit = { onBack -> // Reserves key editing for its separate settings task.
         NavigationPlaceholder(stringResource(R.string.navigation_settings), onBack) // Reads no credential and performs no preference operation.
     }, // Ends the temporary Settings content.

@@ -38,6 +38,7 @@
 | 1.0.26 | 12/10/2026 | Luca Raona | M2-25 | VERIFICATION.md with levels, commands, device matrix, exit criteria and explicit limits of emulator-free verification. |
 | 1.0.27 | 12/10/2026 | Luca Raona | M2-26 | Audited the existing 22 history tests: every planned case covered without duplicate tests. |
 | 1.0.28 | 12/10/2026 | Luca Raona | M2-27 | Audited existing Ktor MockEngine and JSON contract tests: 53 remote tests cover the planned outcomes without duplication. |
+| 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -467,6 +468,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verification M2-27 — 12/10/2026.** Audited existing Ktor MockEngine and JSON contract tests: 53 remote tests cover the planned outcomes without duplication. Focused remote-package command: BUILD SUCCESSFUL in 10s; 53 tests, zero failures/errors/skips. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verification M2-28 — 12/10/2026.** Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. Instrumentation APK check: BUILD SUCCESSFUL in 9s. Last actual device execution on 2026-10-11 passed the unchanged 14 DAO + 7 entity + 5 database cases within the 73-test suite; not rerun today. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Foundations and manual dependency injection
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
@@ -523,7 +526,7 @@ pt/isel/pdm/droidmentor/
 | M2-25 | `VERIFICATION.md` document | Formalisation of the strategy described in section 12: levels, tools, exit criteria, device matrix. It is the source from which the verification part of the video is built. | M | 🟡 | 2 h | — | ☑ |
 | M2-26 | `HistoryPayloadBuilder` tests | Cases: empty history, first message, N completed exchanges plus a new message (`2N + 1`), `seq` ordering, role alternation and final `user` role, long history retained in full, rejection of invalid history and retry of the `FAILED` on the same row. No session identifier in the payload. | M | 🟡 | 3 h | M2-08 | ☑ |
 | M2-27 | Network tests with `MockEngine` | Simulate 200 with a valid payload, 400, 401, 403, 429 with `Retry-After`, 5xx, IO failures, timeouts, malformed JSON, empty responses and blocked responses. Verify typed outcomes and that no network exception propagates to the UI. | M | 🟡 | 4 h | M2-09 | ☑ |
-| M2-28 | Instrumented DAO tests | In-memory Room: inserts and `Flow` observation, cascade deletion, `seq` uniqueness and monotonicity under concurrent inserts, atomic exchange completion, error-category persistence and no duplicate rows on retry. | M | 🟡 | 3 h | M2-12 | ☐ |
+| M2-28 | Instrumented DAO tests | In-memory Room: inserts and `Flow` observation, cascade deletion, `seq` uniqueness and monotonicity under concurrent inserts, atomic exchange completion, error-category persistence and no duplicate rows on retry. | M | 🟡 | 3 h | M2-12 | ☑ |
 | M2-29 | Continuous Integration | GitHub Actions workflow on `push` and `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Status badge in the README. | S | 🟡 | 2 h | M1-07 | ☐ |
 
 ### 9.8 WBS — Workstream G: Delivery

@@ -125,3 +125,19 @@ The existing remote tests already cover the planned Ktor MockEngine scenarios. T
 | Cancellation remains structured | Mapper and source cancellation cases; cancellation is not converted into a false network result |
 
 ViewModels receive local acknowledgements, and saved answer/error content is observed through Room; this boundary is separately checked by repository and ViewModel tests.
+
+## M2-28 Room coverage audit — 2026-10-12
+
+The existing device suites cover the planned DAO requirements. Room implementation, storage tests and exported v1 schema are unchanged from the verified foundation commit `15b270b`. The last actual device run was the 73-test successful run on 2026-10-11, including 14 DAO, 7 entity and 5 persistent-database tests. This session rechecked coverage and compiled the instrumentation APK (`BUILD SUCCESSFUL in 9s`); it did **not** rerun any device test.
+
+| Required case | Existing evidence |
+|---|---|
+| Insert and observe Flow | `messageFlowEmitsInsertedRows`, `chatFlowEmitsTitleChanges`, preview Flow tests |
+| Cascade delete with observation | `deletingChatClearsItsObservedHistory`, entity cascade case |
+| Unique, monotonic per-chat sequence under concurrency | `concurrentInsertsAllocateConsecutiveSequences`, `sequenceAllocationIsSeparateForEachChat`, entity uniqueness cases |
+| Atomic user/model completion and rollback | `completedExchangeSavesBothRowsOnlyOnce`, `failedReplyInsertRollsBackExchangeCompletion` |
+| Persisted error category and same-row retry | `retryKeepsTheSameMessageAndClearsItsError`, entity category cases, disk reopen/retry case |
+| No duplicate retry or reply | Completion duplicate guards and repository retry tests |
+| Exported schema and real persistence | `exportedSchemaMatchesTheInitialDatabaseContract`, disk close/reopen cases |
+
+Fresh device regression for the new screens remains pending in the manual checklist; unchanged DAO coverage is not evidence of tested new UI interactions.

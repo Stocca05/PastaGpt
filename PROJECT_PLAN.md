@@ -38,6 +38,7 @@
 | 1.0.26 | 12/10/2026 | Luca Raona | M2-25 | VERIFICATION.md con livelli, comandi, matrice dispositivi, criteri di uscita e limiti espliciti delle verifiche senza emulatore. |
 | 1.0.27 | 12/10/2026 | Luca Raona | M2-26 | Audit dei 22 test esistenti della cronologia: tutti i casi previsti coperti senza aggiungere test duplicati. |
 | 1.0.28 | 12/10/2026 | Luca Raona | M2-27 | Audit dei test Ktor MockEngine e del contratto JSON: 53 test rete già presenti coprono gli esiti previsti, senza duplicazioni. |
+| 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audit dei test DAO esistenti: concorrenza, Flow, cascade, atomicità, errori e retry coperti; sorgenti Room/schema/test invariati. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -467,6 +468,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verifica M2-27 — 12/10/2026.** Audit dei test Ktor MockEngine e del contratto JSON: 53 test rete già presenti coprono gli esiti previsti, senza duplicazioni. Focused remote-package command: BUILD SUCCESSFUL in 10s; 53 tests, zero failures/errors/skips. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verifica M2-28 — 12/10/2026.** Audit dei test DAO esistenti: concorrenza, Flow, cascade, atomicità, errori e retry coperti; sorgenti Room/schema/test invariati. Instrumentation APK check: BUILD SUCCESSFUL in 9s. Last actual device execution on 2026-10-11 passed the unchanged 14 DAO + 7 entity + 5 database cases within the 73-test suite; not rerun today. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Fondazioni e dependency injection manuale
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
@@ -523,7 +526,7 @@ pt/isel/pdm/droidmentor/
 | M2-25 | Documento `VERIFICATION.md` | Formalizzazione della strategia descritta nella sezione 12: livelli, strumenti, criteri di uscita, matrice dispositivi. È la fonte da cui si costruisce la parte del video dedicata alla verifica. | M | 🟡 | 2 h | — | ☑ |
 | M2-26 | Test di `HistoryPayloadBuilder` | Casi: cronologia vuota, primo messaggio, N scambi completati più nuovo messaggio (`2N + 1`), ordine `seq`, alternanza e ultimo ruolo `user`, cronologia lunga conservata integralmente, rifiuto di cronologia non valida e retry del `FAILED` sulla stessa riga. Nessun identificativo di sessione nel payload. | M | 🟡 | 3 h | M2-08 | ☑ |
 | M2-27 | Test di rete con `MockEngine` | Simulazione di 200 con payload valido, 400, 401, 403, 429 con `Retry-After`, 5xx, IO, timeout, JSON malformato, risposta vuota e risposta bloccata. Verifica degli esiti tipizzati e dell’assenza di eccezioni di rete propagate alla UI. | M | 🟡 | 4 h | M2-09 | ☑ |
-| M2-28 | Test strumentati dei DAO | Room in-memory: inserimenti e osservazione dei `Flow`, cancellazione a cascata, unicità e monotonia di `seq` anche con inserimenti concorrenti, completamento atomico dello scambio, persistenza della categoria di errore e assenza di duplicati al retry. | M | 🟡 | 3 h | M2-12 | ☐ |
+| M2-28 | Test strumentati dei DAO | Room in-memory: inserimenti e osservazione dei `Flow`, cancellazione a cascata, unicità e monotonia di `seq` anche con inserimenti concorrenti, completamento atomico dello scambio, persistenza della categoria di errore e assenza di duplicati al retry. | M | 🟡 | 3 h | M2-12 | ☑ |
 | M2-29 | Continuous Integration | Workflow GitHub Actions su `push` e `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Badge di stato nel README. | S | 🟡 | 2 h | M1-07 | ☐ |
 
 ### 9.8 WBS — Workstream G: Consegna

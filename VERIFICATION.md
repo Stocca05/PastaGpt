@@ -108,3 +108,20 @@ The existing 22 domain tests cover every planned history case; no duplicate test
 | Invalid ownership, identities, sequences, text and stale errors | Dedicated rejection cases in `HistoryPayloadBuilderTest` |
 | Failed-row retry without a duplicate | `unresolvedFailureBlocksLaterTurns`, `retryUsesTheSameRowAfterItsErrorIsCleared` |
 | No shared conversation session | `independentCallsDoNotShareHistory`; builder output contains only role/text turns, with request JSON separately checked by DTO/source tests |
+
+## M2-27 network coverage audit — 2026-10-12
+
+The existing remote tests already cover the planned Ktor MockEngine scenarios. The focused remote-package run passed with `BUILD SUCCESSFUL in 10s`: 53 tests (8 client, 12 DTO, 20 result mapper, 13 source), zero failures/errors/skips. No real network or credential was used.
+
+| Required case | Existing evidence |
+|---|---|
+| 200 with usable answer and actual JSON | Mapper success cases, DTO contract tests and source request tests |
+| 400, 401, 403, 429 and 5xx | `httpFailuresAreMappedBeforeReadingTheirBodies`, source failure cases |
+| Retry-After numeric/date/invalid metadata | `unsignedRetryDelaysArePreserved`, `retryDatesUseTheCurrentClockAndRoundUp`, `invalidRetryMetadataIsIgnoredSafely` |
+| IO and timeout, including body reads | `transportExceptionsAreTypedWithoutTheirDetails`, `ktorRequestTimerProducesTypedTimeout`, `bodyReadFailureIsANetworkFailure` |
+| Malformed, empty and blocked replies | Mapper response rejection cases and source response tests |
+| Stateless complete history and repeated persona | DTO and source tests inspect actual request JSON, changed keys and long retained history |
+| No raw failure or credential exposure | Safe diagnostic/logging tests and typed error-category mapping |
+| Cancellation remains structured | Mapper and source cancellation cases; cancellation is not converted into a false network result |
+
+ViewModels receive local acknowledgements, and saved answer/error content is observed through Room; this boundary is separately checked by repository and ViewModel tests.

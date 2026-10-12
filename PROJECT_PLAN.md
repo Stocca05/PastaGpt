@@ -36,6 +36,7 @@
 | 1.0.24 | 12/10/2026 | Luca Raona | M2-21 | Chat Room con bubble per ruolo, input multilinea, invio protetto, attesa, retry sulla stessa riga, errori persistiti e gestione tastiera; eliminati i placeholder. |
 | 1.0.25 | 12/10/2026 | Luca Raona | M2-24 | Banner offline persistente, invio/retry protetti da rete e chiave, bozze ancora modificabili e tre nuovi test sui prerequisiti. |
 | 1.0.26 | 12/10/2026 | Luca Raona | M2-25 | VERIFICATION.md con livelli, comandi, matrice dispositivi, criteri di uscita e limiti espliciti delle verifiche senza emulatore. |
+| 1.0.27 | 12/10/2026 | Luca Raona | M2-26 | Audit dei 22 test esistenti della cronologia: tutti i casi previsti coperti senza aggiungere test duplicati. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -461,6 +462,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verifica M2-25 — 12/10/2026.** VERIFICATION.md con livelli, comandi, matrice dispositivi, criteri di uscita e limiti espliciti delle verifiche senza emulatore. Document references, command blocks, current test counts and git diff --check verified; latest application build/unit/lint/APK check remains the successful M2-24 run. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verifica M2-26 — 12/10/2026.** Audit dei 22 test esistenti della cronologia: tutti i casi previsti coperti senza aggiungere test duplicati. Focused HistoryPayloadBuilderTest command: BUILD SUCCESSFUL in 27s; 22 tests, zero failures/errors/skips. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Fondazioni e dependency injection manuale
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
@@ -515,7 +518,7 @@ pt/isel/pdm/droidmentor/
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
 |---|---|---|---|---|---|---|---|
 | M2-25 | Documento `VERIFICATION.md` | Formalizzazione della strategia descritta nella sezione 12: livelli, strumenti, criteri di uscita, matrice dispositivi. È la fonte da cui si costruisce la parte del video dedicata alla verifica. | M | 🟡 | 2 h | — | ☑ |
-| M2-26 | Test di `HistoryPayloadBuilder` | Casi: cronologia vuota, primo messaggio, N scambi completati più nuovo messaggio (`2N + 1`), ordine `seq`, alternanza e ultimo ruolo `user`, cronologia lunga conservata integralmente, rifiuto di cronologia non valida e retry del `FAILED` sulla stessa riga. Nessun identificativo di sessione nel payload. | M | 🟡 | 3 h | M2-08 | ☐ |
+| M2-26 | Test di `HistoryPayloadBuilder` | Casi: cronologia vuota, primo messaggio, N scambi completati più nuovo messaggio (`2N + 1`), ordine `seq`, alternanza e ultimo ruolo `user`, cronologia lunga conservata integralmente, rifiuto di cronologia non valida e retry del `FAILED` sulla stessa riga. Nessun identificativo di sessione nel payload. | M | 🟡 | 3 h | M2-08 | ☑ |
 | M2-27 | Test di rete con `MockEngine` | Simulazione di 200 con payload valido, 400, 401, 403, 429 con `Retry-After`, 5xx, IO, timeout, JSON malformato, risposta vuota e risposta bloccata. Verifica degli esiti tipizzati e dell’assenza di eccezioni di rete propagate alla UI. | M | 🟡 | 4 h | M2-09 | ☐ |
 | M2-28 | Test strumentati dei DAO | Room in-memory: inserimenti e osservazione dei `Flow`, cancellazione a cascata, unicità e monotonia di `seq` anche con inserimenti concorrenti, completamento atomico dello scambio, persistenza della categoria di errore e assenza di duplicati al retry. | M | 🟡 | 3 h | M2-12 | ☐ |
 | M2-29 | Continuous Integration | Workflow GitHub Actions su `push` e `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Badge di stato nel README. | S | 🟡 | 2 h | M1-07 | ☐ |

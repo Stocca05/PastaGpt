@@ -93,3 +93,18 @@ Local exit criteria: debug/release compilation and unit tests pass, instrumentat
 10. Images are outside M2; any later support must persist only file paths/URIs, never Base64 in Room.
 
 The requested code work stops at M2-29. Video, link publication and the `mentor_2` delivery tag remain M2-30 and M2-31.
+
+## M2-26 history coverage audit — 2026-10-12
+
+The existing 22 domain tests cover every planned history case; no duplicate test was added. The focused Gradle command passed with `BUILD SUCCESSFUL in 27s`, 22 tests, zero failures/errors/skips.
+
+| Required case | Existing test evidence |
+|---|---|
+| Empty history and first user turn | `emptyHistoryIsRejected`, `firstPendingUserProducesOneTurn` |
+| All N prior exchanges plus current user | `everyCompletedExchangeIsIncluded` |
+| Sequence ordering and large/gapped positions | `sequenceDeterminesTurnOrder`, `timestampsDoNotReorderTurns`, `largeAndNonContiguousSequencesAreAccepted` |
+| Strict roles, final user, valid statuses | `initialModelTurnIsRejected`, `consecutiveEqualRolesAreRejected`, `completedHistoryWithoutPendingUserIsRejected`, `everyStatusCombinationIsChecked` |
+| Full long history and untouched input | `longHistoryAndTextAreNotTruncated`, `inputMessagesAreNeverChanged` |
+| Invalid ownership, identities, sequences, text and stale errors | Dedicated rejection cases in `HistoryPayloadBuilderTest` |
+| Failed-row retry without a duplicate | `unresolvedFailureBlocksLaterTurns`, `retryUsesTheSameRowAfterItsErrorIsCleared` |
+| No shared conversation session | `independentCallsDoNotShareHistory`; builder output contains only role/text turns, with request JSON separately checked by DTO/source tests |

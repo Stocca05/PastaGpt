@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">DroidMentor</string>
+    <string name="title_subtitle">Your Android programming mentor</string>
     <string name="navigation_chat_history">Conversations</string>
     <string name="navigation_active_chat">Active conversation</string>
     <string name="navigation_about">About</string>

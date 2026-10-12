@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Simple conversation mark used only by the Title screen. Compose supplies the theme tint. -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M8,6H40A4,4 0,0 1,44 10V32A4,4 0,0 1,40 36H20L8,44V36A4,4 0,0 1,4 32V10A4,4 0,0 1,8 6ZM8,10V32H12V36.5L18.8,32H40V10Z"
+        android:fillType="evenOdd" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M12,16H36V20H12ZM12,24H28V28H12Z" />
+</vector>

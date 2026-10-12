@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable // Adds each Compose destination t
 import androidx.navigation.compose.rememberNavController // Retains navigation state across recomposition and saved-state restoration.
 import androidx.navigation.navArgument // Describes the active conversation's required route argument.
 import pt.isel.pdm.droidmentor.R // Resolves app and destination label resources.
+import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
 import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing shared spacing values.
 
 /**
@@ -37,9 +38,9 @@ import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing 
 @Composable // Displays the graph inside the app's existing theme.
 fun DroidMentorNavHost( // Allows screen tasks and tests to supply content without duplicating graph logic.
     navController: NavHostController = rememberNavController(), // Uses Compose's saved controller instead of a process-wide navigation singleton.
-    titleContent: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { _, _, _ -> // Reserves the three menu events for the Title screen task.
-        NavigationPlaceholder(stringResource(R.string.app_name)) // Preserves the existing initial app label without implementing the future menu.
-    }, // Ends the temporary Title content.
+    titleContent: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { onHistory, onSettings, onAbout -> // Supplies the main menu with the graph's three navigation events.
+        TitleScreen(onHistory, onSettings, onAbout) // Keeps navigation ownership in the graph and menu layout in its screen package.
+    }, // Ends the real Title content.
     chatHistoryContent: @Composable ((String) -> Unit, () -> Unit) -> Unit = { _, onBack -> // Reserves chat selection for the Room-backed history screen task.
         NavigationPlaceholder(stringResource(R.string.navigation_chat_history), onBack) // Displays the destination with its actual return callback.
     }, // Ends the temporary history content.

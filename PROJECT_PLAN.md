@@ -28,6 +28,7 @@
 | 1.0.16 | 11/10/2026 | Luca Raona | M2-01 completato | Application registrata, grafo manuale lazy condiviso, Context.app e quattro test del service locator superati |
 | 1.0.17 | 11/10/2026 | Luca Raona | M2-02 completato | DependencyContainer implementato dall’Application, factory manuale AndroidX, sei test locali e due su dispositivo superati |
 | 1.0.18 | 11/10/2026 | Luca Raona | M2-16 completato | Grafo delle cinque destinazioni conforme alla Figura 1, ritorni e stato salvato, nove test Android superati |
+| 1.0.19 | 12/10/2026 | Luca Raona | M2-17 | Menu principale con logo, titolo e tre azioni; layout semplice e scorrevole. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -437,6 +438,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verifica M2-16 — 11/10/2026.** Letta e ispezionata visivamente la Figura 1 dell’[enunciato ufficiale del corso](https://github.com/isel-leic-pdm/2627i/blob/main/assignments/PDM-2627-Assignment.pdf), pagina 2. Aggiunti `DroidMentorRoutes` e `DroidMentorNavHost`, collegato a MainActivity e alle preview. Cinque destinazioni: Title iniziale, ChatHistory, ActiveChat/{chatId}, About, Settings. Callback del grafo per Title→History/Settings/About e History→ActiveChat; i ritorni usano popBackStack verso la voce precedente, senza aggiungere nuove Title. launchSingleTop evita duplicati della destinazione superiore. L’ID locale obbligatorio è codificato con Uri.encode e decodificato dagli argomenti Navigation, senza trasportare messaggi o chiavi; una selezione vuota non cambia destinazione. rememberNavController conserva lo stato salvato della composizione e il back stack. Questo non implementa la sessione DataStore M3-06. Slot Compose consentono ai task delle schermate di aggiungere i propri contenuti ricevendo soltanto eventi e ID, senza controller: in questa verifica i controlli sono fixture di test; l’app mostra ancora etichette provvisorie, senza menu reale, lista Room, editor chiave o chat. Otto test del grafo coprono tutte le rotte e i ritorni Figura 1, Back Android, eventi duplicati, ID riservati, selezioni vuote e ripristino dello stato; un nono test verifica MainActivity reale e assenza del pulsante Back sulla Title iniziale. Prima prova completa fallita in 45 s per cinque interazioni con controlli sovrapposti nelle fixture; corretto il solo layout di test, otto test mirati passati in 23 s. Verifica finale `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 46s`, 97 test unitari in debug + gli stessi 97 in release + 73 su dispositivo, zero fallimenti/errori/saltati. Lint: 0 errori e gli stessi 59 avvisi precedenti. Nessuna nuova dipendenza, chiave o chiamata reale a Gemini. Reinstallazione debug riuscita in 4 s, avvio a freddo confermato `Status: ok`, `LaunchState: COLD`, 356 ms. Schermate M2-17..M2-21 e ViewModel M2-22 restano da implementare.
 
+> **Verifica M2-17 — 12/10/2026.** Menu principale con logo, titolo e tre azioni; layout semplice e scorrevole. Local verification: BUILD SUCCESSFUL in 1m 23s; debug/release build, unit tests, lint and instrumentation APK compilation passed. The initial incremental resource build was interrupted while waiting for generated files; the clean build passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Fondazioni e dependency injection manuale
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
@@ -472,7 +475,7 @@ pt/isel/pdm/droidmentor/
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
 |---|---|---|---|---|---|---|---|
 | M2-16 | Grafo di navigazione | `NavHost` con rotte `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, conformi alla Figura 1 dell'enunciato (compresi i percorsi di ritorno). Gestione del back stack. | M | 🟡 | 4 h | M2-03 | ☑ |
-| M2-17 | Title Screen | Menu principale: logo/titolo, voci *Conversazioni*, *Impostazioni*, *Informazioni*. Punto di ingresso dell'app quando non esiste una chat attiva. | M | 🟢 | 2 h | M2-16 | ☐ |
+| M2-17 | Title Screen | Menu principale: logo/titolo, voci *Conversazioni*, *Impostazioni*, *Informazioni*. Punto di ingresso dell'app quando non esiste una chat attiva. | M | 🟢 | 2 h | M2-16 | ☑ |
 | M2-18 | About Screen | Nome dell'applicazione, versione, il tuo nome, corso e istituzione, crediti delle librerie di terze parti. | M | 🟢 | 1,5 h | M2-16 | ☐ |
 | M2-19 | Settings Screen | Campo per la chiave API con `PasswordVisualTransformation` e toggle di visibilità, salvataggio, cancellazione, indicatore *chiave configurata / non configurata*, validazione di formato non vuoto, feedback tramite snackbar. | M | 🟡 | 4 h | M2-14, M2-16 | ☐ |
 | M2-20 | Chat History Screen | `LazyColumn` alimentata dal `Flow` di Room: titolo, anteprima dell'ultimo messaggio, data relativa. Stato vuoto illustrato. FAB *Nuova conversazione*. | M | 🟡 | 4 h | M2-12, M2-16 | ☐ |

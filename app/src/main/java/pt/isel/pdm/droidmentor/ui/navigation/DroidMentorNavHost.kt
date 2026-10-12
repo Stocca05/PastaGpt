@@ -1,35 +1,26 @@
 package pt.isel.pdm.droidmentor.ui.navigation // Owns route registration and navigation callbacks for the five M2 screens.
 
-import androidx.compose.foundation.layout.Arrangement // Spaces the temporary destination label and return button.
-import androidx.compose.foundation.layout.Column // Holds the temporary destination's minimal content.
 import androidx.compose.foundation.layout.fillMaxSize // Lets each destination use the full host area.
-import androidx.compose.foundation.layout.padding // Adds the shared screen padding.
-import androidx.compose.foundation.layout.safeDrawingPadding // Keeps temporary content outside system bars and cutouts.
 import androidx.compose.material3.MaterialTheme // Reuses the app's existing colours and typography.
 import androidx.compose.material3.Surface // Gives the navigation host the app's themed background.
-import androidx.compose.material3.Text // Displays each temporary destination's label.
-import androidx.compose.material3.TextButton // Provides a minimal visible return action before real screens are implemented.
 import androidx.compose.runtime.Composable // Marks the host and screen content as Compose UI.
-import androidx.compose.ui.Alignment // Centres the temporary destination content.
 import androidx.compose.ui.Modifier // Describes the host and content layout.
-import androidx.compose.ui.res.stringResource // Resolves destination labels from Android resources.
 import androidx.navigation.NavHostController // Receives the controller owned by this host instead of passing it into screens.
 import androidx.navigation.NavType // Declares that the active conversation argument is a required string.
 import androidx.navigation.compose.NavHost // Registers destinations and integrates the system Back action.
 import androidx.navigation.compose.composable // Adds each Compose destination to the graph.
 import androidx.navigation.compose.rememberNavController // Retains navigation state across recomposition and saved-state restoration.
 import androidx.navigation.navArgument // Describes the active conversation's required route argument.
-import pt.isel.pdm.droidmentor.R // Resolves app and destination label resources.
 import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
 import pt.isel.pdm.droidmentor.ui.screens.about.AboutScreen // Supplies the public app information without repository access.
 import pt.isel.pdm.droidmentor.ui.screens.settings.SettingsScreen // Supplies owner-scoped key configuration through its manual ViewModel.
 import pt.isel.pdm.droidmentor.ui.screens.chathistory.ChatHistoryScreen // Supplies the saved Room-backed conversation list.
-import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing shared spacing values.
+import pt.isel.pdm.droidmentor.ui.screens.activechat.ActiveChatScreen // Supplies the selected conversation's Room-derived messages.
 
 /**
  * Hosts the M2 graph with Title as its initial destination and callbacks matching the assignment's Figure 1.
  *
- * Content slots keep this task limited to navigation: later screen tasks replace the minimal placeholders.
+ * Content slots keep this task limited to navigation: tests can replace screen content without duplicating the graph.
  * Screens receive events and a local chat ID, never the controller or a network result.
  * @param navController The host's controller; normally created and saved by Compose.
  * @param titleContent Content receiving history, settings and about navigation callbacks, in that order.
@@ -47,9 +38,9 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
     chatHistoryContent: @Composable ((String) -> Unit, () -> Unit) -> Unit = { onOpenChat, onBack -> // Supplies the saved list with its two navigation events.
         ChatHistoryScreen(onOpenChat, onBack) // Uses its own manually injected repository ViewModel.
     }, // Ends the real history content.
-    activeChatContent: @Composable (String, () -> Unit) -> Unit = { _, onBack -> // Reserves the chat ID for the future message screen and ViewModel.
-        NavigationPlaceholder(stringResource(R.string.navigation_active_chat), onBack) // Displays no invented messages or sample conversation data.
-    }, // Ends the temporary active conversation content.
+    activeChatContent: @Composable (String, () -> Unit) -> Unit = { chatId, onBack -> // Supplies only the saved local ID and return event.
+        ActiveChatScreen(chatId, onBack) // Uses the selected entry's manually constructed ViewModel.
+    }, // Ends the real active conversation content.
     aboutContent: @Composable (() -> Unit) -> Unit = { onBack -> // Supplies the information screen with its existing return event.
         AboutScreen(onBack) // Keeps public app metadata in its own screen package.
     }, // Ends the real About content.
@@ -105,19 +96,3 @@ private fun NavHostController.openDestination(route: String) { // Keeps the same
         launchSingleTop = true // Repeated events for the same top destination do not add duplicate back-stack entries.
     } // Ends the forward navigation options.
 } // Ends the shared navigation helper.
-
-@Composable // Displays only minimal content until each screen's own M2 task is completed.
-private fun NavigationPlaceholder(title: String, onBack: (() -> Unit)? = null) { // Keeps temporary UI separate from route and back-stack logic.
-    Column( // Groups the destination label and optional Back action.
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(DroidMentorSpacing.large), // Keeps content centred within the safe, padded screen area.
-        verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium, Alignment.CenterVertically), // Gives the return action a clear gap below the label.
-        horizontalAlignment = Alignment.CenterHorizontally, // Aligns temporary content in the centre of the screen.
-    ) { // Starts the minimal destination content.
-        Text(title, style = MaterialTheme.typography.headlineMedium) // Displays only the app or destination name.
-        if (onBack != null) { // Leaves the Title root without an in-app return action.
-            TextButton(onClick = onBack) { // Uses the graph's actual pop action instead of navigating to a new Title.
-                Text(stringResource(R.string.navigation_back)) // Reads the visible return label from resources.
-            } // Ends the temporary Back button.
-        } // Ends optional return content.
-    } // Ends the temporary destination layout.
-} // Ends the minimal navigation placeholder.

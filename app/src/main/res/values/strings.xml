@@ -38,4 +38,22 @@
     <string name="history_empty">No conversations yet. Start a new one.</string>
     <string name="history_no_messages">No messages yet</string>
     <string name="history_read_error">Saved conversations could not be read.</string>
+    <string name="chat_read_error">Saved messages could not be read.</string>
+    <string name="chat_empty">Ask your Android mentor a question.</string>
+    <string name="chat_waiting">Waiting for a reply…</string>
+    <string name="chat_draft_label">Message</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_retry">Retry</string>
+    <string name="chat_you">You</string>
+    <string name="chat_mentor">Mentor</string>
+    <string name="message_invalid_key">The API key or model access was rejected. Check Settings.</string>
+    <string name="message_bad_request">The provider rejected this request.</string>
+    <string name="message_rate_limited">The request limit was reached. Retry later.</string>
+    <string name="message_server_error">The provider is temporarily unavailable. Retry later.</string>
+    <string name="message_network_error">The connection failed. Check your connection and retry.</string>
+    <string name="message_timeout">The request timed out. You can retry this message.</string>
+    <string name="message_malformed">The reply could not be read. You can retry this message.</string>
+    <string name="message_empty">The provider returned no usable reply.</string>
+    <string name="message_blocked">The provider blocked this request or reply.</string>
+    <string name="message_unknown">The attempt did not complete. You can retry this message.</string>
 </resources>

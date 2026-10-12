@@ -4,9 +4,9 @@ DroidMentor uses local unit tests for pure logic and simulated networking, and A
 
 ## Scope and current evidence
 
-The current code implements the five screens, manual factories, repositories and offline UI guards. On 2026-10-12, the latest local check passed with 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, and lint with 0 errors and 59 existing warnings. The instrumentation APK compiled successfully. No emulator or device was opened or used in this session, as requested.
+The current code implements the five screens, manual factories, repositories and offline UI guards. On 2026-10-12, the latest local check passed with 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, and lint with 0 errors and 59 existing warnings. A later emulator verification on the same date passed 80 Android tests on Android 14 / API 34. Both app variants compiled, lint still reported 0 errors and 59 existing warnings, and no unit or device test failed or was skipped.
 
-The previous device run on 2026-10-11 passed 73 tests before the real M2 screens were added. It remains evidence for unchanged Room, DataStore, connectivity and repository implementations. It does **not** establish that the new screens have passed device or visual testing. No real Gemini request or real credential has been used in these checks.
+The 2026-10-11 run of 73 tests is historical evidence. The newer 80-test run includes six real-screen cases using production ViewModels, real isolated Room storage and Ktor MockEngine. Production history and preferences were left untouched. Real provider access remains a separate check; simulated responses do not prove BYOK access or quotas.
 
 ## Levels and coverage
 
@@ -55,24 +55,24 @@ A clean build is useful in this cloud-synchronised workspace because older gener
 
 | Device/API | Status |
 |---|---|
-| Emulator Android 14 / API 34, arm64 | Previous 73-test run passed on 2026-10-11; new screen tests not executed |
+| Emulator Android 14 / API 34, arm64 | 80-test run passed on 2026-10-12, including six new screen interaction cases |
 | Android API 26, the declared minimum | Pending |
 | Android API 35, the declared target | Pending |
 | Physical phone | Pending |
-| Small viewport, landscape and enlarged font | Pending visual and interaction checks |
-| Light and dark themes | Existing theme checked previously; new screens still need visual checks |
+| Small viewport, landscape and enlarged font | 320×640 viewport checked; Title tested with font scale 1.8 in portrait and landscape, with scrolling to every action |
+| Light and dark themes | Title, Settings and About inspected; light/dark About and enlarged-font Title checked on 2026-10-12 |
 
 ## Manual checklist before the M2 demo
 
-- [ ] Open all three Title actions and return using the visible Back action and Android Back.
-- [ ] Confirm About displays the actual Gradle version, author, course and library credits.
-- [ ] Enter the user's key directly in Settings; test masking, visibility, save and clear without printing or recording its value.
-- [ ] Create and reopen a local chat; verify empty state, previews and dates.
+- [x] Open all three Title actions and return using the visible Back action and Android Back.
+- [x] Confirm About displays the actual Gradle version, author, course and library credits.
+- [x] Check Settings masking, visibility, save and clear with generated fictitious input in an isolated contract. Enter any real key only in the app for a separate live-provider check.
+- [x] Create an isolated local chat from the actual history action; verify persisted-ID navigation and empty state. Production history/date layout remains available for manual use.
 - [ ] Complete a real Gemini exchange and a second turn using the full saved history and repeated persona.
-- [ ] Reopen the conversation offline; confirm saved messages remain readable, the banner stays visible and the draft remains editable.
-- [ ] Confirm Send/Retry stay disabled with missing prerequisites or an unresolved attempt; verify retry reuses the saved row.
-- [ ] Confirm keyboard handling, multiline input, scrolling and readable role bubbles on a device.
-- [ ] Confirm typed persisted error text is shown without raw provider response or credential content.
+- [x] Confirm an isolated persisted conversation remains readable after changing the injected validated status to offline; the actual banner stays visible and its draft remains editable. Physical emulator connectivity is separately covered by ConnectivityObserver tests.
+- [x] Confirm Send/Retry stay disabled with missing prerequisites or an unresolved attempt; verify retry reuses the saved row.
+- [x] Exercise actual input, keyboard and message widgets during emulator tests; inspect scrollable Title under enlarged font and landscape. Other APIs/physical-device layouts remain pending.
+- [x] Confirm typed persisted error text is shown without raw provider response or credential content.
 - [ ] Confirm screenshots and the milestone video never reveal a credential.
 
 A real provider check is separate from MockEngine tests. The BYOK project's model access and quotas still require live verification; do not assume simulation proves access.
@@ -151,3 +151,19 @@ Active Chat now supplies its local ID as the Compose ViewModel key. A new factor
 The Android CI workflow is configured for push, pull request and manual dispatch. YAML parsing, required triggers, read-only permissions, four 40-character release commit references, executable wrapper mode and emulator-free task selection were checked locally. The action releases were verified against their official GitHub repositories; Java/Gradle workflow structure follows [GitHub's Gradle guidance](https://docs.github.com/en/actions/tutorials/build-and-test-code/java-with-gradle).
 
 The final local command passed in 43 seconds after the selected-ID fix: 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, lint 0 errors and 59 unchanged warnings, both app variants and instrumentation APK compilation successful. A preceding clean full run passed in 1m 11s. Device tests were not executed. A GitHub-hosted run has not yet been observed; local validation does not establish a successful remote run or a green badge.
+
+## Emulator verification — 2026-10-12
+
+The existing full suite first passed with 74 device tests and both 109-test unit variants (`BUILD SUCCESSFUL in 2m 5s`). Six new `ScreenDeviceTest` cases now cover actual Settings password/save/clear controls, offline local creation from history, a pending send followed by the Room-persisted model row, a saved provider error followed by same-row retry, readable offline history with editable input, and missing-key UI gating. They use only generated fictitious input, in-memory test preferences, isolated production-schema Room and the real Ktor/source/result-mapper stack around MockEngine. ViewModel cancellation is awaited before test storage closes.
+
+ActiveChatScreen accepts an explicit model for isolated screen tests; its default still uses the ID-keyed manual factory and the destination owner. No business operation or production credential was moved into a Composable.
+
+Cloud synchronisation caused source/resource IO timeouts, temporarily missing tracked files and identical numbered copies of source/resources/generated dex. Missing tracked files were restored only from the verified commit; identical conflict copies were preserved outside source. Tests were then run from a managed checkout outside the synchronised Documents directory, based on the same commit plus the verification changes. No dependency or app version was changed to bypass these failures.
+
+Final command in that checkout:
+
+```bash
+./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon
+```
+
+Result: `BUILD SUCCESSFUL in 1m 13s`, 109 debug unit tests, the same 109 release unit tests, 80 Android tests, zero failures/errors/skips, lint 0 errors and 59 unchanged warnings. `installDebug` succeeded in 6s; a final cold launch returned `Status: ok`, `LaunchState: COLD`, 1467 ms. Theme, font, rotation and network settings were restored to their original values. The emulator remains available for the separate live-key check.

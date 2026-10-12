@@ -473,6 +473,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verification M2-29 — 12/10/2026.** GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. Workflow YAML/triggers/permissions/action refs and tracked executable wrapper validated. Final local debug/release build, both unit suites, lint and instrumentation APK compilation: BUILD SUCCESSFUL in 43s; 109 tests per variant, zero failures/errors/skips, lint 0 errors/59 existing warnings. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Emulator verification — 2026-10-12.** Original 74-device-test suite passed, then six real-screen cases were added using isolated Room, real ViewModels and Ktor MockEngine. Verified fake-key form controls, offline local creation, pending/persisted reply, error/same-row retry, editable offline draft and missing-key guard. ActiveChatScreen permits explicit test model injection while retaining the ID-keyed manual factory by default. Because synchronised-folder IO and generated conflict copies interrupted builds, the same commit plus test changes was checked in a managed checkout outside Documents. `BUILD SUCCESSFUL in 1m 13s`: 109 unit tests per variant + 80 Android tests, zero failures/errors/skips, lint 0 errors/59 warnings. Inspected menu, Settings and About, light/dark contrast and font 1.8/landscape menu scrolling; original settings restored. Live Gemini verification remains separate and requires a key entered only in the app.
+
 ### 9.2 WBS — Workstream A: Foundations and manual dependency injection
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |

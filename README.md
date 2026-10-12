@@ -296,3 +296,9 @@ No emulator was opened or used for the new screens in this session. Instrumentat
 The workflow and badge are configured locally. A successful GitHub-hosted execution has not yet been observed; publishing the branch and checking that first run remain separate from the local verification recorded here.
 
 Final local verification on 2026-10-12: `BUILD SUCCESSFUL in 43s`, 109 unit tests in debug and the same 109 in release, zero failures/errors/skips, lint 0 errors and 59 existing warnings. Both variants and the instrumentation APK compiled. The selected local chat ID also keys its ViewModel, preventing different conversations from reusing one state under a reused navigation owner.
+
+## Emulator verification — 2026-10-12
+
+A later full emulator run passed all 80 Android tests plus 109 unit tests per variant (`BUILD SUCCESSFUL in 1m 13s`), with lint at 0 errors and 59 existing warnings. Six new real-screen cases verify Settings input/commands, offline history creation, pending and persisted chat replies, same-row retry, offline draft retention and missing-key guards using isolated Room and simulated Ktor responses. Title, Settings and About were inspected; theme contrast and enlarged-font/landscape menu scrolling were checked. See [VERIFICATION.md](VERIFICATION.md) for the command and evidence limits.
+
+A real Gemini exchange still requires a key entered directly by the user in the app; these successful simulated checks do not establish provider access or quota.

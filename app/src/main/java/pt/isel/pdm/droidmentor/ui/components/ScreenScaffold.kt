@@ -20,6 +20,7 @@ fun ScreenScaffold( // Keeps the repeated screen frame readable without moving b
     title: String, // Displays the screen's resource-backed title.
     onBack: () -> Unit, // Invokes the navigation callback supplied by the graph.
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, // Allows a screen to provide its own feedback state.
+    floatingActionButton: @Composable () -> Unit = {}, // Lets history display its explicit new-conversation action.
     content: @Composable (PaddingValues) -> Unit, // Lets the caller apply the app bar and system padding to its own layout.
 ) { // Starts the common screen frame.
     Scaffold( // Uses Material's system-inset handling rather than manual status-bar measurements.
@@ -32,6 +33,7 @@ fun ScreenScaffold( // Keeps the repeated screen frame readable without moving b
             ) // Ends the screen app bar.
         }, // Ends the app bar slot.
         snackbarHost = { SnackbarHost(snackbarHostState) }, // Displays typed feedback requested by a screen.
+        floatingActionButton = floatingActionButton, // Places the caller's primary action above system insets.
         content = content, // Supplies the reserved padding to the screen's body.
     ) // Ends the common layout.
 } // Ends the reusable screen frame.

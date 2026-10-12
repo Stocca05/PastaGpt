@@ -23,6 +23,7 @@ import pt.isel.pdm.droidmentor.R // Resolves app and destination label resources
 import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the real main menu while other screen tasks remain separate.
 import pt.isel.pdm.droidmentor.ui.screens.about.AboutScreen // Supplies the public app information without repository access.
 import pt.isel.pdm.droidmentor.ui.screens.settings.SettingsScreen // Supplies owner-scoped key configuration through its manual ViewModel.
+import pt.isel.pdm.droidmentor.ui.screens.chathistory.ChatHistoryScreen // Supplies the saved Room-backed conversation list.
 import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses the existing shared spacing values.
 
 /**
@@ -43,9 +44,9 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
     titleContent: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { onHistory, onSettings, onAbout -> // Supplies the main menu with the graph's three navigation events.
         TitleScreen(onHistory, onSettings, onAbout) // Keeps navigation ownership in the graph and menu layout in its screen package.
     }, // Ends the real Title content.
-    chatHistoryContent: @Composable ((String) -> Unit, () -> Unit) -> Unit = { _, onBack -> // Reserves chat selection for the Room-backed history screen task.
-        NavigationPlaceholder(stringResource(R.string.navigation_chat_history), onBack) // Displays the destination with its actual return callback.
-    }, // Ends the temporary history content.
+    chatHistoryContent: @Composable ((String) -> Unit, () -> Unit) -> Unit = { onOpenChat, onBack -> // Supplies the saved list with its two navigation events.
+        ChatHistoryScreen(onOpenChat, onBack) // Uses its own manually injected repository ViewModel.
+    }, // Ends the real history content.
     activeChatContent: @Composable (String, () -> Unit) -> Unit = { _, onBack -> // Reserves the chat ID for the future message screen and ViewModel.
         NavigationPlaceholder(stringResource(R.string.navigation_active_chat), onBack) // Displays no invented messages or sample conversation data.
     }, // Ends the temporary active conversation content.

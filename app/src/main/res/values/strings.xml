@@ -32,4 +32,10 @@
     <string name="notice_invalid_history">This saved conversation cannot be sent.</string>
     <string name="notice_invalid_retry">This message cannot be retried.</string>
     <string name="notice_storage_error">Changes could not be saved. Try again later.</string>
+    <string name="history_new_title">New conversation</string>
+    <string name="history_new_chat">New conversation</string>
+    <string name="history_creating">Creating…</string>
+    <string name="history_empty">No conversations yet. Start a new one.</string>
+    <string name="history_no_messages">No messages yet</string>
+    <string name="history_read_error">Saved conversations could not be read.</string>
 </resources>

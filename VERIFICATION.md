@@ -145,3 +145,9 @@ Fresh device regression for the new screens remains pending in the manual checkl
 ## Selected-chat ownership check — 2026-10-12
 
 Active Chat now supplies its local ID as the Compose ViewModel key. A new factory test checks that two selections under the same owner preserve different captured IDs, while revisiting an existing key reuses its original instance. Final local debug/release builds, both unit suites, lint and instrumentation APK compilation passed with `BUILD SUCCESSFUL in 43s`: 109 tests per variant, no failures/errors/skips. No device test was run.
+
+## M2-29 CI configuration — 2026-10-12
+
+The Android CI workflow is configured for push, pull request and manual dispatch. YAML parsing, required triggers, read-only permissions, four 40-character release commit references, executable wrapper mode and emulator-free task selection were checked locally. The action releases were verified against their official GitHub repositories; Java/Gradle workflow structure follows [GitHub's Gradle guidance](https://docs.github.com/en/actions/tutorials/build-and-test-code/java-with-gradle).
+
+The final local command passed in 43 seconds after the selected-ID fix: 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, lint 0 errors and 59 unchanged warnings, both app variants and instrumentation APK compilation successful. A preceding clean full run passed in 1m 11s. Device tests were not executed. A GitHub-hosted run has not yet been observed; local validation does not establish a successful remote run or a green badge.

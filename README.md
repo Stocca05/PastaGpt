@@ -1,5 +1,7 @@
 # DroidMentor (PastaGPT)
 
+[![Android CI](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml/badge.svg)](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml)
+
 A BYOK (Bring Your Own Key) Android LLM client built for the **Mobile Devices Programming (PDM)** course at **Instituto Superior de Engenharia de Lisboa (ISEL)**, Winter Semester 2026/2027. 
 It uses Google Gemini's REST API in stateless mode and acts as a senior Android engineering mentor.
 
@@ -22,8 +24,8 @@ It uses Google Gemini's REST API in stateless mode and acts as a senior Android 
 
 * 🇮🇹 [PROJECT_PLAN.md](PROJECT_PLAN.md) (Piano di Progetto)
 * 🇬🇧 [PROJECT_PLAN.en.md](PROJECT_PLAN.en.md) (Project Plan)
-* [VERIFICATION.md](VERIFICATION.md) (to be added)
-* [CONTRIBUTING.md](CONTRIBUTING.md) (to be added)
+* [VERIFICATION.md](VERIFICATION.md) (verification strategy and evidence)
+* [CONTRIBUTING.md](CONTRIBUTING.md) (contribution guidelines)
 
 ## Tech stack
 
@@ -235,7 +237,7 @@ It finished with `BUILD SUCCESSFUL in 37s`: 97 unit tests in debug, the same 97 
 
 `ui/navigation/DroidMentorNavHost.kt` registers `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About` and `Settings`, with Title as the M2 start destination. Paths follow Figure 1, page 2 of the [official course assignment](https://github.com/isel-leic-pdm/2627i/blob/main/assignments/PDM-2627-Assignment.pdf): Title opens history, settings or information; history opens a selected or newly created conversation by its local ID. Return callbacks use `popBackStack`, preserving the existing Title and history entries. Navigation Compose handles system Back, and `launchSingleTop` avoids duplicate top entries from repeated events. `DroidMentorRoutes` centralises names and safely URI-encodes the required chat ID; the graph receives its original decoded value and ignores blank selections.
 
-MainActivity now hosts this graph. Separate Compose content slots receive only the callbacks and local ID needed by each screen, so later screen tasks can provide their real UI without controller access or business logic in the graph. Default content is intentionally minimal: the app still displays the Title label, with destination labels and return actions available for subsequent screen integration. The Title menu is implemented below; history, settings, active chat and their ViewModels are implemented in separate M2 tasks. `rememberNavController` restores saved composition state and the previous back stack; persistent active-session restoration remains M3-06.
+MainActivity now hosts this graph. Separate Compose content slots receive only the callbacks and local ID needed by each screen, so later screen tasks can provide their real UI without controller access or business logic in the graph. The default content now uses the real Title, history, settings, About and active-chat screens; tests can still supply isolated content. All five M2 screens are now connected below through their own content and manually constructed ViewModels for dynamic state. `rememberNavController` restores saved composition state and the previous back stack; persistent active-session restoration remains M3-06.
 
 Eight Android graph tests use test-only content to exercise registration, all Figure 1 branches and returns, system Back, repeated events, reserved and percent-like ID characters, invalid selection and saved controller restoration. One further test launches the actual MainActivity and checks the initial Title content has no Back button. The first full run failed in 45 seconds on overlapping controls in test fixtures; arranging those controls in separate rows fixed the interactions, and all eight focused graph tests passed in 23 seconds.
 
@@ -267,7 +269,7 @@ This app is a BYOK (Bring Your Own Key) client. The user obtains an API key from
    ```bash
    ./gradlew :app:installDebug
    ```
-   Open **DroidMentor** from the device's app launcher. The current scaffold displays the app name.
+   Open **DroidMentor** from the device's app launcher. The app opens the main menu with Conversations, Settings and About.
 
 To check the M2 dependency configuration, build the app and instrumentation APK, run available unit tests and run Android lint:
 ```bash
@@ -278,3 +280,19 @@ The unit-test task runs the settings repository error-path tests, HTTP client co
 ## Main menu (M2-17)
 
 `TitleScreen` displays a local conversation mark, the application title and three resource-backed actions: Conversations, Settings and About. It receives callbacks only. The layout scrolls when space is limited and uses the existing theme. Verification on 2026-10-12: debug/release builds, unit tests, lint and instrumentation APK compilation passed (`BUILD SUCCESSFUL in 1m 23s`). No emulator was opened; the real-menu Android test is compiled but not executed in this session.
+
+## M2 screens and local verification — 2026-10-12
+
+The five screens are connected to the existing navigation graph. Settings exposes only configured-key status and a new in-memory password draft. History observes saved Room summaries and creates an empty local chat before navigation. Active Chat displays full saved messages, role bubbles, persisted error labels, a multiline draft, same-row retry, waiting state and keyboard insets. Validated connectivity and configured-key presence gate Send/Retry while offline history remains readable and the draft stays editable.
+
+Title and About are static callback-based screens. Settings, history and active chat use manual factories, immutable StateFlow snapshots and lifecycle-aware one-shot event collection. Temporary navigation placeholders have been removed. App statements and model fields retain short English study comments.
+
+No emulator was opened or used for the new screens in this session. Instrumentation APK compilation is not device execution; visual, keyboard and live Gemini checks remain pending as listed in [VERIFICATION.md](VERIFICATION.md). M2-30 video and M2-31 delivery/tag work remain outside this code-only scope.
+
+## Continuous integration (M2-29)
+
+`.github/workflows/android-ci.yml` runs the wrapper's debug build, unit tests, lint and instrumentation APK compilation on push and pull request, with an optional manual trigger. It uses JDK 17 and SDK Platform 35, read-only repository permissions and four action references pinned to the exact official release commits verified on 2026-10-12. Library and plugin versions remain those in the catalog. No emulator, API key or real Gemini request is required.
+
+The workflow and badge are configured locally. A successful GitHub-hosted execution has not yet been observed; publishing the branch and checking that first run remain separate from the local verification recorded here.
+
+Final local verification on 2026-10-12: `BUILD SUCCESSFUL in 43s`, 109 unit tests in debug and the same 109 in release, zero failures/errors/skips, lint 0 errors and 59 existing warnings. Both variants and the instrumentation APK compiled. The selected local chat ID also keys its ViewModel, preventing different conversations from reusing one state under a reused navigation owner.

@@ -35,6 +35,7 @@
 | 1.0.23 | 12/10/2026 | Luca Raona | M2-20 | Room list with stable IDs, preview and relative date, illustrated empty state and local new-chat FAB. |
 | 1.0.24 | 12/10/2026 | Luca Raona | M2-21 | Room chat with role bubbles, multiline input, guarded sending, waiting indicator, same-row retry, persisted errors and keyboard handling; placeholders removed. |
 | 1.0.25 | 12/10/2026 | Luca Raona | M2-24 | Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. |
+| 1.0.26 | 12/10/2026 | Luca Raona | M2-25 | VERIFICATION.md with levels, commands, device matrix, exit criteria and explicit limits of emulator-free verification. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -458,6 +459,8 @@ pt/isel/pdm/droidmentor/
 
 > **Verification M2-24 — 12/10/2026.** Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. Local verification: BUILD SUCCESSFUL in 1m 6s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
 
+> **Verification M2-25 — 12/10/2026.** VERIFICATION.md with levels, commands, device matrix, exit criteria and explicit limits of emulator-free verification. Document references, command blocks, current test counts and git diff --check verified; latest application build/unit/lint/APK check remains the successful M2-24 run. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
 ### 9.2 WBS — Workstream A: Foundations and manual dependency injection
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
@@ -511,7 +514,7 @@ pt/isel/pdm/droidmentor/
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-25 | `VERIFICATION.md` document | Formalisation of the strategy described in section 12: levels, tools, exit criteria, device matrix. It is the source from which the verification part of the video is built. | M | 🟡 | 2 h | — | ☐ |
+| M2-25 | `VERIFICATION.md` document | Formalisation of the strategy described in section 12: levels, tools, exit criteria, device matrix. It is the source from which the verification part of the video is built. | M | 🟡 | 2 h | — | ☑ |
 | M2-26 | `HistoryPayloadBuilder` tests | Cases: empty history, first message, N completed exchanges plus a new message (`2N + 1`), `seq` ordering, role alternation and final `user` role, long history retained in full, rejection of invalid history and retry of the `FAILED` on the same row. No session identifier in the payload. | M | 🟡 | 3 h | M2-08 | ☐ |
 | M2-27 | Network tests with `MockEngine` | Simulate 200 with a valid payload, 400, 401, 403, 429 with `Retry-After`, 5xx, IO failures, timeouts, malformed JSON, empty responses and blocked responses. Verify typed outcomes and that no network exception propagates to the UI. | M | 🟡 | 4 h | M2-09 | ☐ |
 | M2-28 | Instrumented DAO tests | In-memory Room: inserts and `Flow` observation, cascade deletion, `seq` uniqueness and monotonicity under concurrent inserts, atomic exchange completion, error-category persistence and no duplicate rows on retry. | M | 🟡 | 3 h | M2-12 | ☐ |

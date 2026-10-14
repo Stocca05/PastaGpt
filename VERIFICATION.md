@@ -68,14 +68,14 @@ A clean build is useful in this cloud-synchronised workspace because older gener
 - [x] Confirm About displays the actual Gradle version, author, course and library credits.
 - [x] Check Settings masking, visibility, save and clear with generated fictitious input in an isolated contract. Enter any real key only in the app for a separate live-provider check.
 - [x] Create an isolated local chat from the actual history action; verify persisted-ID navigation and empty state. Production history/date layout remains available for manual use.
-- [ ] Complete a real Gemini exchange and a second turn using the full saved history and repeated persona.
+- [x] Complete a real Gemini exchange and a second turn: on 2026-10-14 the author confirmed two consecutive real replies in the app. This is author-reported manual evidence; the agent did not inspect that live exchange. Full-history payload and repeated persona are covered independently by automated tests.
 - [x] Confirm an isolated persisted conversation remains readable after changing the injected validated status to offline; the actual banner stays visible and its draft remains editable. Physical emulator connectivity is separately covered by ConnectivityObserver tests.
 - [x] Confirm Send/Retry stay disabled with missing prerequisites or an unresolved attempt; verify retry reuses the saved row.
 - [x] Exercise actual input, keyboard and message widgets during emulator tests; inspect scrollable Title under enlarged font and landscape. Other APIs/physical-device layouts remain pending.
 - [x] Confirm typed persisted error text is shown without raw provider response or credential content.
 - [ ] Confirm screenshots and the milestone video never reveal a credential.
 
-A real provider check is separate from MockEngine tests. The BYOK project's model access and quotas still require live verification; do not assume simulation proves access.
+A real provider check is separate from MockEngine tests. The author reported a successful two-turn live check on 2026-10-14; access and quota must still be checked before recording the demo.
 
 ## Exit criteria and assignment constraints
 
@@ -92,7 +92,7 @@ Local exit criteria: debug/release compilation and unit tests pass, instrumentat
 9. Network failures are typed, and structured coroutine cancellation is preserved.
 10. Images are outside M2; any later support must persist only file paths/URIs, never Base64 in Room.
 
-The requested code work stops at M2-29. Video, link publication and the `mentor_2` delivery tag remain M2-30 and M2-31.
+Implementation is complete through M2-29. Delivery work now covers M2-30 and M2-31: [the recording script](M2_VIDEO_SCRIPT.md) is ready, while the actual video, accessible link and annotated `mentor_2` tag remain pending.
 
 ## M2-26 history coverage audit — 2026-10-12
 
@@ -150,7 +150,15 @@ Active Chat now supplies its local ID as the Compose ViewModel key. A new factor
 
 The Android CI workflow is configured for push, pull request and manual dispatch. YAML parsing, required triggers, read-only permissions, four 40-character release commit references, executable wrapper mode and emulator-free task selection were checked locally. The action releases were verified against their official GitHub repositories; Java/Gradle workflow structure follows [GitHub's Gradle guidance](https://docs.github.com/en/actions/tutorials/build-and-test-code/java-with-gradle).
 
-The final local command passed in 43 seconds after the selected-ID fix: 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, lint 0 errors and 59 unchanged warnings, both app variants and instrumentation APK compilation successful. A preceding clean full run passed in 1m 11s. Device tests were not executed. A GitHub-hosted run has not yet been observed; local validation does not establish a successful remote run or a green badge.
+The final local command passed in 43 seconds after the selected-ID fix: 109 debug unit tests and the same 109 release unit tests, no failures/errors/skips, lint 0 errors and 59 unchanged warnings, both app variants and instrumentation APK compilation successful. A preceding clean full run passed in 1m 11s. Device tests were not executed in that earlier check; the later emulator run is recorded below.
+
+On 2026-10-14, the status and logs of [GitHub Actions run 38383593411](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) were checked. The run completed successfully on 2026-10-13 for `8ad0d772efa035f35d9aaa196eef2b6456295b4f` on `codex/m2-dependencies`. The exact hosted command was:
+
+```bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --console=plain --no-daemon
+```
+
+Real log output: `BUILD SUCCESSFUL in 4m 2s`, `83 actionable tasks: 83 executed`. Every workflow step succeeded. This proves the hosted build/test/lint check; it does not represent a device run or live Gemini exchange.
 
 ## Emulator verification — 2026-10-12
 

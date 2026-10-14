@@ -1,6 +1,6 @@
 # DroidMentor (PastaGPT)
 
-[![Android CI](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml/badge.svg)](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml)
+[![Android CI](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml/badge.svg?branch=codex%2Fm2-dependencies)](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml?query=branch%3Acodex%2Fm2-dependencies)
 
 A BYOK (Bring Your Own Key) Android LLM client built for the **Mobile Devices Programming (PDM)** course at **Instituto Superior de Engenharia de Lisboa (ISEL)**, Winter Semester 2026/2027. 
 It uses Google Gemini's REST API in stateless mode and acts as a senior Android engineering mentor.
@@ -25,6 +25,7 @@ It uses Google Gemini's REST API in stateless mode and acts as a senior Android 
 * 🇮🇹 [PROJECT_PLAN.md](PROJECT_PLAN.md) (Piano di Progetto)
 * 🇬🇧 [PROJECT_PLAN.en.md](PROJECT_PLAN.en.md) (Project Plan)
 * [VERIFICATION.md](VERIFICATION.md) (verification strategy and evidence)
+* [M2_VIDEO_SCRIPT.md](M2_VIDEO_SCRIPT.md) (Italian recording script and delivery checklist)
 * [CONTRIBUTING.md](CONTRIBUTING.md) (contribution guidelines)
 
 ## Tech stack
@@ -293,7 +294,7 @@ No emulator was opened or used for the new screens in this session. Instrumentat
 
 `.github/workflows/android-ci.yml` runs the wrapper's debug build, unit tests, lint and instrumentation APK compilation on push and pull request, with an optional manual trigger. It uses JDK 17 and SDK Platform 35, read-only repository permissions and four action references pinned to the exact official release commits verified on 2026-10-12. Library and plugin versions remain those in the catalog. No emulator, API key or real Gemini request is required.
 
-The workflow and badge are configured locally. A successful GitHub-hosted execution has not yet been observed; publishing the branch and checking that first run remain separate from the local verification recorded here.
+The M2 branch is published. [The first GitHub-hosted run](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for commit `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, with all 83 tasks executed. This covers debug compilation, unit tests, lint and instrumentation APK compilation; device tests are executed separately on the emulator. The badge follows `codex/m2-dependencies`.
 
 Final local verification on 2026-10-12: `BUILD SUCCESSFUL in 43s`, 109 unit tests in debug and the same 109 in release, zero failures/errors/skips, lint 0 errors and 59 existing warnings. Both variants and the instrumentation APK compiled. The selected local chat ID also keys its ViewModel, preventing different conversations from reusing one state under a reused navigation owner.
 
@@ -301,4 +302,8 @@ Final local verification on 2026-10-12: `BUILD SUCCESSFUL in 43s`, 109 unit test
 
 A later full emulator run passed all 80 Android tests plus 109 unit tests per variant (`BUILD SUCCESSFUL in 1m 13s`), with lint at 0 errors and 59 existing warnings. Six new real-screen cases verify Settings input/commands, offline history creation, pending and persisted chat replies, same-row retry, offline draft retention and missing-key guards using isolated Room and simulated Ktor responses. Title, Settings and About were inspected; theme contrast and enlarged-font/landscape menu scrolling were checked. See [VERIFICATION.md](VERIFICATION.md) for the command and evidence limits.
 
-A real Gemini exchange still requires a key entered directly by the user in the app; these successful simulated checks do not establish provider access or quota.
+On 2026-10-14 the author confirmed two consecutive real Gemini replies in the app. This is author-reported manual evidence, separate from the simulated test suite; the agent did not inspect that exchange. The key is entered only in the app.
+
+## M2 delivery preparation — 2026-10-14
+
+All 29 implementation/verification tasks are checked in the plan. [The recording script](M2_VIDEO_SCRIPT.md) prepares the required 5–7 minute demonstration, design discussion, verification strategy and project status. M2-30 stays open until the actual recording is uploaded and accessible. M2-31 stays open until its real video link is committed and the annotated `mentor_2` tag is pushed. The script is preparation, not the video deliverable.

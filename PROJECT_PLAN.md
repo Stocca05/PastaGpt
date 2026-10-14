@@ -40,6 +40,7 @@
 | 1.0.28 | 12/10/2026 | Luca Raona | M2-27 | Audit dei test Ktor MockEngine e del contratto JSON: 53 test rete già presenti coprono gli esiti previsti, senza duplicazioni. |
 | 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audit dei test DAO esistenti: concorrenza, Flow, cascade, atomicità, errori e retry coperti; sorgenti Room/schema/test invariati. |
 | 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | Workflow GitHub Actions per push/PR, JDK 17, SDK 35, azioni ufficiali fissate a commit verificati, build/test/lint e badge; prima esecuzione remota ancora da verificare dopo il push. |
+| 1.0.31 | 14/10/2026 | Luca Raona | Preparazione M2-30 | CI remota riuscita; due risposte Gemini reali confermate dall’autore; scaletta del video pronta, registrazione/link/tag ancora aperti. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -535,6 +536,8 @@ pt/isel/pdm/droidmentor/
 | M2-29 | Continuous Integration | Workflow GitHub Actions su `push` e `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Badge di stato nel README. | S | 🟡 | 2 h | M1-07 | ☑ |
 
 ### 9.8 WBS — Workstream G: Consegna
+
+> **Preparazione consegna — 14/10/2026.** [CI GitHub](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) completata il 13/10/2026 sul commit `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, 83 task eseguiti. L’autore ha confermato in chat due risposte reali consecutive di Gemini; questa è evidenza manuale riferita dall’autore, distinta dai test automatici. Preparata [la scaletta del video](M2_VIDEO_SCRIPT.md), durata prevista 6:30. M2-30 e M2-31 restano aperti fino a registrazione, link accessibile e tag pubblicato. L’interfaccia attuale resta quella della M2; la rifinitura grafica è prevista in M3-16 e i controlli finali in MF-07.
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
 |---|---|---|---|---|---|---|---|

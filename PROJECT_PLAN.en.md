@@ -40,6 +40,7 @@
 | 1.0.28 | 12/10/2026 | Luca Raona | M2-27 | Audited existing Ktor MockEngine and JSON contract tests: 53 remote tests cover the planned outcomes without duplication. |
 | 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. |
 | 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. |
+| 1.0.31 | 14/10/2026 | Luca Raona | M2-30 preparation | Hosted CI passed; author confirmed two real Gemini replies; recording script ready, actual recording/link/tag still pending. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -535,6 +536,8 @@ pt/isel/pdm/droidmentor/
 | M2-29 | Continuous Integration | GitHub Actions workflow on `push` and `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Status badge in the README. | S | 🟡 | 2 h | M1-07 | ☑ |
 
 ### 9.8 WBS — Workstream G: Delivery
+
+> **Delivery preparation — 2026-10-14.** [GitHub CI](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, 83 tasks executed. The author confirmed two consecutive real Gemini replies in chat; this is author-reported manual evidence, separate from automated tests. [The recording script](M2_VIDEO_SCRIPT.md) is ready with a planned duration of 6:30. M2-30 and M2-31 remain open until recording, an accessible link and the published tag are complete. The current interface remains the M2 version; UI refinement is planned under M3-16 and final checks under MF-07.
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|

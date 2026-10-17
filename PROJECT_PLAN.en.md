@@ -10,6 +10,38 @@
 | Version | Date | Author | Status | Notes |
 |---|---|---|---|---|
 | 1.0 | 18/09/2026 | Luca Raona | Approved for M1 | Initial version delivered with `mentor_1` |
+| 1.0.1 | 09/10/2026 | Luca Raona | M2 decisions agreed | Complete history, initial schema, sends and errors; no functional task marked complete |
+| 1.0.2 | 09/10/2026 | Luca Raona | M2-03 completed | Package layout, Material 3 theme and verified light/dark rendering |
+| 1.0.3 | 09/10/2026 | Luca Raona | M2-04 completed | Six domain models; simple English teaching comments across app Kotlin code |
+| 1.0.4 | 09/10/2026 | Luca Raona | M2-11 completed | Room entities, enum converters and seven passing entity storage tests |
+| 1.0.5 | 09/10/2026 | Luca Raona | M2-12 completed | Production DAOs, latest-message relation, atomic writes and fourteen passing DAO tests |
+| 1.0.6 | 09/10/2026 | Luca Raona | M2-13 completed | Production database v1, exported Git-tracked schema and five passing database tests |
+| 1.0.7 | 10/10/2026 | Luca Raona | M2-14 completed | Dedicated key DataStore, typed storage outcomes and twelve passing settings tests |
+| 1.0.8 | 10/10/2026 | Luca Raona | M2-05 completed | Configured Ktor client, diagnostics without sensitive data and eight client tests passing in debug and release |
+| 1.0.9 | 10/10/2026 | Luca Raona | M2-06 completed | Gemini DTOs and data-layer turn conversion, twelve JSON contract tests passed |
+| 1.0.10 | 10/10/2026 | Luca Raona | M2-08 completed | Domain history builder, typed rejections and twenty-two passing validation tests |
+| 1.0.11 | 10/10/2026 | Luca Raona | M2-10 completed | Centralised mentor persona, teaching tone, commented Kotlin examples and course constraints |
+| 1.0.12 | 10/10/2026 | Luca Raona | M2-09 completed | Typed API outcomes, HTTP/response mapper, persisted error conversion and twenty passing tests |
+| 1.0.13 | 11/10/2026 | Luca Raona | M2-07 completed | Stateless Gemini data source, mandatory connectivity gate and thirteen passing integration tests |
+| 1.0.14 | 11/10/2026 | Luca Raona | M2-23 completed | Validated Android connectivity, callback cleanup, ten local and three device tests passed |
+| 1.0.15 | 11/10/2026 | Luca Raona | M2-15 completed | Offline-first Room repository, per-chat sends, same-row retry and twenty-three passing integration tests |
+| 1.0.16 | 11/10/2026 | Luca Raona | M2-01 completed | Registered Application, shared lazy manual graph, Context.app and four service locator tests passed |
+| 1.0.17 | 11/10/2026 | Luca Raona | M2-02 completed | Application implements DependencyContainer, manual AndroidX factory, six local and two device tests passed |
+| 1.0.18 | 11/10/2026 | Luca Raona | M2-16 completed | Five-destination graph matching Figure 1, return paths and saved state, nine Android tests passed |
+| 1.0.19 | 12/10/2026 | Luca Raona | M2-17 | Main menu with logo, title and three actions; simple scrollable layout. |
+| 1.0.20 | 12/10/2026 | Luca Raona | M2-18 | About screen with Gradle version, author, course, ISEL and credits; shared Material screen frame. |
+| 1.0.21 | 12/10/2026 | Luca Raona | M2-22 | Three manual ViewModels with immutable StateFlow, Channel events and eight state tests; static Title/About need no empty ViewModels. |
+| 1.0.22 | 12/10/2026 | Luca Raona | M2-19 | Key form with password masking, in-memory visibility, DataStore save/clear, configured status and typed snackbars. |
+| 1.0.23 | 12/10/2026 | Luca Raona | M2-20 | Room list with stable IDs, preview and relative date, illustrated empty state and local new-chat FAB. |
+| 1.0.24 | 12/10/2026 | Luca Raona | M2-21 | Room chat with role bubbles, multiline input, guarded sending, waiting indicator, same-row retry, persisted errors and keyboard handling; placeholders removed. |
+| 1.0.25 | 12/10/2026 | Luca Raona | M2-24 | Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. |
+| 1.0.26 | 12/10/2026 | Luca Raona | M2-25 | VERIFICATION.md with levels, commands, device matrix, exit criteria and explicit limits of emulator-free verification. |
+| 1.0.27 | 12/10/2026 | Luca Raona | M2-26 | Audited the existing 22 history tests: every planned case covered without duplicate tests. |
+| 1.0.28 | 12/10/2026 | Luca Raona | M2-27 | Audited existing Ktor MockEngine and JSON contract tests: 53 remote tests cover the planned outcomes without duplication. |
+| 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. |
+| 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. |
+| 1.0.31 | 14/10/2026 | Luca Raona | M2-30 preparation | Hosted CI passed; author confirmed two real Gemini replies; recording script ready, actual recording/link/tag still pending. |
+| 1.0.32 | 17/10/2026 | Luca Raona | M2 code delivery | At the author's request, integrate into main and tag mentor_2 before the video; upload planned for 18/10, video checklist remains open. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -132,10 +164,10 @@ Three-layer architecture with unidirectional data flow (UDF), without any DI fra
 
 The UI **never observes** a network call result directly. The cycle is:
 
-1. The user sends a message → the repository immediately inserts it into Room with status `SENDING`.
+1. The user sends a message → the repository checks the key, connectivity and absence of unresolved messages, then inserts it into Room with status `SENDING`.
 2. The DAO's `Flow` notifies the UI, which displays the message right away (*optimistic update*).
 3. The repository checks connectivity, builds the payload with **all** the history and calls Gemini.
-4. The outcome is written to Room: the model's reply as a new row with role `MODEL`, or the message updated to status `FAILED`.
+4. On success, a Room transaction inserts the `MODEL` reply and marks the user message `SENT`. On failure, the message becomes `FAILED` with a persisted error category.
 5. The UI updates again by observing Room only.
 
 This choice satisfies V3, V5 and V7 simultaneously and makes the offline-reading requirement trivial.
@@ -350,66 +382,165 @@ Build the entire architectural scaffolding and reach a **demonstrable vertical s
 
 Pay particular attention to the fact that Milestone 2 explicitly requires the video to contain a **description of the elected verification strategy**: the workstream F tasks are neither optional nor deferrable.
 
+### 9.1.1 Agreed M2 decisions — 09/10/2026
+
+These decisions resolve ambiguities in the initial plan. They define the behaviour to implement in M2; they do not mark implementation tasks as complete.
+
+1. **Complete history.** Each request includes every completed exchange and the current user message, ordered by `seq`. Older turns are never removed to save tokens. After N completed exchanges, the next request contains `2N + 1` elements; roles start with `user`, alternate and end with `user`.
+2. **Initial Room schema.** Version 1 contains `chats` and `messages`, including `seq` and a nullable error category. The `(chatId, seq)` pair is unique; sequence allocation and insertion are atomic. `imagePath` is excluded from the M2 schema and domain. Later schema evolution follows actual implemented changes, with no migration dedicated to adding `seq`.
+3. **One send per chat.** The send button remains disabled during a request. The repository enforces the same rule and rejects new turns while an unresolved `SENDING` or `FAILED` message exists in the chat. Invalid local history never triggers a request.
+4. **States and atomic completion.** `SENDING` means a user message is awaiting a reply; `SENT` means a completed exchange; `FAILED` means an attempt ended without a usable reply. Persisting the `MODEL` reply and marking the user message `SENT` happen in the same transaction. Persisted model messages have status `SENT`.
+5. **Minimal manual recovery.** M2 includes a *Retry* action to resume a failed send. It reuses the same user row, changes `FAILED` to `SENDING`, clears the error category and rebuilds the complete history. Failed messages are never skipped to append a new turn. Automatic backoff is outside the M2 implementation.
+6. **Send prerequisites.** A missing key or unavailable network blocks sending; history remains readable and the draft remains editable. The repository rechecks the prerequisites and verifies connectivity immediately before each call. Connectivity loss during a request produces a persisted failure.
+7. **Errors observed through Room.** `ApiResult` stays in the data layer. HTTP errors, timeouts, IO failures, malformed JSON, empty responses and blocked responses are typed outcomes mapped to a category persisted in the message. The UI translates that category into understandable text; neither raw error bodies nor API keys are persisted in Room.
+8. **Domain independent of Gemini.** `HistoryPayloadBuilder` produces domain turns containing role and text. Gemini DTOs and turn conversion belong in `data/remote`; the domain imports no Android, Room, Ktor or data-layer DTOs.
+9. **Model and persona.** One centralised model name. Initial candidate: `gemini-3.5-flash-lite`, documented by [Google](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite); access for the BYOK project must be checked before live tests. Use stateless `generateContent` and repeat `system_instruction` on every call.
+
+### 9.1.2 Mandatory package layout
+
+```text
+pt/isel/pdm/droidmentor/
+├── DroidMentorApplication.kt
+├── MainActivity.kt
+├── di/ — DependencyContainer.kt
+├── domain/
+├── data/
+│   ├── local/ — entity/, dao/, converter/, relation/
+│   ├── remote/ — dto/, HttpClientFactory.kt, GeminiRemoteDataSource.kt, ApiResult.kt
+│   ├── preferences/
+│   ├── repository/
+│   └── connectivity/
+└── ui/
+    ├── theme/
+    ├── navigation/
+    ├── screens/<screen>/
+    └── components/
+```
+
+> **M2-03 verification — 09/10/2026.** Package directories prepared; four Kotlin theme files added; initial content, native launch theme and light/dark previews connected. `./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:installDebug --console=plain`: `BUILD SUCCESSFUL in 3s`, lint 0 errors and 59 warnings, unit tests `NO-SOURCE`. Cold launch and system light/dark switching verified on the Android 14 emulator (API 34). All 12 text/background colour pairs per palette exceed 4.5:1 contrast; minimum 6.46:1 in light mode and 5.49:1 in dark mode.
+
+> **M2-04 verification — 09/10/2026.** Added `Chat`, `Message`, `Role`, `MessageStatus`, `MessageErrorCategory` and `ConversationTurn`, with read-only fields and public KDoc. The domain has no imports or framework annotations. Checked local string IDs, `Long` timestamps and sequence, typed optional errors, and turns limited to role and text. Every code line in the 11 app Kotlin files now has a simple English explanation; this preference is recorded in `AGENTS.md`. `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain`: `BUILD SUCCESSFUL in 4s`, lint 0 errors and 59 warnings, unit tests `NO-SOURCE`. This task adds data models; history validation and state transitions remain separate implementation tasks.
+
+> **M2-11 verification — 09/10/2026.** Added `ChatEntity`, `MessageEntity` and `MessageConverters`: local primary keys, `CASCADE` foreign key, `chatId` index and unique `(chatId, seq)` index, typed enums with null error preservation, no credential or image columns. Seven instrumented SQLite tests passed on Android 14 (API 34): completed exchange round-trip and ordering, Long sequence and null error, all error categories, cascade isolation, duplicate sequence rejection, same sequence in different chats, missing-parent rejection. The in-memory database and minimal DAO exist only under `androidTest`; production M2-12, M2-13 and the full M2-28 DAO suite remain pending. `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 31s`, 7 tests / 0 failures / 0 errors / 0 skips, lint 0 errors and 59 warnings, unit tests `NO-SOURCE`.
+
+> **M2-12 verification — 09/10/2026.** Added `ChatDao`, `MessageDao` and `ChatWithLastMessage`, with line-by-line teaching comments. Verified full ordered histories, nullable latest-message previews, chat and message Flow updates, child-error changes with an unchanged parent, twenty concurrent per-chat sequence allocations, independent chat sequences, guarded failure/retry on the same row, atomic completion, replay rejection, rollback after reply-ID conflict, duplicate-ID rejection and cascade deletion. The test-only database exposes the production DAOs; the app database M2-13 and full DAO verification task M2-28 remain pending. After regenerating stale duplicated build outputs, `./gradlew clean :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 17s`, 21 tests passed (14 DAO + 7 entity), no failures/errors/skips, lint 0 errors and 59 warnings, unit tests `NO-SOURCE`.
+
+> **M2-13 verification — 09/10/2026.** Added the version-one `DroidMentorDatabase`, its two DAO accessors and a persistent builder using application context, a stable app file name and test-only file-name overrides. Main-thread queries and destructive migration fallbacks remain disabled. KSP exports `app/schemas/pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase/1.json`, added to Git tracking and instrumentation assets. The 14 DAO tests now use the real app database in memory; 5 additional tests verify disk close/reopen persistence, retained errors and retry, missing-migration data preservation, main-thread protection and exported schema constraints. `./gradlew clean :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 17s`, 26 device tests passed (7 entity + 14 DAO + 5 database), no failures/errors/skips, lint 0 errors and 55 warnings, unit tests `NO-SOURCE`. Service locator M2-01 and final DAO verification M2-28 remain pending.
+
+> **M2-14 verification — 10/10/2026.** Added the single-instance `ApiKeyDataStore`, `SettingsRepository` interface, `DataStoreSettingsRepository` and typed read/write results. Verified null for an unconfigured key, save/reopen persistence, trimming and replacement, blank rejection without writes, selective clear and persisted deletion, Flow save/clear emissions, corrupt-file preservation and singleton reuse. Six unit tests cover read/write failures, unexpected storage exceptions, cancellation and redacted result text; six device settings tests use generated fictitious values and isolated preferences files. Key values are not logged or asserted as printable expected/actual values. `./gradlew clean :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 30s`, 6 unit + 32 device tests passed, no failures/errors/skips, lint 0 errors and 59 warnings. Manual service-locator wiring M2-01 and the Settings screen M2-19 remain pending.
+
+> **M2-05 verification — 10/10/2026.** Added `HttpClientFactory` with a client-owned OkHttp engine, JSON accepting unknown fields and omitting nulls, connect 10 s/socket 60 s timeouts and the Gemini base URL. HTTP failure statuses remain inspectable for the later mapper; automatic redirects are disabled. `BuildConfig.DEBUG` enables `Logging` only in debug: INFO without headers/bodies, with a logger that discards the original text and emits a fixed message without URLs or exception details. Eight tests verify the engine and cleanup, build variant, relative URL and JSON, engine timeout propagation, preserved HTTP statuses, blocked redirects, log privacy on success/failure and absent release logging. No real Gemini calls; only MockEngine and fictitious values generated in memory. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 57s`, 14 debug unit tests + the same 14 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. Service locator wiring M2-01, DTOs M2-06 and typed mapping M2-09 remain pending.
+
+> **M2-06 verification — 10/10/2026.** Added `@Serializable` DTOs for requests, content, text parts, optional generation settings, responses, candidates, token usage, block feedback and error envelopes. `systemInstruction` and `contents` are required; `@SerialName("system_instruction")` keeps the persona separate from history. `ConversationTurn.toContent()` explicitly converts roles in the data layer without changing text or adding API dependencies to the domain. Optional response fields and empty lists represent absent text; finish/block reasons remain strings compatible with future values. DTOs retain the thought marker; the request model contains no attachment, key or session field. `ApiError.toString()` hides all raw server details. Twelve new tests check the JSON contract, unchanged ordered turns, omitted settings, required request fields, multipart responses and metadata, absent fields, blocks, future values, parts without text, malformed JSON rejection, safe diagnostics and the real Ktor converter on MockEngine. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 41s`, 26 debug unit tests + the same 26 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. No real Gemini calls. History validation M2-08, data source M2-07, typed outcomes M2-09 and the actual persona M2-10 remain pending.
+
+> **M2-08 verification — 10/10/2026.** Added `HistoryPayloadBuilder`, `HistoryPayloadResult` and `HistoryValidationError` categories, with no domain imports. The builder receives a chat ID and complete saved history, sorts a copy by `seq`, preserves every role/text and returns all turns only after validation. It rejects empty input, blank/duplicate/foreign identities, negative/duplicate positions, roles not alternating from user, blank text, unresolved failures, inconsistent states and stale errors. Every earlier turn must be SENT; the last is USER/SENDING without an error. Retry must already reactivate the same row through the repository/DAO: the builder never changes messages or drops failed turns. Distinct Long positions need not be contiguous; no timestamp ordering, truncation or incremental sequence arithmetic that could overflow. Twenty-two tests also cover `2N + 1`, 2,001 turns and long Unicode text, all 27 three-turn status combinations, every stale error category, same ID/seq retry, unchanged input and independent calls. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 31s`, 48 debug unit tests + the same 48 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. Repository wiring M2-15, data source M2-07, network errors M2-09 and persona M2-10 remain pending.
+
+> **M2-10 verification — 10/10/2026.** Added `domain/MentorPersona.kt` with one `SYSTEM_INSTRUCTION` constant, KDoc and English teaching comments. The text defines a patient, practical senior Android mentor, replies in the student’s language, clear explanations and small Kotlin examples with English comments. It asks for official Android/Kotlin references, respect for existing versions and explicit uncertainty. It includes the course constraints for manual DI, networking/serialization, persistence, credentials, Compose/coroutines and the stateless protocol. The constant contains no model name or credential; the domain still has no imports. Reran the existing suite without adding tests that reproduce a constant’s wording. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 27s`, 48 debug unit tests + the same 48 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. Text defined and reviewed; sending it through `system_instruction` on every call and checking live responses depend on data source M2-07.
+
+> **M2-09 verification — 10/10/2026.** Added `ApiResult`, `GeminiResultMapper` and exhaustive `toMessageErrorCategory()` conversion. The wrapper accepts one Ktor operation and contains sending, reading and decoding: HTTP 400, 401/403, 429, every 5xx, request/connect/socket timeouts, IO, JSON/conversion errors and unexpected ordinary failures become results without raw bodies or exceptions. Caller cancellation propagates even when the engine reports it as IO. `Retry-After` supports unsigned decimal seconds and RFC 1123 HTTP dates, an injected clock, rounding up and zero for past dates; absent/invalid/overflowing values remain null, with no automatic retry. Prompt/candidate blocks take priority over text; only the first candidate is selected and non-thought text parts are joined without trimming or invented separators. Missing/blank text is `EmptyResponse`, an explicit non-model author is malformed, unknown finish reasons are `Unknown`; STOP/MAX_TOKENS or absent metadata allow usable text. Success diagnostic text hides its value; failures expose only categories and numeric metadata. Twenty new tests also cover all 100 5xx statuses, the actual Ktor timer, a failed response channel, throwing HTTP status validation, cancellation, Room-compatible labels and privacy using fictitious in-memory values. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain`: `BUILD SUCCESSFUL in 21s`, 68 debug unit tests + the same 68 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. Endpoint/model and wrapper use in data source M2-07, persisted outcomes in repository M2-15 and connectivity gating remain to be integrated; no real Gemini calls.
+
+> **M2-07 verification — 11/10/2026.** Added `GeminiRemoteDataSource` with a shared client, mandatory `isConnected` callback and manually injected result mapper. Every send uses POST `v1beta/models/{MODEL_NAME}:generateContent`; one constant selects `gemini-3.5-flash-lite`, reconfirmed in Google documentation. The key remains only in the call’s `x-goog-api-key` header, with in-memory trimming and rejection of empty or unsafe header input. Every call builds a fresh request containing all turns and separate `system_instruction`, defaulting to `MentorPersona.SYSTEM_INSTRUCTION`; the source retains no session ID, key or history. Invalid wire roles, blank text or blank persona block HTTP; the connection gate runs immediately before POST inside the mapper and offline produces `NetworkUnavailable`. Cancellation is preserved and the source never closes the shared client. Thirteen simulated tests verify actual endpoint/headers/JSON, repeated persona, changed keys without accumulation, 501 complete turns, local guards, dynamic connectivity and provider failures, HTTP/response/transport outcomes, cancellation, safe debug logs, trimming and client reuse. The initial focused check was interrupted while KSP waited to read dataless caches; after regenerating only build files, `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 1m 9s`, 81 debug unit tests + the same 81 release unit tests + 32 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. No real credentials or Gemini calls. Android connectivity provider M2-23, service locator M2-01 and repository/UI integration remain pending; BYOK model access and quotas require live verification.
+
+> **M2-23 verification — 11/10/2026.** Added `ConnectivityStatus`, `ConnectivityObserver` and an internal callback tracker. Observe the default HTTP route with `registerDefaultNetworkCallback`; both INTERNET and VALIDATED are required. The cold Flow registers one callback per collector, unregisters on cancellation, deduplicates statuses and keeps the latest value. Initial snapshots and callbacks are protected against reordering; old-network events cannot disconnect a replacement route. The suspend `isConnected()` reads a current snapshot on IO even without a collector and rejects a network that changes during the read. The `GeminiRemoteDataSource` gate now accepts the suspend callback; actual wiring is verified by an Android test using MockEngine. Ten local tests cover capabilities, handovers, stale events, snapshot races and independent subscriptions. Three device tests verify main-dispatcher calling, 110 successive subscriptions with cleanup, actual offline and recovery: zero HTTP offline and one simulated call after reconnection. Toggles are emulator-only and restore original Wi-Fi/mobile-data settings. Added the existing MockEngine alias only to Android test dependencies. Initial clean verification succeeded in 50 s; after adjusting test shell-stream ownership, `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 20s`, 91 unit tests per variant already passed in the clean build and remain valid, all 35 device tests reran and passed, zero failures/errors/skips, lint 0 errors and 59 warnings. Original Wi-Fi/mobile-data settings confirmed restored. Service locator instance M2-01, repository integration M2-15 and UI banner/gating M2-24 remain pending.
+
+> **M2-15 verification — 11/10/2026.** Added the `ChatRepository` contract, `RoomChatRepository`, `ChatSummary` and local `ChatReadResult`/`ChatCommandResult` outcomes. The UI receives only Room observations and local acknowledgements: `Stored` confirms outcome persistence without returning model text or `ApiResult`. Local create/rename/delete work offline. Per-chat mutexes reject concurrent operations without blocking other chats; short transactional preparation checks existence, unresolved rows and complete history before inserting SENDING or reactivating the final FAILED user with the same ID/sequence/text/timestamp. No transaction remains open during HTTP. Key and connectivity are checked before writing and reread/rechecked before the source; changes after preparation become saved failures. Success atomically inserts MODEL and marks the user SENT; failures store only categories. Text containing the configured key is rejected before a new user insert; an echoed credential in a reply is blocked. Cancellation propagates after NonCancellable local cleanup of the owned row to retryable FAILED/UNKNOWN; unavailable storage has an explicit local outcome and can prevent cleanup. Flow catch handles only upstream failures, preserving collector exceptions. Twenty-three real Room + Ktor/MockEngine tests cover optimistic/atomic observation, full history, ten API categories, same-row retry, concurrency and the persisted guard, initial/changed prerequisites, invalid targets, two cancellation stages, completion rollback, credential boundaries, storage errors, Flow transparency and an isolated real Preferences DataStore cycle. The initial build stopped before compilation on unreadable Gradle execution history: regenerated only that cache, then the clean build succeeded in 1m 5s. Final verification `./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 39s`, 91 debug unit tests + the same 91 release unit tests + 58 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. Room schema v1 unchanged; no real credentials or Gemini calls. Service locator M2-01 and ViewModel/UI integration remain pending.
+
+> **M2-01 verification — 11/10/2026.** Added `DroidMentorApplication : Application`, registered through manifest `android:name`. Synchronised `by lazy` properties expose Room, the dedicated Preferences DataStore, Ktor HttpClient, ConnectivityObserver, SettingsRepository, GeminiRemoteDataSource and ChatRepository; constructors are wired by hand and the suspend Android check is supplied to both source and repository. `Context.app` resolves applicationContext without retaining an Activity. No DI framework, startup query/request or eager database opening. Four device tests verify the actual manifest-created class, context wrappers, 24 concurrent accesses to the same graph/provider/engine/database name, and a local repository→shared database round trip: only its own temporary row was created and removed, no credential value was read/written and no HTTP was sent. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 37s`, 91 debug unit tests + the same 91 release unit tests + 62 device tests, zero failures/errors/skips, lint 0 errors and 59 warnings. After instrumentation the target APK was not installed: `:app:installDebug` succeeded in 44 s and Android cold launch reported `Status: ok`, `LaunchState: COLD`, 395 ms. The graph owns process-lifetime resources; network callbacks remain collector-scoped. DependencyContainer contract and ViewModel factories M2-02 remain pending.
+
+> **M2-02 verification — 11/10/2026.** Added `DependencyContainer` with ChatRepository, SettingsRepository and a Flow of ConnectivityStatus; `DroidMentorApplication` implements the interface using the same lazy repositories and existing observer’s cold Flow. `dependencyViewModelFactory<VM>` builds `ViewModelProvider.Factory` with `viewModelFactory { initializer { … } }`: it resolves the container from standard Application creation extras or accepts an explicit test container. Each screen supplies its constructor manually, without a DI framework, global ViewModel cache or credential access. Six local tests verify deferred construction, fake injection without an Application, same-store reuse and separate-owner instances, missing dependencies, unregistered types and constructor failures. Two Android tests verify the real container through APPLICATION_KEY and rejection of an incompatible Application. These ViewModels are test fixtures only; screen ViewModels/UiState M2-22 and navigation M2-16 remain pending. `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 37s`, 97 debug unit tests + the same 97 release unit tests + 64 device tests, zero failures/errors/skips. Lint: 0 errors and the same previous 59 warnings. No new dependency, real credential or live Gemini call. Debug reinstallation succeeded in 4 s and a cold launch reported `Status: ok`, `LaunchState: COLD`, 342 ms.
+
+> **M2-16 verification — 11/10/2026.** Read and visually inspected Figure 1 of the [official course assignment](https://github.com/isel-leic-pdm/2627i/blob/main/assignments/PDM-2627-Assignment.pdf), page 2. Added `DroidMentorRoutes` and `DroidMentorNavHost`, connected to MainActivity and both previews. Five destinations: initial Title, ChatHistory, ActiveChat/{chatId}, About, Settings. The graph supplies Title→History/Settings/About and History→ActiveChat callbacks; returns popBackStack to the previous entry without adding another Title. launchSingleTop avoids duplicate top destinations. The required local ID uses Uri.encode and Navigation argument decoding, carrying no messages or credentials; blank selections do not navigate. rememberNavController retains saved composition state and its back stack. This does not implement the DataStore session M3-06. Compose content slots let separate screen tasks supply content receiving only events and IDs, without the controller: the interactive controls here are test fixtures; the app still displays minimal destination labels without a real menu, Room list, key editor or chat. Eight graph tests cover registered routes and Figure 1 returns, Android Back, repeated events, reserved ID characters, blank selection and saved-state restoration; a ninth checks actual MainActivity and no Back button on the initial Title. The first full run failed in 45 s on five interactions with overlapping test fixture controls; corrected only the test layout, then all eight focused tests passed in 23 s. Final verification `./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:connectedDebugAndroidTest --console=plain --no-daemon`: `BUILD SUCCESSFUL in 46s`, 97 debug unit tests + the same 97 release unit tests + 73 device tests, zero failures/errors/skips. Lint: 0 errors and the same previous 59 warnings. No new dependency, credential or live Gemini call. Debug reinstallation succeeded in 4 s; cold launch confirmed `Status: ok`, `LaunchState: COLD`, 356 ms. Screens M2-17..M2-21 and ViewModels M2-22 remain pending.
+
+> **Verification M2-17 — 12/10/2026.** Main menu with logo, title and three actions; simple scrollable layout. Local verification: BUILD SUCCESSFUL in 1m 23s; debug/release build, unit tests, lint and instrumentation APK compilation passed. The initial incremental resource build was interrupted while waiting for generated files; the clean build passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-18 — 12/10/2026.** About screen with Gradle version, author, course, ISEL and credits; shared Material screen frame. Local verification: BUILD SUCCESSFUL in 1m 30s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-22 — 12/10/2026.** Three manual ViewModels with immutable StateFlow, Channel events and eight state tests; static Title/About need no empty ViewModels. Build/APK compilation passed in 1m 2s. Final local unit/lint verification: BUILD SUCCESSFUL in 34s; eight new ViewModel tests passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-19 — 12/10/2026.** Key form with password masking, in-memory visibility, DataStore save/clear, configured status and typed snackbars. Local verification: BUILD SUCCESSFUL in 58s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-20 — 12/10/2026.** Room list with stable IDs, preview and relative date, illustrated empty state and local new-chat FAB. Local verification: BUILD SUCCESSFUL in 58s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-21 — 12/10/2026.** Room chat with role bubbles, multiline input, guarded sending, waiting indicator, same-row retry, persisted errors and keyboard handling; placeholders removed. Local build/unit/lint/APK verification: BUILD SUCCESSFUL in 58s. After adjustResize manifest configuration, debug build/lint passed in 29s. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-24 — 12/10/2026.** Persistent offline banner, connectivity/key send and retry guards, editable drafts and three new prerequisite tests. Local verification: BUILD SUCCESSFUL in 1m 6s; debug build, unit tests, lint and instrumentation APK compilation passed. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-25 — 12/10/2026.** VERIFICATION.md with levels, commands, device matrix, exit criteria and explicit limits of emulator-free verification. Document references, command blocks, current test counts and git diff --check verified; latest application build/unit/lint/APK check remains the successful M2-24 run. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-26 — 12/10/2026.** Audited the existing 22 history tests: every planned case covered without duplicate tests. Focused HistoryPayloadBuilderTest command: BUILD SUCCESSFUL in 27s; 22 tests, zero failures/errors/skips. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-27 — 12/10/2026.** Audited existing Ktor MockEngine and JSON contract tests: 53 remote tests cover the planned outcomes without duplication. Focused remote-package command: BUILD SUCCESSFUL in 10s; 53 tests, zero failures/errors/skips. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-28 — 12/10/2026.** Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. Instrumentation APK check: BUILD SUCCESSFUL in 9s. Last actual device execution on 2026-10-11 passed the unchanged 14 DAO + 7 entity + 5 database cases within the 73-test suite; not rerun today. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Verification M2-29 — 12/10/2026.** GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. Workflow YAML/triggers/permissions/action refs and tracked executable wrapper validated. Final local debug/release build, both unit suites, lint and instrumentation APK compilation: BUILD SUCCESSFUL in 43s; 109 tests per variant, zero failures/errors/skips, lint 0 errors/59 existing warnings. No emulator/device run in this session, as requested. Device UI checks remain pending; no real Gemini request or credential was used.
+
+> **Emulator verification — 2026-10-12.** Original 74-device-test suite passed, then six real-screen cases were added using isolated Room, real ViewModels and Ktor MockEngine. Verified fake-key form controls, offline local creation, pending/persisted reply, error/same-row retry, editable offline draft and missing-key guard. ActiveChatScreen permits explicit test model injection while retaining the ID-keyed manual factory by default. Because synchronised-folder IO and generated conflict copies interrupted builds, the same commit plus test changes was checked in a managed checkout outside Documents. `BUILD SUCCESSFUL in 1m 13s`: 109 unit tests per variant + 80 Android tests, zero failures/errors/skips, lint 0 errors/59 warnings. Inspected menu, Settings and About, light/dark contrast and font 1.8/landscape menu scrolling; original settings restored. Live Gemini verification remains separate and requires a key entered only in the app.
+
 ### 9.2 WBS — Workstream A: Foundations and manual dependency injection
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-01 | Service locator | `DroidMentorApplication : Application` exposing, via `by lazy`, the Room database, DataStore, the Ktor `HttpClient` and the repositories. Extension `val Context.app: DroidMentorApplication`. **No trace of Hilt/Dagger (V1).** | M | 🟡 | 4 h | M1-07 | ☐ |
-| M2-02 | ViewModel factories | A `DependencyContainer` interface implemented by the `Application`, so it can be swapped for a fake in tests. `ViewModelProvider.Factory` built with `viewModelFactory { initializer { … } }`. | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-03 | Package structure and design system | Packages `data/{local,remote,repository}`, `domain`, `ui/{screens,components,theme,navigation}`. Material 3 theme, palette, typography, spacing, light/dark support. | S | 🟢 | 2 h | M1-06 | ☐ |
-| M2-04 | Domain model | `Chat(id, title, createdAt, updatedAt)`, `Message(id, chatId, role, text, imagePath?, seq, status, createdAt)`, `enum Role { USER, MODEL }`, `enum MessageStatus { SENDING, SENT, FAILED }`. Pure Kotlin, no Android dependencies. | M | 🟢 | 2 h | — | ☐ |
+| M2-01 | Service locator | `DroidMentorApplication : Application` exposing, via `by lazy`, the Room database, DataStore, the Ktor `HttpClient` and the repositories. Extension `val Context.app: DroidMentorApplication`. **No trace of Hilt/Dagger (V1).** | M | 🟡 | 4 h | M1-07 | ☑ |
+| M2-02 | ViewModel factories | A `DependencyContainer` interface implemented by the `Application`, so it can be swapped for a fake in tests. `ViewModelProvider.Factory` built with `viewModelFactory { initializer { … } }`. | M | 🟡 | 3 h | M2-01 | ☑ |
+| M2-03 | Package structure and design system | Mandatory layout from section 9.1.2. Material 3 theme, palette, typography, spacing, light/dark support. | S | 🟢 | 2 h | M1-06 | ☑ |
+| M2-04 | Domain model | `Chat(id, title, createdAt, updatedAt)`, `Message(id, chatId, role, text, seq, status, createdAt, errorCategory?)`, `enum Role { USER, MODEL }`, `enum MessageStatus { SENDING, SENT, FAILED }` and a typed error category. Domain turns with role and text; pure Kotlin, no Android dependencies or Gemini DTOs. `imagePath` excluded from M2. | M | 🟢 | 2 h | — | ☑ |
 
 ### 9.3 WBS — Workstream B: Networking (Ktor + Kotlinx Serialization)
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-05 | `HttpClient` configuration | OkHttp engine; `ContentNegotiation` with `Json { ignoreUnknownKeys = true; explicitNulls = false }`; `HttpTimeout` (connect 10 s, socket 60 s); `DefaultRequest` with base URL `https://generativelanguage.googleapis.com/`; `Logging` plugin **enabled in debug only** and configured not to print headers or bodies containing the key. | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-06 | Gemini DTOs | `@Serializable` types for `GenerateContentRequest(systemInstruction, contents, generationConfig)`, `Content(role, parts)`, `Part(text, inlineData?)`, `GenerateContentResponse(candidates, usageMetadata)`, `Candidate(content, finishReason)`, `ApiErrorEnvelope(error)`. Use `@SerialName` for snake_case fields (e.g. `system_instruction`, `inline_data`, `mime_type`). | M | 🟡 | 4 h | M2-05 | ☐ |
-| M2-07 | `GeminiRemoteDataSource` | `suspend fun generateContent(history, systemInstruction, apiKey): ApiResult<String>`. `POST /v1beta/models/{model}:generateContent` with the `x-goog-api-key` header. Model name configurable from a single constant. **No session identifier (V5).** | M | 🔴 | 5 h | M2-06 | ☐ |
-| M2-08 | `HistoryPayloadBuilder` | Pure domain component that turns `List<Message>` into `List<Content>` guaranteeing: strict `user`/`model` alternation, exclusion of `FAILED` messages, configurable truncation of the oldest turns to contain token cost, order preserved via `seq`. **The heart of the stateless requirement: must be exhaustively tested.** | M | 🔴 | 5 h | M2-04 | ☐ |
-| M2-09 | Error mapping | `sealed interface ApiResult<out T>` with `Success`, `InvalidApiKey` (401/403), `BadRequest` (400), `RateLimited(retryAfterSeconds)` (429), `ServerError` (5xx), `NetworkUnavailable` (`IOException`), `MalformedResponse` (`SerializationException`), `Unknown`. No exception escapes the data source (V8). | M | 🟡 | 4 h | M2-07 | ☐ |
-| M2-10 | Persona `system_instruction` | A single text defining the senior Android mentor: tone, scope of expertise, preference for official best practices, request for Kotlin examples. Centralised in `MentorPersona.kt` (V6). | M | 🟢 | 1 h | M2-06 | ☐ |
+| M2-05 | `HttpClient` configuration | OkHttp engine; `ContentNegotiation` with `Json { ignoreUnknownKeys = true; explicitNulls = false }`; `HttpTimeout` (connect 10 s, socket 60 s); `DefaultRequest` with base URL `https://generativelanguage.googleapis.com/`; `Logging` plugin **enabled in debug only** and configured not to print headers or bodies containing the key. | M | 🟡 | 3 h | M2-01 | ☑ |
+| M2-06 | Gemini DTOs | `@Serializable` types for `GenerateContentRequest(systemInstruction, contents, generationConfig)`, `Content(role, parts)`, `Part(text)`, `GenerateContentResponse(candidates, usageMetadata)`, `Candidate(content, finishReason)`, `ApiErrorEnvelope(error)`. Convert domain turns in the data layer. Use `@SerialName` for `system_instruction`; attachments excluded from M2. | M | 🟡 | 4 h | M2-05 | ☑ |
+| M2-07 | `GeminiRemoteDataSource` | `suspend fun generateContent(history, systemInstruction, apiKey): ApiResult<String>`. `POST /v1beta/models/{model}:generateContent` with the `x-goog-api-key` header. Model name configurable from a single constant. **No session identifier (V5).** | M | 🔴 | 5 h | M2-06 | ☑ |
+| M2-08 | `HistoryPayloadBuilder` | Pure domain component producing turns with role and text from every completed exchange and the current `SENDING` user message, ordered by `seq`. Validate strict `user`/`model` alternation and final `user` role. No truncation of older turns; an unresolved `FAILED` blocks new turns and is reactivated on the same row for retry. Convert to Gemini DTOs in the data layer. **Must be exhaustively tested.** | M | 🔴 | 5 h | M2-04 | ☑ |
+| M2-09 | Error mapping | `sealed interface ApiResult<out T>` with `Success`, `InvalidApiKey` (401/403), `BadRequest` (400), `RateLimited(retryAfterSeconds)` (429), `ServerError` (5xx), `NetworkUnavailable` (`IOException`), `Timeout`, `MalformedResponse` (`SerializationException`), `EmptyResponse`, `BlockedResponse`, `Unknown`. No network exception escapes the data source to the UI; outcomes are mapped to error categories persisted in Room (V8). | M | 🟡 | 4 h | M2-07 | ☑ |
+| M2-10 | Persona `system_instruction` | A single text defining the senior Android mentor: tone, scope of expertise, preference for official best practices, request for Kotlin examples. Centralised in `MentorPersona.kt` (V6). | M | 🟢 | 1 h | M2-06 | ☑ |
 
 ### 9.4 WBS — Workstream C: Persistence (Room + DataStore)
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-11 | Room entities | `ChatEntity(id, title, createdAt, updatedAt)` and `MessageEntity(id, chatId, role, text, imagePath, seq, status, createdAt)` with `@ForeignKey(onDelete = CASCADE)` and `@Index("chatId")`. Type converters for the enums. | M | 🟡 | 4 h | M2-04 | ☐ |
-| M2-12 | DAOs | `ChatDao`: `observeChats(): Flow<List<ChatWithLastMessage>>`, `insert`, `updateTitle`, `deleteById`. `MessageDao`: `observeMessages(chatId): Flow<List<MessageEntity>>`, `insert`, `updateStatus`, `deleteFromSeq(chatId, seq)`, `nextSeq(chatId)`. Relation queries with `@Transaction` + `@Relation`. | M | 🟡 | 4 h | M2-11 | ☐ |
-| M2-13 | Database | `DroidMentorDatabase : RoomDatabase` version 1, schema exported to `app/schemas` and **version-controlled in Git** (essential for testing later migrations). | M | 🟢 | 2 h | M2-12 | ☐ |
-| M2-14 | `SettingsRepository` | Dedicated Preferences DataStore: `apiKey: Flow<String?>`, `saveApiKey`, `clearApiKey`. The key is never logged nor included in crash reports (V4). | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-15 | Offline-first `ChatRepository` | Orchestration of the cycle described in §4.2: optimistic insert, connectivity check, payload construction, call, outcome write. The UI observes **only** Room (V7). | M | 🔴 | 5 h | M2-09, M2-12, M2-23 | ☐ |
+| M2-11 | Room entities | `ChatEntity(id, title, createdAt, updatedAt)` and `MessageEntity(id, chatId, role, text, seq, status, createdAt, errorCategory?)` in schema version 1, with `@ForeignKey(onDelete = CASCADE)`, an index on `chatId` and a unique `(chatId, seq)` index. Converters for roles, states and error categories. `imagePath` excluded from M2. | M | 🟡 | 4 h | M2-04 | ☑ |
+| M2-12 | DAOs | `ChatDao`: `observeChats(): Flow<List<ChatWithLastMessage>>`, `insert`, `updateTitle`, `deleteById`. `MessageDao`: `observeMessages(chatId): Flow<List<MessageEntity>>`, insertion with atomic `seq` allocation, status/error updates, atomic exchange completion and history reads. Relation queries with `@Transaction` + `@Relation`. | M | 🟡 | 4 h | M2-11 | ☑ |
+| M2-13 | Database | `DroidMentorDatabase : RoomDatabase` version 1, schema exported to `app/schemas` and **version-controlled in Git** (essential for testing later migrations). | M | 🟢 | 2 h | M2-12 | ☑ |
+| M2-14 | `SettingsRepository` | Dedicated Preferences DataStore: `apiKey: Flow<String?>`, `saveApiKey`, `clearApiKey`. The key is never logged nor included in crash reports (V4). | M | 🟡 | 3 h | M2-01 | ☑ |
+| M2-15 | Offline-first `ChatRepository` | Cycle from §4.2: check prerequisites and unresolved messages, optimistic insert, connectivity recheck, complete payload, call, atomic success persistence or failure persistence. One send per chat; manual retry on the same `FAILED` row. The UI observes **only** Room for messages and network errors (V7). | M | 🔴 | 5 h | M2-09, M2-12, M2-23 | ☑ |
 
 ### 9.5 WBS — Workstream D: User interface and navigation
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-16 | Navigation graph | `NavHost` with routes `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, matching Figure 1 of the statement (including the return paths). Back stack management. | M | 🟡 | 4 h | M2-03 | ☐ |
-| M2-17 | Title Screen | Main menu: logo/title, entries *Conversations*, *Settings*, *About*. Entry point of the app when no active chat exists. | M | 🟢 | 2 h | M2-16 | ☐ |
-| M2-18 | About Screen | Application name, version, your name, course and institution, third-party library credits. | M | 🟢 | 1.5 h | M2-16 | ☐ |
-| M2-19 | Settings Screen | API key field with `PasswordVisualTransformation` and a visibility toggle, save, clear, *key configured / not configured* indicator, non-empty format validation, snackbar feedback. | M | 🟡 | 4 h | M2-14, M2-16 | ☐ |
-| M2-20 | Chat History Screen | `LazyColumn` fed by the Room `Flow`: title, last-message preview, relative date. Illustrated empty state. FAB *New conversation*. | M | 🟡 | 4 h | M2-12, M2-16 | ☐ |
-| M2-21 | Active Chat Screen | Message list with role-differentiated bubbles, input bar with send, auto-scroll to the latest message, *the mentor is typing* indicator, correct `imePadding` handling. | M | 🔴 | 6 h | M2-15, M2-16 | ☐ |
-| M2-22 | ViewModels and UiState | One ViewModel per screen with an immutable `UiState` exposed as `StateFlow`; one-shot events (snackbar, navigation) via `Channel`/`SharedFlow`. No business logic inside Composables. | M | 🟡 | 4 h | M2-02, M2-15 | ☐ |
+| M2-16 | Navigation graph | `NavHost` with routes `Title`, `ChatHistory`, `ActiveChat/{chatId}`, `About`, `Settings`, matching Figure 1 of the statement (including the return paths). Back stack management. | M | 🟡 | 4 h | M2-03 | ☑ |
+| M2-17 | Title Screen | Main menu: logo/title, entries *Conversations*, *Settings*, *About*. Entry point of the app when no active chat exists. | M | 🟢 | 2 h | M2-16 | ☑ |
+| M2-18 | About Screen | Application name, version, your name, course and institution, third-party library credits. | M | 🟢 | 1.5 h | M2-16 | ☑ |
+| M2-19 | Settings Screen | API key field with `PasswordVisualTransformation` and a visibility toggle, save, clear, *key configured / not configured* indicator, non-empty format validation, snackbar feedback. | M | 🟡 | 4 h | M2-14, M2-16 | ☑ |
+| M2-20 | Chat History Screen | `LazyColumn` fed by the Room `Flow`: title, last-message preview, relative date. Illustrated empty state. FAB *New conversation*. | M | 🟡 | 4 h | M2-12, M2-16 | ☑ |
+| M2-21 | Active Chat Screen | Message list with role-differentiated bubbles, input bar, send disabled during a request or while a failed message is unresolved, minimal *Retry* action, auto-scroll, waiting indicator and `imePadding` handling. Error text derived from the category in Room. | M | 🔴 | 6 h | M2-15, M2-16 | ☑ |
+| M2-22 | ViewModels and UiState | One ViewModel per screen with dynamic state, with an immutable `UiState` exposed as `StateFlow`; one-shot events (snackbar, navigation) via `Channel`/`SharedFlow`. No business logic inside Composables. | M | 🟡 | 4 h | M2-02, M2-15 | ☑ |
 
 ### 9.6 WBS — Workstream E: Connectivity
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-23 | `ConnectivityObserver` | Wrapper over `ConnectivityManager.registerNetworkCallback` exposed as `Flow<ConnectivityStatus>`, checking `NET_CAPABILITY_VALIDATED`. Registered in the service locator. | M | 🟡 | 3 h | M2-01 | ☐ |
-| M2-24 | Offline gating | Connectivity is checked **before** every call (V7). When offline: send input disabled, persistent and understandable banner at the top of the Active Chat, history still fully readable. | M | 🟡 | 3 h | M2-21, M2-23 | ☐ |
+| M2-23 | `ConnectivityObserver` | Wrapper over the default `ConnectivityManager` network using `registerDefaultNetworkCallback`, `Flow<ConnectivityStatus>`, INTERNET and VALIDATED checks and callback cleanup. Fresh suspend check on IO. Instance to expose in service locator M2-01. | M | 🟡 | 3 h | M2-01 | ☑ |
+| M2-24 | Offline gating | Connectivity check **before** every call (V7) and key check in the repository. When offline or the key is missing: sending blocked with understandable feedback; editable draft and fully readable history. Persistent offline banner in Active Chat. | M | 🟡 | 3 h | M2-21, M2-23 | ☑ |
 
 ### 9.7 WBS — Workstream F: Verification *(explicitly required in the M2 video)*
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-25 | `VERIFICATION.md` document | Formalisation of the strategy described in section 12: levels, tools, exit criteria, device matrix. It is the source from which the verification part of the video is built. | M | 🟡 | 2 h | — | ☐ |
-| M2-26 | `HistoryPayloadBuilder` tests | Cases: empty conversation, single turn, N alternating turns, `FAILED` messages excluded, truncation beyond threshold, absence of any session identifier in the produced payload. | M | 🟡 | 3 h | M2-08 | ☐ |
-| M2-27 | Network tests with `MockEngine` | Simulation of 200 with a valid payload, 400, 401, 429 with a `Retry-After` header, 500, malformed JSON, timeout. Verify the mapping onto `ApiResult` and that no exception propagates. | M | 🟡 | 4 h | M2-09 | ☐ |
-| M2-28 | Instrumented DAO tests | In-memory Room: inserts, `Flow` observation, cascade deletion, `seq` monotonicity. | M | 🟡 | 3 h | M2-12 | ☐ |
-| M2-29 | Continuous Integration | GitHub Actions workflow on `push` and `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Status badge in the README. | S | 🟡 | 2 h | M1-07 | ☐ |
+| M2-25 | `VERIFICATION.md` document | Formalisation of the strategy described in section 12: levels, tools, exit criteria, device matrix. It is the source from which the verification part of the video is built. | M | 🟡 | 2 h | — | ☑ |
+| M2-26 | `HistoryPayloadBuilder` tests | Cases: empty history, first message, N completed exchanges plus a new message (`2N + 1`), `seq` ordering, role alternation and final `user` role, long history retained in full, rejection of invalid history and retry of the `FAILED` on the same row. No session identifier in the payload. | M | 🟡 | 3 h | M2-08 | ☑ |
+| M2-27 | Network tests with `MockEngine` | Simulate 200 with a valid payload, 400, 401, 403, 429 with `Retry-After`, 5xx, IO failures, timeouts, malformed JSON, empty responses and blocked responses. Verify typed outcomes and that no network exception propagates to the UI. | M | 🟡 | 4 h | M2-09 | ☑ |
+| M2-28 | Instrumented DAO tests | In-memory Room: inserts and `Flow` observation, cascade deletion, `seq` uniqueness and monotonicity under concurrent inserts, atomic exchange completion, error-category persistence and no duplicate rows on retry. | M | 🟡 | 3 h | M2-12 | ☑ |
+| M2-29 | Continuous Integration | GitHub Actions workflow on `push` and `pull_request`: `assembleDebug`, `testDebugUnitTest`, `lint`. Status badge in the README. | S | 🟡 | 2 h | M1-07 | ☑ |
 
 ### 9.8 WBS — Workstream G: Delivery
+
+> **Code delivery — 2026-10-17.** The author requested delivery of the project now and plans video upload on 2026-10-18. Integration into `main` through a pull request and the annotated `mentor_2` tag therefore precede the video link. The tag identifies the code snapshot without that link; M2-30 and M2-31 remain open for recording, publication and link insertion. Full milestone acceptance is not claimed without the video. [Latest pre-delivery CI](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143): passed for `a0622fe`.
+
+> **Delivery preparation — 2026-10-14.** [GitHub CI](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, 83 tasks executed. The author confirmed two consecutive real Gemini replies in chat; this is author-reported manual evidence, separate from automated tests. [The recording script](M2_VIDEO_SCRIPT.md) is ready with a planned duration of 6:30. M2-30 and M2-31 remain open until recording, an accessible link and the published tag are complete. The current interface remains the M2 version; UI refinement is planned under M3-16 and final checks under MF-07.
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
@@ -420,7 +551,7 @@ Pay particular attention to the fact that Milestone 2 explicitly requires the vi
 
 ### 9.9 Acceptance checklist (Milestone 2)
 
-- ☐ The repository is correctly tagged **`mentor_2`** and the tag has been pushed.
+- ☑ The repository is correctly tagged **`mentor_2`** and the tag has been pushed (code delivery; video still pending).
 - ☐ The `README.md` contains the **video link**, verified as reachable from an outside account.
 - ☐ The video is **between 5 and 7 minutes** long.
 - ☐ The video **demonstrates the implemented functionalities**.
@@ -452,7 +583,7 @@ Implement the requirements with the highest logical complexity — conversation 
 | M3-02 | Conversation titling | Title generated automatically from the first characters of the first user message, with manual rename available. | S | 🟢 | 2 h | M3-01 | ☐ |
 | M3-03 | **Conversation rewrite** | The user edits one of their own messages at **any position**. Atomic Room transaction: update the text, `deleteFromSeq(chatId, seq + 1)` which invalidates and removes all subsequent exchanges, rebuild the payload over the truncated history and resend it to the API. If the network call fails, the state prior to the resend must remain consistent. | M | 🔴 | 8 h | M2-15, M3-05 | ☐ |
 | M3-04 | Rewrite UI | Long-press on a user bubble → context menu (*Edit*, *Copy*, *Delete*). In edit mode: dialog or pre-filled input bar with an explicit warning that subsequent messages will be deleted; confirmation required. | M | 🔴 | 5 h | M3-03 | ☐ |
-| M3-05 | Deterministic ordering | Introduce a monotonic per-chat `seq` field, populated inside a transaction. **Do not rely on timestamps**: two messages inserted in the same millisecond would make the ordering non-deterministic and corrupt the role alternation in the payload. Room migration 1 → 2 with tests. | M | 🟡 | 3 h | M2-13 | ☐ |
+| M3-05 | Deterministic ordering | Verify deterministic ordering already introduced in M2 schema version 1: monotonic per-chat sequences and consistent transactions during rewrite. **Do not rely on timestamps.** No migration to add `seq`, which already exists. | M | 🟡 | 3 h | M2-13 | ☐ |
 
 ### 10.3 WBS — State management and life cycle
 
@@ -472,7 +603,7 @@ Implement the requirements with the highest logical complexity — conversation 
 |---|---|---|---|---|---|---|---|
 | M3-11 | Gallery selection | `ActivityResultContracts.PickVisualMedia` (Photo Picker): requires no runtime permission. Copy the selected file into `filesDir/images/` with a unique name. | C | 🟡 | 4 h | M2-21 | ☐ |
 | M3-12 | Camera capture | `ActivityResultContracts.TakePicture` with a `FileProvider` configured in `file_paths.xml`; handling of the `CAMERA` permission with its rationale and of permanent denial. | C | 🔴 | 6 h | M3-11 | ☐ |
-| M3-13 | Constraint-compliant persistence | An `imagePath` column (**relative** path, to survive sandbox changes) in `messages`. Room migration 2 → 3. The `inline_data` Base64 encoding is produced **in memory** only when building the request and is **never** written to the database (V9). | C | 🔴 | 5 h | M3-11, M2-08 | ☐ |
+| M3-13 | Constraint-compliant persistence | An `imagePath` column (**relative** path, to survive sandbox changes) in `messages`. Test migration from the schema version actually shipped; no advance numbering based on adding `seq`. The `inline_data` Base64 encoding is produced **in memory** only for requests and is **never** written to the database (V9). | C | 🔴 | 5 h | M3-11, M2-08 | ☐ |
 | M3-14 | Rendering in the conversation | Thumbnail inside the bubble with Coil, loading placeholder, handling of the *file no longer present* case, full-screen viewer. | C | 🟡 | 4 h | M3-13 | ☐ |
 | M3-15 | File life cycle | Delete the file when the message or the conversation is deleted; delete on a rewrite that invalidates the message; orphan-cleanup routine at startup; resize/compress before sending to keep the payload small. | C | 🟡 | 4 h | M3-13, M3-01 | ☐ |
 
@@ -481,7 +612,7 @@ Implement the requirements with the highest logical complexity — conversation 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
 | M3-16 | Accessibility and UI polish | `contentDescription` on every non-textual element, touch targets ≥ 48 dp, verified contrast, complete dark theme, correct behaviour on rotation. | S | 🟡 | 4 h | M2-21 | ☐ |
-| M3-17 | Test suite extension | Tests for the rewrite (correct truncation, resulting payload), for retries, for Room migrations 1→2→3, Compose UI tests over the main flows. | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
+| M3-17 | Test suite extension | Tests for the rewrite (correct truncation, resulting payload), for retries, for Room migrations actually introduced after the M2 schema, Compose UI tests over the main flows. | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
 | M3-18 | Milestone 3 video | **5–7 minute** recording: demonstration of the functionalities (with emphasis on rewrite, deletion, session restore, images if present), discussion of the relevant decisions, project status. | M | 🟡 | 4 h | all M3 | ☐ |
 | M3-19 | `mentor_3` tag | Video link in the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M3-18 | ☐ |
 
@@ -570,7 +701,7 @@ No new functionality after Sprint 9, except completing the optional requirement.
 
 **Stateless requirement (V5)**
 
-1. Payload of a conversation with N exchanges: `contents` holds exactly 2N elements with alternating roles starting from `user`.
+1. After N completed exchanges, a request with the new user message contains `2N + 1` elements: alternating roles starting and ending with `user`; every completed exchange is included.
 2. No field in the payload contains session or conversation identifiers.
 3. `system_instruction` is present and populated in every request.
 4. After an intermediate-position rewrite, the payload reflects the **truncated** history, not the original one.
@@ -590,7 +721,7 @@ No new functionality after Sprint 9, except completing the optional requirement.
 
 1. Deleting a chat cascades to all of its messages.
 2. `seq` is strictly monotonic even under concurrent inserts.
-3. Migrations 1→2→3 preserve the data (tested with `MigrationTestHelper`).
+3. Migrations after the M2 schema, when needed, preserve data (tested with `MigrationTestHelper`); `seq` already exists in version 1.
 4. The image column holds paths; no Base64 value (automated assertion on length and format).
 
 ### 12.3 Manual execution matrix
@@ -644,7 +775,7 @@ Every requirement from the statement is mapped to the tasks that implement it an
 | Mentor persona via `system_instruction` | M2-10 | M2 |
 | Offline-first experience; conversations accessible without network | M2-15, M2-24 | M2 |
 | Network availability verified before every call | M2-23, M2-24 | M2 |
-| Graceful HTTP error handling (429, 500, …) | M2-09, M3-08, MF-02 | M3 |
+| Graceful HTTP error handling (429, 500, …) | M2-09, M2-15, M2-21, M2-27; later extensions M3-08, MF-02 | M2 for typed handling and manual recovery |
 | Title screen | M2-17 | M2 |
 | Chat History screen | M2-20 | M2 |
 | Active Chat screen | M2-21 | M2 |
@@ -710,7 +841,7 @@ The useful response is at `candidates[0].content.parts[0].text`; the cases where
 
 > **Note.** Google has also introduced conversational interfaces with server-side state. **They must not be used:** the statement explicitly forbids server-side multi-turn sessions and requires the client to manage all the context.
 
-### Appendix B — Proposed Room schema (version 3)
+### Appendix B — M2 Room schema (version 1)
 
 ```
 chats
@@ -725,16 +856,16 @@ messages
 ├── seq          INTEGER  NOT NULL   -- deterministic per-chat ordering
 ├── role         TEXT     NOT NULL   -- USER | MODEL
 ├── text         TEXT     NOT NULL
-├── imagePath    TEXT     NULL       -- RELATIVE PATH, NEVER Base64  (V9)
 ├── status       TEXT     NOT NULL   -- SENDING | SENT | FAILED
+├── errorCategory TEXT    NULL       -- stable typed error category
 └── createdAt    INTEGER  NOT NULL
 ```
 
 | Version | Content | Introduced in |
 |---|---|---|
-| 1 | Base schema `chats` + `messages` | M2-13 |
-| 2 | Addition of `seq` | M3-05 |
-| 3 | Addition of `imagePath` | M3-13 |
+| 1 | `chats` + `messages`, with `seq`, unique `(chatId, seq)` index and nullable `errorCategory`; no `imagePath` | M2-11, M2-13 |
+
+Later versions will be defined by actual schema changes; `seq` needs no future migration.
 
 Every migration must come with a `MigrationTestHelper` test and with an update of the exported schema in `app/schemas`.
 
@@ -759,7 +890,7 @@ Solo project, developed under the name **PastaGPT**.
 | Milestone | Tag | Date | Video |
 |---|---|---|---|
 | 1 — Project plan | `mentor_1` | 21/09/2026 | — (see PROJECT_PLAN.md) |
-| 2 | `mentor_2` | 12/10/2026 | [link] |
+| 2 | `mentor_2` | 12/10/2026 | Pending — upload planned 18/10/2026; code delivered 17/10/2026 |
 | 3 | `mentor_3` | 16/11/2026 | [link] |
 | Final | `mentor_f` | 12/12/2026 | [link] |
 

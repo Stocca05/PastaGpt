@@ -34,6 +34,8 @@ Document this tree as the mandatory layout:
 - No `!!`. No `runBlocking` outside tests. No I/O on the main dispatcher.
 - Immutable UiState data classes exposed as `StateFlow` from ViewModels.
 - English identifiers, English comments, English commit messages using Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`).
+- Use straightforward code suitable for a student project; avoid unnecessary abstractions.
+- Explain each app code statement and model field with short English comments so the author can study it. Keep KDoc on public declarations.
 
 # Session rules
 - Do exactly one task per session. Do not implement future tasks "while you are there". Do not refactor files outside the task's declared scope.

@@ -41,6 +41,7 @@
 | 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audited existing DAO coverage: concurrency, Flow, cascade, atomicity, errors and retry covered; Room/schema/test sources unchanged. |
 | 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. |
 | 1.0.31 | 14/10/2026 | Luca Raona | M2-30 preparation | Hosted CI passed; author confirmed two real Gemini replies; recording script ready, actual recording/link/tag still pending. |
+| 1.0.32 | 17/10/2026 | Luca Raona | M2 code delivery | At the author's request, integrate into main and tag mentor_2 before the video; upload planned for 18/10, video checklist remains open. |
 | 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
@@ -537,6 +538,8 @@ pt/isel/pdm/droidmentor/
 
 ### 9.8 WBS — Workstream G: Delivery
 
+> **Code delivery — 2026-10-17.** The author requested delivery of the project now and plans video upload on 2026-10-18. Integration into `main` through a pull request and the annotated `mentor_2` tag therefore precede the video link. The tag identifies the code snapshot without that link; M2-30 and M2-31 remain open for recording, publication and link insertion. Full milestone acceptance is not claimed without the video. [Latest pre-delivery CI](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143): passed for `a0622fe`.
+
 > **Delivery preparation — 2026-10-14.** [GitHub CI](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, 83 tasks executed. The author confirmed two consecutive real Gemini replies in chat; this is author-reported manual evidence, separate from automated tests. [The recording script](M2_VIDEO_SCRIPT.md) is ready with a planned duration of 6:30. M2-30 and M2-31 remain open until recording, an accessible link and the published tag are complete. The current interface remains the M2 version; UI refinement is planned under M3-16 and final checks under MF-07.
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
@@ -548,7 +551,7 @@ pt/isel/pdm/droidmentor/
 
 ### 9.9 Acceptance checklist (Milestone 2)
 
-- ☐ The repository is correctly tagged **`mentor_2`** and the tag has been pushed.
+- ☑ The repository is correctly tagged **`mentor_2`** and the tag has been pushed (code delivery; video still pending).
 - ☐ The `README.md` contains the **video link**, verified as reachable from an outside account.
 - ☐ The video is **between 5 and 7 minutes** long.
 - ☐ The video **demonstrates the implemented functionalities**.
@@ -887,7 +890,7 @@ Solo project, developed under the name **PastaGPT**.
 | Milestone | Tag | Date | Video |
 |---|---|---|---|
 | 1 — Project plan | `mentor_1` | 21/09/2026 | — (see PROJECT_PLAN.md) |
-| 2 | `mentor_2` | 12/10/2026 | [link] |
+| 2 | `mentor_2` | 12/10/2026 | Pending — upload planned 18/10/2026; code delivered 17/10/2026 |
 | 3 | `mentor_3` | 16/11/2026 | [link] |
 | Final | `mentor_f` | 12/12/2026 | [link] |
 

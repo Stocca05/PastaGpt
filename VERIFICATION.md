@@ -94,6 +94,8 @@ Local exit criteria: debug/release compilation and unit tests pass, instrumentat
 
 Implementation is complete through M2-29. Delivery work now covers M2-30 and M2-31: [the recording script](M2_VIDEO_SCRIPT.md) is ready, while the actual video, accessible link and annotated `mentor_2` tag remain pending.
 
+Code delivery update — 2026-10-17: the author requested publication of the code and annotated `mentor_2` tag before the video, whose upload is planned for 2026-10-18. The code is integrated through a pull request into `main`; video acceptance remains pending and is not claimed by the code tag. The [CI run for `a0622fe`](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) completed successfully. This delivery changes documentation only; the previously verified application code is unchanged.
+
 ## M2-26 history coverage audit — 2026-10-12
 
 The existing 22 domain tests cover every planned history case; no duplicate test was added. The focused Gradle command passed with `BUILD SUCCESSFUL in 27s`, 22 tests, zero failures/errors/skips.

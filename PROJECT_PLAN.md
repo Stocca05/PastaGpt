@@ -41,6 +41,7 @@
 | 1.0.29 | 12/10/2026 | Luca Raona | M2-28 | Audit dei test DAO esistenti: concorrenza, Flow, cascade, atomicità, errori e retry coperti; sorgenti Room/schema/test invariati. |
 | 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | Workflow GitHub Actions per push/PR, JDK 17, SDK 35, azioni ufficiali fissate a commit verificati, build/test/lint e badge; prima esecuzione remota ancora da verificare dopo il push. |
 | 1.0.31 | 14/10/2026 | Luca Raona | Preparazione M2-30 | CI remota riuscita; due risposte Gemini reali confermate dall’autore; scaletta del video pronta, registrazione/link/tag ancora aperti. |
+| 1.0.32 | 17/10/2026 | Luca Raona | Consegna codice M2 | Su richiesta dell’autore, integrazione su main e tag mentor_2 prima del video; upload previsto per il 18/10, checklist video ancora aperta. |
 | 1.1 | *(da compilare)* | | Bozza | Revisione post-M2 |
 | 1.2 | *(da compilare)* | | Bozza | Revisione post-M3 |
 
@@ -537,6 +538,8 @@ pt/isel/pdm/droidmentor/
 
 ### 9.8 WBS — Workstream G: Consegna
 
+> **Consegna codice — 17/10/2026.** L’autore ha richiesto di consegnare ora il progetto e caricare il video il 18/10/2026. Si anticipano quindi l’integrazione su `main` tramite pull request e il tag annotato `mentor_2`. Il tag identifica il codice prima del link al video; M2-30 e M2-31 restano aperti per registrazione, pubblicazione e inserimento del link. Non si dichiara completata l’accettazione della milestone senza il video. [Ultima CI prima della consegna](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143): superata sul commit `a0622fe`.
+
 > **Preparazione consegna — 14/10/2026.** [CI GitHub](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) completata il 13/10/2026 sul commit `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, 83 task eseguiti. L’autore ha confermato in chat due risposte reali consecutive di Gemini; questa è evidenza manuale riferita dall’autore, distinta dai test automatici. Preparata [la scaletta del video](M2_VIDEO_SCRIPT.md), durata prevista 6:30. M2-30 e M2-31 restano aperti fino a registrazione, link accessibile e tag pubblicato. L’interfaccia attuale resta quella della M2; la rifinitura grafica è prevista in M3-16 e i controlli finali in MF-07.
 
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
@@ -548,7 +551,7 @@ pt/isel/pdm/droidmentor/
 
 ### 9.9 Checklist di accettazione (Milestone 2)
 
-- ☐ Il repository è correttamente taggato **`mentor_2`** e il tag è stato pushato.
+- ☑ Il repository è correttamente taggato **`mentor_2`** e il tag è stato pushato (consegna del codice, video ancora in attesa).
 - ☐ Il `README.md` contiene il **link al video**, verificato come accessibile da un account esterno.
 - ☐ Il video dura **tra 5 e 7 minuti**.
 - ☐ Il video **dimostra le funzionalità implementate**.
@@ -887,7 +890,7 @@ Progetto individuale, sviluppato sotto il nome **PastaGPT**.
 | Milestone | Tag | Data | Video |
 |---|---|---|---|
 | 1 — Piano di progetto | `mentor_1` | 21/09/2026 | — (vedi PROJECT_PLAN.md) |
-| 2 | `mentor_2` | 12/10/2026 | [link] |
+| 2 | `mentor_2` | 12/10/2026 | In attesa — upload previsto 18/10/2026; codice consegnato 17/10/2026 |
 | 3 | `mentor_3` | 16/11/2026 | [link] |
 | Finale | `mentor_f` | 12/12/2026 | [link] |
 

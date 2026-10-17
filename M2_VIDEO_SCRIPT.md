@@ -85,3 +85,5 @@ Secondo messaggio suggerito: `Using your previous explanation, why should the UI
 - [ ] Verifica su GitHub che il tag punti al commit corretto, contenga il README con il link e sia accessibile ai docenti. Spunta M2-31 nel commit di consegna soltanto quando gli altri prerequisiti sono pronti; la conferma del push viene riportata dopo l'esecuzione.
 
 **Stato al 14/10/2026:** scaletta pronta; due risposte reali consecutive confermate dall'autore in chat. Registrazione, link pubblico e tag ancora da completare. La scaletta non sostituisce il video richiesto.
+
+**Aggiornamento al 17/10/2026:** su richiesta dell’autore, il codice viene consegnato su `main` con tag annotato `mentor_2` prima del video, il cui upload è previsto per il 18/10/2026. Nella chiusura del video sostituisci «pubblicherò il tag mentor_2 sul commit finale» con «il codice della M2 è già pubblicato con il tag mentor_2; aggiungerò il link a questo video nel README». La checklist precedente descrive la sequenza originaria: ora restano da completare video, accessibilità e commit del link. Non occorre ripetere la pubblicazione del tag per caricare il video.

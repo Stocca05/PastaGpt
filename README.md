@@ -1,6 +1,6 @@
 # DroidMentor (PastaGPT)
 
-[![Android CI](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml/badge.svg?branch=codex%2Fm2-dependencies)](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml?query=branch%3Acodex%2Fm2-dependencies)
+[![Android CI](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml/badge.svg?branch=main)](https://github.com/Stocca05/PastaGpt/actions/workflows/android-ci.yml?query=branch%3Amain)
 
 A BYOK (Bring Your Own Key) Android LLM client built for the **Mobile Devices Programming (PDM)** course at **Instituto Superior de Engenharia de Lisboa (ISEL)**, Winter Semester 2026/2027. 
 It uses Google Gemini's REST API in stateless mode and acts as a senior Android engineering mentor.
@@ -16,9 +16,11 @@ It uses Google Gemini's REST API in stateless mode and acts as a senior Android 
 | Milestone | Tag | Due date | Video |
 | :--- | :--- | :--- | :--- |
 | 1 — Project plan | `mentor_1` | 2026-09-21 | — (see [PROJECT_PLAN.md](PROJECT_PLAN.md)) |
-| 2 — Core functionality | `mentor_2` | 2026-10-12 | _pending_ |
+| 2 — Core functionality | [`mentor_2`](https://github.com/Stocca05/PastaGpt/tree/mentor_2) | 2026-10-12 | Pending — author plans upload on 2026-10-18 |
 | 3 — Advanced features | `mentor_3` | 2026-11-16 | _pending_ |
 | Final — Delivery | `mentor_f` | 2026-12-12 | _pending_ |
+
+M2 code is delivered on 2026-10-17 through `main` and the annotated `mentor_2` tag. At the author's request, code delivery precedes the video upload. The video link and its accessibility check are still outstanding; the complete milestone acceptance checklist therefore remains open. Once uploaded, its link will be added in a follow-up documentation commit.
 
 ## Documentation
 
@@ -294,7 +296,7 @@ No emulator was opened or used for the new screens in this session. Instrumentat
 
 `.github/workflows/android-ci.yml` runs the wrapper's debug build, unit tests, lint and instrumentation APK compilation on push and pull request, with an optional manual trigger. It uses JDK 17 and SDK Platform 35, read-only repository permissions and four action references pinned to the exact official release commits verified on 2026-10-12. Library and plugin versions remain those in the catalog. No emulator, API key or real Gemini request is required.
 
-The M2 branch is published. [The first GitHub-hosted run](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for commit `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, with all 83 tasks executed. This covers debug compilation, unit tests, lint and instrumentation APK compilation; device tests are executed separately on the emulator. The badge follows `codex/m2-dependencies`.
+The M2 branch is published. [The first GitHub-hosted run](https://github.com/Stocca05/PastaGpt/actions/runs/38383593411) passed on 2026-10-13 for commit `8ad0d77`: `BUILD SUCCESSFUL in 4m 2s`, with all 83 tasks executed. This covers debug compilation, unit tests, lint and instrumentation APK compilation; device tests are executed separately on the emulator. The badge follows `main` for code delivery.
 
 Final local verification on 2026-10-12: `BUILD SUCCESSFUL in 43s`, 109 unit tests in debug and the same 109 in release, zero failures/errors/skips, lint 0 errors and 59 existing warnings. Both variants and the instrumentation APK compiled. The selected local chat ID also keys its ViewModel, preventing different conversations from reusing one state under a reused navigation owner.
 
@@ -307,3 +309,5 @@ On 2026-10-14 the author confirmed two consecutive real Gemini replies in the ap
 ## M2 delivery preparation — 2026-10-14
 
 All 29 implementation/verification tasks are checked in the plan. [The recording script](M2_VIDEO_SCRIPT.md) prepares the required 5–7 minute demonstration, design discussion, verification strategy and project status. M2-30 stays open until the actual recording is uploaded and accessible. M2-31 stays open until its real video link is committed and the annotated `mentor_2` tag is pushed. The script is preparation, not the video deliverable.
+
+Update on 2026-10-17: the author requested code delivery now and plans to upload the video on 2026-10-18. The annotated tag therefore identifies the code snapshot before the video link. M2-30 and the video-link part of M2-31 remain open. The [subsequent CI run](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) for `a0622fe` also passed before this delivery.

@@ -20,10 +20,20 @@ import pt.isel.pdm.droidmentor.ui.components.UiNotice // Identifies resource-bac
 data class SettingsUiState( // Keeps the new key draft only in memory until the user saves it.
     val draft: String = "", // Holds newly entered input without restoring it through saved state.
     val configured: Boolean = false, // Indicates presence without exposing the stored key.
+    val editing: Boolean = false, // Opens replacement input only after an explicit change action.
     val loading: Boolean = true, // Waits for the first typed DataStore snapshot.
     val saving: Boolean = false, // Prevents duplicate writes and draft changes during a write.
     val storageError: Boolean = false, // Distinguishes unreadable preferences from an unconfigured key.
 ) { // Adds a safe diagnostic representation for input that may contain a credential.
+    /** Whether a new or replacement key may be entered after a successful settings read. */
+    val showKeyInput: Boolean get() = !loading && !storageError && (!configured || editing) // Keeps an existing key out of the empty input form.
+
+    /** Whether a nonblank draft can be saved without a conflicting command. */
+    val canSave: Boolean get() = showKeyInput && !saving && draft.isNotBlank() // Uses the same guard for the button and the command.
+
+    /** Whether the confirmed stored key can be changed or removed. */
+    val canChangeKey: Boolean get() = configured && !loading && !saving && !storageError // Blocks changes while the saved status is unknown or busy.
+
     /** Hides the draft if state is accidentally converted to text. */
     override fun toString(): String = "SettingsUiState(input=<hidden>)" // Never includes a typed key in logs or assertions.
 } // Ends the immutable settings state.
@@ -44,7 +54,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             repository.readResult.collect { result -> // Reads only the configured flag into the UI state.
                 mutableState.update { current -> // Preserves any unsaved input while preferences emit.
                     current.copy( // Updates only preference status, keeping the draft unchanged.
-                        configured = result is SettingsReadResult.Success && !result.apiKey.isNullOrBlank(), // Stores only the presence flag.
+                        configured = if (result is SettingsReadResult.Success) !result.apiKey.isNullOrBlank() else current.configured, // Preserves the last known presence if a read fails.
                         loading = false, // Finishes the initial read.
                         storageError = result is SettingsReadResult.StorageError, // Distinguishes a failure from missing configuration.
                     ) // Ends the safe preference snapshot.
@@ -55,8 +65,18 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
 
     /** Updates the input only while no preference write owns it. */
     fun updateDraft(value: String) { // Receives text changes from the password field.
-        if (!state.value.saving) mutableState.update { it.copy(draft = value) } // Prevents a late write result from clearing newer input.
+        if (state.value.showKeyInput && !state.value.saving) mutableState.update { it.copy(draft = value) } // Accepts input only in an available new-key or replacement form.
     } // Ends draft editing.
+
+    /** Opens an empty replacement form while leaving the saved key unchanged. */
+    fun beginEdit() { // Requires an explicit change action for an already configured key.
+        if (state.value.canChangeKey) mutableState.update { it.copy(editing = true, draft = "") } // Never copies the saved value into the draft.
+    } // Ends replacement entry.
+
+    /** Discards unsaved replacement input and returns to the configured status. */
+    fun cancelEdit() { // Leaves the stored key available to the rest of the app.
+        if (state.value.canChangeKey) mutableState.update { it.copy(editing = false, draft = "") } // Clears only the in-memory draft without a repository write.
+    } // Ends replacement cancellation.
 
     /** Saves the current draft through Preferences DataStore and clears it only on success. */
     fun save() { // Captures one input value for this command.
@@ -69,7 +89,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     } // Ends the clear event.
 
     private fun write(clear: Boolean) { // Keeps duplicate-write prevention and safe failure handling in one small helper.
-        if (state.value.saving || state.value.loading) return // Rejects repeated writes or writes before the initial preferences read.
+        if (if (clear) !state.value.canChangeKey else !state.value.canSave) return // Shares the screen's guards and ignores an empty replacement instead of requesting another key.
         val input = state.value.draft // Captures the in-memory draft without logging or persisting another copy.
         mutableState.update { it.copy(saving = true) } // Disables conflicting input events before launching work.
         viewModelScope.launch { // Calls only suspend repository operations; DataStore handles its own IO.
@@ -77,7 +97,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
                 val result = if (clear) repository.clearApiKey() else repository.saveApiKey(input) // Selects the explicitly requested storage operation.
                 val notice = when (result) { // Handles the typed result without exposing the supplied key.
                     SettingsWriteResult.SUCCESS -> { // Clears input only after a successful preference write.
-                        mutableState.update { it.copy(draft = "") } // Removes the completed draft from memory.
+                        mutableState.update { it.copy(draft = "", editing = false, configured = !clear) } // Reflects acknowledged storage immediately and closes the completed form.
                         if (clear) UiNotice.KEY_CLEARED else UiNotice.KEY_SAVED // Distinguishes the two successful commands.
                     } // Ends success handling.
                     SettingsWriteResult.EMPTY_KEY -> UiNotice.EMPTY_KEY // Retains the input and requests a nonblank value.

@@ -14,6 +14,14 @@
     <string name="navigation_back">Back</string>
     <string name="settings_configured">API key configured</string>
     <string name="settings_not_configured">API key not configured</string>
+    <string name="settings_loading">Checking saved API key…</string>
+    <string name="settings_configured_hint">Your key is saved on this device and will be used automatically. You do not need to enter it again.</string>
+    <string name="settings_setup_hint">Add your Gemini API key to start sending messages.</string>
+    <string name="settings_change">Change key</string>
+    <string name="settings_new_key_label">New Gemini API key</string>
+    <string name="settings_replace_hint">Your current key stays saved until the new key is saved successfully.</string>
+    <string name="settings_replace">Save replacement</string>
+    <string name="settings_cancel">Cancel</string>
     <string name="settings_key_label">Gemini API key</string>
     <string name="settings_show">Show</string>
     <string name="settings_hide">Hide</string>

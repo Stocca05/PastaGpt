@@ -177,3 +177,19 @@ Final command in that checkout:
 ```
 
 Result: `BUILD SUCCESSFUL in 1m 13s`, 109 debug unit tests, the same 109 release unit tests, 80 Android tests, zero failures/errors/skips, lint 0 errors and 59 unchanged warnings. `installDebug` succeeded in 6s; a final cold launch returned `Status: ok`, `LaunchState: COLD`, 1467 ms. Theme, font, rotation and network settings were restored to their original values. The emulator remains available for the separate live-key check.
+
+## Saved API key screen regression — 2026-10-19
+
+An existing configured key previously appeared beside an always-empty setup form. Initial loading and storage errors could also display the unconfigured label. The screen now distinguishes these states and opens a replacement draft only after Change key. Cancel does not save or delete anything. A successful replacement closes the form immediately; a failed replacement preserves the original key and the new draft. DataStore storage, the preference name and file, and provider networking are unchanged.
+
+Six new unit cases cover no re-entry for an existing key, cancellation without writes, saved replacement recognised by a new screen owner, failed replacement retaining the original, loading/read-error guards, and acknowledgement before a delayed observer emission. Both unit variants passed 115 tests with zero failures/errors/skips. The existing privacy test now opens replacement mode explicitly. Two new Android screen cases cover configured/change/cancel/replacement controls and safe read-error presentation; the previous save/clear case also checks that a just-saved key does not leave a setup field on screen.
+
+Verification command, using JDK 17 in the isolated managed checkout outside the cloud-synchronised Documents directory:
+
+```bash
+./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:assembleDebugAndroidTest --console=plain --no-daemon
+```
+
+Real output: `BUILD SUCCESSFUL in 3m 58s`, `139 actionable tasks: 139 executed`. Both app variants and the Android test APK compiled. Unit XML reports confirm 115 tests per variant with zero failures/errors/skips; lint XML has zero errors and 59 existing warnings. The five changed source/test files in the root workspace were compared byte-for-byte with the tested checkout. Reports were preserved outside the temporary checkout before cleanup.
+
+The attempted emulator start used separate temporary data and cache paths. It failed before boot with `Your device does not have enough disk space to run avd`. Less than 500 MB was available on the Mac. No new device-test execution or visual inspection is claimed for this change, and no production key or conversation was read, overwritten or deleted for the attempt. The historical 80-device-test result above applies to the earlier code.

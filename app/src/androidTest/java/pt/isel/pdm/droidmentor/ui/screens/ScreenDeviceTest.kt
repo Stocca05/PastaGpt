@@ -128,10 +128,54 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.waitUntil(5_000) { model.state.value.configured && !model.state.value.saving } // Waits for successful fake persistence and presence observation.
         assertEquals(1, preferences.saves) // Checks exactly one save command reached the contract.
         assertTrue(model.state.value.draft.isEmpty()) // Checks successful input was cleared from memory.
+        compose.onNode(hasSetTextAction()).assertDoesNotExist() // Does not ask for the just-saved key again.
+        compose.onNodeWithText("API key configured").assertExists() // Confirms the successful saved status.
         compose.onNodeWithText("Clear key").performScrollTo().performClick() // Invokes explicit selective removal through the actual widget.
         compose.waitUntil(5_000) { !model.state.value.configured && !model.state.value.saving } // Waits for absent configuration without exposing a value.
         assertEquals(1, preferences.clears) // Checks the clear action reached the repository once.
     } // Ends actual settings interactions.
+
+    /** Checks an existing key opens as configured and can be changed or left untouched. */
+    @Test // Reproduces Settings re-entry with a generated saved configuration.
+    fun configuredSettingsOnlyAskForAnExplicitReplacement() { // Uses the fixture's generated in-memory key.
+        val original = (preferences.read.value as SettingsReadResult.Success).apiKey // Keeps a comparison value in test memory only.
+        val model = own("settings", SettingsViewModel(preferences)) // Creates a fresh Settings owner over already configured preferences.
+        compose.setContent { DroidMentorTheme { SettingsScreen({}, model) } } // Displays the actual settings screen.
+        compose.waitUntil(5_000) { !model.state.value.loading } // Waits for confirmed key presence.
+        compose.onNodeWithText("API key configured").assertExists() // Recognises the saved key immediately after reading.
+        compose.onNode(hasSetTextAction()).assertDoesNotExist() // Shows no misleading empty key field.
+        compose.onNodeWithText("Change key").performScrollTo().performClick() // Explicitly starts replacement.
+        compose.onNode(hasSetTextAction()).performTextInput("fixture-${UUID.randomUUID()}") // Types a generated replacement without touching production preferences.
+        compose.onNodeWithText("Cancel").performScrollTo().performClick() // Discards only the unsaved draft.
+        compose.onNode(hasSetTextAction()).assertDoesNotExist() // Returns to the saved summary.
+        assertTrue((preferences.read.value as SettingsReadResult.Success).apiKey == original) // Confirms cancellation preserves the original without printing it.
+        assertEquals(0, preferences.saves) // Confirms no implicit save occurred.
+        assertEquals(0, preferences.clears) // Confirms no implicit removal occurred.
+        compose.onNodeWithText("Change key").performScrollTo().performClick() // Opens another explicit replacement form.
+        compose.onNode(hasSetTextAction()).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password)) // Starts the new form masked.
+        compose.onNodeWithText("Save replacement").assertIsNotEnabled() // Does not accept an empty replacement.
+        compose.onNode(hasSetTextAction()).performTextInput("fixture-${UUID.randomUUID()}") // Supplies a new generated key draft.
+        compose.onNodeWithText("Save replacement").performScrollTo().performClick() // Saves only after explicit confirmation.
+        compose.waitUntil(5_000) { !model.state.value.saving && !model.state.value.showKeyInput } // Waits for the saved summary to return.
+        compose.onNodeWithText("API key configured").assertExists() // Leaves the replacement configured instead of asking for another entry.
+        compose.onNode(hasSetTextAction()).assertDoesNotExist() // Removes completed sensitive input from the UI.
+        assertEquals(1, preferences.saves) // Performs exactly one replacement save.
+        assertEquals(0, preferences.clears) // Replaces atomically without deleting the old key first.
+    } // Ends configured-key screen regression coverage.
+
+    /** Checks a failed settings read is explained without falsely requesting a missing key. */
+    @Test // Keeps storage errors separate from initial setup in the real UI.
+    fun unreadableSettingsDoNotDisplayMissingKeySetup() { // Uses a typed error with no actual file failure.
+        preferences.read.value = SettingsReadResult.StorageError // Makes only the isolated fixture unreadable.
+        val model = own("settings", SettingsViewModel(preferences)) // Observes the typed error through production logic.
+        compose.setContent { DroidMentorTheme { SettingsScreen({}, model) } } // Displays the actual error state.
+        compose.waitUntil(5_000) { model.state.value.storageError } // Waits for initial observation.
+        compose.onNodeWithText("Settings could not be read. Try again later.").assertExists() // Explains the real failure safely.
+        compose.onNodeWithText("API key not configured").assertDoesNotExist() // Does not confuse unreadable preferences with absence.
+        compose.onNode(hasSetTextAction()).assertDoesNotExist() // Does not request input that could overwrite an unknown saved key.
+        assertEquals(0, preferences.saves) // Leaves preferences untouched.
+        assertEquals(0, preferences.clears) // Does not remove potentially saved configuration.
+    } // Ends unreadable-settings UI regression coverage.
 
     /** Checks the history action creates local storage before requesting navigation, even without prerequisites. */
     @Test // Covers the real new-chat widget, Room insert and one-shot event together.

@@ -311,3 +311,7 @@ On 2026-10-14 the author confirmed two consecutive real Gemini replies in the ap
 All 29 implementation/verification tasks are checked in the plan. [The recording script](M2_VIDEO_SCRIPT.md) prepares the required 5–7 minute demonstration, design discussion, verification strategy and project status. M2-30 stays open until the actual recording is uploaded and accessible. M2-31 stays open until its real video link is committed and the annotated `mentor_2` tag is pushed. The script is preparation, not the video deliverable.
 
 Update on 2026-10-17: the author requested code delivery now and plans to upload the video on 2026-10-18. The annotated tag therefore identifies the code snapshot before the video link. M2-30 and the video-link part of M2-31 remain open. The [subsequent CI run](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) for `a0622fe` also passed before this delivery.
+
+## Saved API key screen correction — 2026-10-19
+
+Settings now shows a configured summary when a key is already saved, without asking for it again. Change key opens an empty replacement form; Cancel discards only the draft, and the original key stays saved until a replacement succeeds. Successful save/clear acknowledgements update presence immediately. Loading and read errors are shown separately from missing configuration. The saved key is never copied into the UI. See [the verification record](VERIFICATION.md#saved-api-key-screen-regression--2026-10-19).

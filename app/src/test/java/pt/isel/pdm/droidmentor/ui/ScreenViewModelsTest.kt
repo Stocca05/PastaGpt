@@ -70,9 +70,119 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         advanceUntilIdle() // Lets the initial settings read complete.
         assertTrue(model.state.value.configured) // Checks only the presence flag is exposed.
         assertTrue(model.state.value.draft.isEmpty()) // Checks the stored key was not copied into the editable field.
+        model.beginEdit() // Opens replacement input explicitly before checking draft privacy.
         model.updateDraft(credential) // Simulates newly typed in-memory input.
         assertFalse(model.state.value.toString().contains(credential)) // Checks accidental state diagnostics reveal no key value.
     } // Ends configured-key privacy verification.
+
+    /** Checks a saved key does not require input or another save when Settings opens. */
+    @Test // Reproduces the unnecessary re-entry reported by the author.
+    fun configuredKeyNeedsNoNewInput() = runTest { // Uses only a generated in-memory preference value.
+        val fake = FakeSettings() // Creates an isolated settings contract.
+        fake.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Starts with a saved fictitious key.
+        val model = own(SettingsViewModel(fake)) // Opens the real settings state logic.
+        advanceUntilIdle() // Completes the initial preference read.
+        assertTrue(model.state.value.configured) // Confirms the saved key is recognised.
+        assertFalse(model.state.value.showKeyInput) // Keeps the empty replacement field hidden.
+        model.save() // Simulates a stale save event without a new draft.
+        advanceUntilIdle() // Allows any incorrectly started write to run.
+        assertEquals(0, fake.saves) // Confirms no empty overwrite or redundant save occurred.
+        assertTrue(model.state.value.configured) // Keeps the existing configuration available.
+    } // Ends existing-key regression coverage.
+
+    /** Checks cancelling a replacement discards its draft without removing the saved key. */
+    @Test // Protects the current configuration while the user changes their mind.
+    fun cancelReplacementKeepsTheSavedKey() = runTest { // Does not use a preference file.
+        val fake = FakeSettings() // Supplies a controllable saved configuration.
+        val original = "fixture-${UUID.randomUUID()}" // Generates the original fictitious value in memory.
+        fake.read.value = SettingsReadResult.Success(original) // Represents an existing saved key.
+        val model = own(SettingsViewModel(fake)) // Creates the screen owner.
+        advanceUntilIdle() // Reads the saved status.
+        model.beginEdit() // Opens an empty optional replacement form.
+        model.updateDraft("fixture-${UUID.randomUUID()}") // Types a different generated draft.
+        model.cancelEdit() // Abandons the draft without a storage command.
+        assertTrue(model.state.value.configured) // Keeps the stored status visible.
+        assertFalse(model.state.value.showKeyInput) // Returns to the configured summary.
+        assertTrue(model.state.value.draft.isEmpty()) // Removes the abandoned draft from memory.
+        assertTrue((fake.read.value as SettingsReadResult.Success).apiKey == original) // Compares without printing either value.
+        assertEquals(0, fake.saves) // Confirms cancellation did not save.
+        assertEquals(0, fake.clears) // Confirms cancellation did not delete the old key.
+    } // Ends safe replacement cancellation.
+
+    /** Checks a successful replacement is recognised again by a newly opened screen. */
+    @Test // Covers re-entry into Settings after a saved change.
+    fun replacementStaysConfiguredWhenSettingsReopens() = runTest { // Shares only the fake persisted contract between owners.
+        val fake = FakeSettings() // Supplies preferences that publish completed saves.
+        fake.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Starts with a generated saved key.
+        val model = own(SettingsViewModel(fake)) // Creates the first screen owner.
+        advanceUntilIdle() // Completes its initial read.
+        model.beginEdit() // Explicitly requests a replacement.
+        val replacement = "fixture-${UUID.randomUUID()}" // Generates a replacement without a source constant.
+        model.updateDraft(replacement) // Supplies the new draft.
+        model.save() // Commits the replacement through the settings contract.
+        advanceUntilIdle() // Waits for acknowledgement and observation.
+        assertTrue(model.state.value.configured) // Confirms the replacement is available immediately.
+        assertFalse(model.state.value.showKeyInput) // Closes the completed replacement form.
+        assertTrue(model.state.value.draft.isEmpty()) // Removes the saved draft from UI memory.
+        assertTrue((fake.read.value as SettingsReadResult.Success).apiKey == replacement) // Checks storage without printable credential arguments.
+        val reopened = own(SettingsViewModel(fake)) // Replaces the old owner with a new settings screen.
+        advanceUntilIdle() // Reads the stored replacement in the new owner.
+        assertTrue(reopened.state.value.configured) // Recognises the saved replacement on re-entry.
+        assertFalse(reopened.state.value.showKeyInput) // Does not ask for the key again.
+    } // Ends replacement persistence at the screen boundary.
+
+    /** Checks a failed replacement leaves the old key usable and the new draft editable. */
+    @Test // Protects existing configuration when a storage write fails.
+    fun failedReplacementKeepsOriginalKeyAndDraft() = runTest { // Uses a typed fake write failure.
+        val fake = FakeSettings() // Supplies isolated saved preferences.
+        val original = "fixture-${UUID.randomUUID()}" // Generates an original fictitious key.
+        fake.read.value = SettingsReadResult.Success(original) // Starts configured.
+        fake.writeResult = SettingsWriteResult.STORAGE_ERROR // Rejects the attempted replacement.
+        val model = own(SettingsViewModel(fake)) // Opens the real command logic.
+        advanceUntilIdle() // Completes settings observation.
+        model.beginEdit() // Starts an explicit replacement.
+        val draft = "fixture-${UUID.randomUUID()}" // Generates an unsaved replacement.
+        model.updateDraft(draft) // Places it only in the input state.
+        model.save() // Attempts the failing write.
+        advanceUntilIdle() // Lets failure feedback and cleanup complete.
+        assertTrue(model.state.value.configured) // Keeps the previous saved status.
+        assertTrue(model.state.value.showKeyInput) // Leaves replacement input available for correction or cancellation.
+        assertTrue(model.state.value.draft == draft) // Checks retention without printing the input.
+        assertTrue((fake.read.value as SettingsReadResult.Success).apiKey == original) // Confirms the old key was not cleared first.
+        assertEquals(UiEvent.Notice(UiNotice.STORAGE_ERROR), model.events.first()) // Reports only the safe storage failure.
+    } // Ends failed-replacement regression coverage.
+
+    /** Checks unknown or unreadable settings never ask the user to replace a possibly saved key. */
+    @Test // Covers the initial-read flicker and a later read failure.
+    fun unreadableSettingsDoNotRequestAnotherKey() = runTest { // Controls when initial observation runs.
+        val fake = FakeSettings() // Creates an initially configured contract.
+        fake.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Publishes generated test configuration.
+        val model = own(SettingsViewModel(fake)) // Has not yet run its scheduled initial read.
+        assertTrue(model.state.value.loading) // Distinguishes pending IO from missing configuration.
+        assertFalse(model.state.value.showKeyInput) // Keeps setup hidden until the read completes.
+        advanceUntilIdle() // Reads the existing key presence.
+        fake.read.value = SettingsReadResult.StorageError // Makes the next observation unreadable.
+        advanceUntilIdle() // Applies the safe read error.
+        assertTrue(model.state.value.configured) // Retains the last known presence rather than claiming deletion.
+        assertTrue(model.state.value.storageError) // Exposes the real reason the status cannot be refreshed.
+        assertFalse(model.state.value.showKeyInput) // Does not request a replacement for a read error.
+        assertFalse(model.state.value.canChangeKey) // Protects configuration while storage is unreadable.
+    } // Ends unknown-status regression coverage.
+
+    /** Checks a successful acknowledgement updates presence before a delayed observer catches up. */
+    @Test // Prevents the just-saved form from remaining in initial setup.
+    fun acknowledgedSaveClosesSetupBeforeObserverEmission() = runTest { // Holds back only fake Flow publication.
+        val fake = FakeSettings() // Starts without a saved key.
+        fake.publishWrites = false // Simulates a successful save whose observed snapshot is delayed.
+        val model = own(SettingsViewModel(fake)) // Uses the actual write acknowledgement handling.
+        advanceUntilIdle() // Opens initial setup after the first read.
+        model.updateDraft("fixture-${UUID.randomUUID()}") // Types generated fictitious input.
+        model.save() // Receives a successful storage acknowledgement.
+        advanceUntilIdle() // Completes state and feedback updates.
+        assertTrue(model.state.value.configured) // Reflects the completed save without waiting for another emission.
+        assertFalse(model.state.value.showKeyInput) // Does not request the just-saved key again.
+        assertFalse(model.state.value.saving) // Leaves the summary usable after completion.
+    } // Ends acknowledged-save regression coverage.
 
     /** Checks a failed save retains the draft and reports only a typed local failure. */
     @Test // Protects unsaved input against storage errors.
@@ -247,16 +357,19 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         val read = MutableStateFlow<SettingsReadResult>(SettingsReadResult.Success(null)) // Starts without a configured key.
         var writeResult = SettingsWriteResult.SUCCESS // Controls whether the requested write succeeds.
         var saves = 0 // Counts actual save calls without retaining input for diagnostics.
+        var clears = 0 // Counts selective removals without inspecting any real preference file.
+        var publishWrites = true // Lets one regression case delay observed write publication.
         var gate: CompletableDeferred<Unit>? = null // Optionally pauses a write to test duplicate events.
         override val readResult: Flow<SettingsReadResult> = read // Exposes the controllable typed stream.
         override val apiKey = read.map { (it as? SettingsReadResult.Success)?.apiKey } // Implements the repository's nullable key projection.
         override suspend fun saveApiKey(value: String): SettingsWriteResult { // Simulates a write without disk IO.
             saves += 1 // Records one repository invocation.
             gate?.await() // Waits only when a test explicitly installs a gate.
-            if (writeResult == SettingsWriteResult.SUCCESS) read.value = SettingsReadResult.Success(value) // Publishes successful preference changes in memory.
+            if (writeResult == SettingsWriteResult.SUCCESS && publishWrites) read.value = SettingsReadResult.Success(value) // Publishes successful preference changes unless the observer is deliberately delayed.
             return writeResult // Returns only the typed write outcome.
         } // Ends fake saving.
         override suspend fun clearApiKey(): SettingsWriteResult { // Simulates selective credential removal.
+            clears += 1 // Counts removal separately from replacement saves.
             if (writeResult == SettingsWriteResult.SUCCESS) read.value = SettingsReadResult.Success(null) // Publishes absence after a successful clear.
             return writeResult // Preserves a controlled failure when requested by the test.
         } // Ends fake clearing.

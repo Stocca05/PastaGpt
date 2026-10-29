@@ -27,7 +27,6 @@ M2 code is delivered on 2026-10-17 through `main` and the annotated `mentor_2` t
 * 🇮🇹 [PROJECT_PLAN.md](PROJECT_PLAN.md) (Piano di Progetto)
 * 🇬🇧 [PROJECT_PLAN.en.md](PROJECT_PLAN.en.md) (Project Plan)
 * [VERIFICATION.md](VERIFICATION.md) (verification strategy and evidence)
-* [M2_VIDEO_SCRIPT.md](M2_VIDEO_SCRIPT.md) (Italian recording script and delivery checklist)
 * [CONTRIBUTING.md](CONTRIBUTING.md) (contribution guidelines)
 
 ## Tech stack
@@ -308,7 +307,7 @@ On 2026-10-14 the author confirmed two consecutive real Gemini replies in the ap
 
 ## M2 delivery preparation — 2026-10-14
 
-All 29 implementation/verification tasks are checked in the plan. [The recording script](M2_VIDEO_SCRIPT.md) prepares the required 5–7 minute demonstration, design discussion, verification strategy and project status. M2-30 stays open until the actual recording is uploaded and accessible. M2-31 stays open until its real video link is committed and the annotated `mentor_2` tag is pushed. The script is preparation, not the video deliverable.
+All 29 implementation/verification tasks are checked in the plan. The recording script prepares the required 5–7 minute demonstration, design discussion, verification strategy and project status. M2-30 stays open until the actual recording is uploaded and accessible. M2-31 stays open until its real video link is committed and the annotated `mentor_2` tag is pushed. The script is preparation, not the video deliverable.
 
 Update on 2026-10-17: the author requested code delivery now and plans to upload the video on 2026-10-18. The annotated tag therefore identifies the code snapshot before the video link. M2-30 and the video-link part of M2-31 remain open. The [subsequent CI run](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) for `a0622fe` also passed before this delivery.
 

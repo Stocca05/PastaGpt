@@ -92,7 +92,7 @@ Local exit criteria: debug/release compilation and unit tests pass, instrumentat
 9. Network failures are typed, and structured coroutine cancellation is preserved.
 10. Images are outside M2; any later support must persist only file paths/URIs, never Base64 in Room.
 
-Implementation is complete through M2-29. Delivery work now covers M2-30 and M2-31: [the recording script](M2_VIDEO_SCRIPT.md) is ready, while the actual video, accessible link and annotated `mentor_2` tag remain pending.
+Implementation is complete through M2-29. Delivery work now covers M2-30 and M2-31: the recording script is ready, while the actual video, accessible link and annotated `mentor_2` tag remain pending.
 
 Code delivery update — 2026-10-17: the author requested publication of the code and annotated `mentor_2` tag before the video, whose upload is planned for 2026-10-18. The code is integrated through a pull request into `main`; video acceptance remains pending and is not claimed by the code tag. The [CI run for `a0622fe`](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) completed successfully. This delivery changes documentation only; the previously verified application code is unchanged.
 

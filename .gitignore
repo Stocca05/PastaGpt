@@ -18,3 +18,4 @@ local.properties
 *.jks
 *.keystore
 **/google-services.json
+M2_VIDEO_SCRIPT.md

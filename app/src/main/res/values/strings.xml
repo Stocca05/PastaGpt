@@ -53,6 +53,10 @@
     <string name="camera_open_app_settings">App Settings</string>
     <string name="chat_image_attached">Image attached</string>
     <string name="chat_remove_attachment">Remove</string>
+    <string name="chat_image_attachment_cd">Attached image</string>
+    <string name="chat_image_missing">Image file is no longer available on this device.</string>
+    <string name="chat_image_fullscreen_cd">Full-screen image preview</string>
+    <string name="chat_image_close_fullscreen">Close</string>
     <string name="history_new_title">New conversation</string>
     <string name="history_new_chat">New conversation</string>
     <string name="history_creating">Creating…</string>

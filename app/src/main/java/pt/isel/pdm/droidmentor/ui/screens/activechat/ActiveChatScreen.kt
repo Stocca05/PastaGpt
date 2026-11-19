@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat // Inspects whether Android recommends s
 import androidx.core.content.ContextCompat // Checks current CAMERA runtime permission status safely.
 import androidx.core.content.FileProvider // Exposes app-private filesDir/images/ target cleanly to the Camera app.
 import androidx.compose.foundation.ExperimentalFoundationApi // Enables long-press combinedClickable on message bubbles.
+import androidx.compose.foundation.clickable // Opens full-screen viewer when tapping a message image thumbnail.
 import androidx.compose.foundation.combinedClickable // Opens the bubble context menu on long-press.
 import androidx.compose.foundation.layout.Arrangement // Separates messages and input controls.
 import androidx.compose.foundation.layout.Box // Displays loading, empty, error or message content in the same body area.
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Row // Aligns role-specific bubbles an
 import androidx.compose.foundation.layout.consumeWindowInsets // Avoids applying already reserved system insets twice.
 import androidx.compose.foundation.layout.fillMaxSize // Uses the available body area.
 import androidx.compose.foundation.layout.fillMaxWidth // Gives rows the full conversation width.
+import androidx.compose.foundation.layout.heightIn // Bounds image thumbnail height cleanly inside message bubbles.
 import androidx.compose.foundation.layout.imePadding // Keeps the draft above the visible keyboard.
 import androidx.compose.foundation.layout.padding // Applies the existing screen and bubble spacing.
 import androidx.compose.foundation.layout.size // Sizes the compact waiting indicator.
@@ -56,13 +58,19 @@ import androidx.compose.runtime.setValue // Opens and closes the manual rename d
 import androidx.compose.runtime.snapshotFlow // Observes LazyList scroll position cleanly for SavedStateHandle.
 import androidx.compose.ui.Alignment // Centres loading states and aligns draft controls.
 import androidx.compose.ui.Modifier // Describes layout size, padding and keyboard handling.
-import androidx.compose.ui.draw.clip // Clips long-press ripple to the message bubble shape.
+import androidx.compose.ui.draw.clip // Clips long-press ripple and image thumbnails to rounded shapes.
+import androidx.compose.ui.layout.ContentScale // Crops thumbnails cleanly and fits full-screen image previews.
 import androidx.compose.ui.platform.LocalClipboardManager // Copies message text cleanly to the system clipboard.
-import androidx.compose.ui.platform.LocalContext // Resolves safe notice strings in suspend event handlers.
-import androidx.compose.ui.res.painterResource // Loads the shared local edit vector icon.
+import androidx.compose.ui.platform.LocalContext // Resolves safe labels in suspend event handlers.
+import androidx.compose.ui.res.painterResource // Loads shared local vector icons.
 import androidx.compose.ui.res.stringResource // Reads all visible action and error labels.
 import androidx.compose.ui.text.AnnotatedString // Wraps copied text for the Compose clipboard API.
-import androidx.compose.ui.unit.dp // Sizes bubbles and the small waiting indicator.
+import androidx.compose.ui.unit.dp // Sizes bubbles and small status indicators.
+import androidx.compose.ui.window.Dialog // Displays full-screen image previews cleanly.
+import androidx.compose.ui.window.DialogProperties // Enables full-bleed full-screen image preview dialog.
+import coil.compose.AsyncImage // Loads app-private images asynchronously in composer and full-screen preview.
+import coil.compose.SubcomposeAsyncImage // Shows Coil loading placeholder and missing-file fallback inside bubbles.
+import java.io.File // References resolved app-private image files safely.
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes immutable state only while this destination is active.
 import androidx.lifecycle.viewmodel.compose.viewModel // Uses the selected conversation's manual factory.
 import kotlinx.coroutines.flow.distinctUntilChanged // Avoids redundant SavedStateHandle writes while scroll is idle.
@@ -101,6 +109,7 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
     var editingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message currently being rewritten.
     var deletingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message awaiting delete confirmation.
+    var fullscreenImageFile by remember { mutableStateOf<File?>(null) } // Displays tapped bubble image in full-screen preview.
     var pendingCapturePath by rememberSaveable { mutableStateOf<String?>(null) } // Preserves relative capture target if Activity recreates during camera flow.
     var showCameraRationale by remember { mutableStateOf(false) } // Shows rationale explanation when Android asks before re-prompting.
     var showCameraPermanentDenial by remember { mutableStateOf(false) } // Guides user to App Settings when CAMERA permission is permanently denied.
@@ -234,6 +243,27 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
             }, // Ends dismiss button.
         ) // Ends permanent denial dialog.
     } // Ends permanent denial check.
+    fullscreenImageFile?.let { file -> // Shows tapped conversation image full screen (M3-14).
+        Dialog( // Uses full-bleed dialog so system Back or Close dismisses smoothly.
+            onDismissRequest = { fullscreenImageFile = null }, // Closes preview cleanly.
+            properties = DialogProperties(usePlatformDefaultWidth = false), // Expands viewer to full screen width/height.
+        ) { // Starts full-screen viewer container.
+            Surface(color = MaterialTheme.colorScheme.scrim, modifier = Modifier.fillMaxSize()) { // Darkens background for clear photo inspection.
+                Box(Modifier.fillMaxSize()) { // Places image centered beneath explicit Close button.
+                    AsyncImage( // Renders full saved image using Coil.
+                        model = file, // Loads app-private image file.
+                        contentDescription = stringResource(R.string.chat_image_fullscreen_cd), // Accessibility label for full-screen preview.
+                        contentScale = ContentScale.Fit, // Preserves original aspect ratio inside screen bounds.
+                        modifier = Modifier.fillMaxSize().padding(DroidMentorSpacing.large), // Leaves subtle breathing room.
+                    ) // Ends AsyncImage preview.
+                    TextButton( // Provides explicit accessible Close button in top-right corner.
+                        onClick = { fullscreenImageFile = null }, // Dismisses full-screen viewer.
+                        modifier = Modifier.align(Alignment.TopEnd).padding(DroidMentorSpacing.medium), // Anchors Close clearly.
+                    ) { Text(stringResource(R.string.chat_image_close_fullscreen), color = MaterialTheme.colorScheme.inverseOnSurface) } // Labels Close clearly.
+                } // Ends full-screen Box.
+            } // Ends full-screen Surface.
+        } // Ends full-screen Dialog.
+    } // Ends full-screen image check.
     ScreenScaffold( // Displays saved conversation metadata and manual rename action.
         title = state.chat?.title ?: stringResource(R.string.navigation_active_chat), // Uses the live Room-backed chat title.
         onBack = onBack, // Returns to the previous history destination.
@@ -289,11 +319,13 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     ) { // Uses stable local message IDs.
                         items(state.messages, key = { it.id }) { message -> // Renders only rows obtained from Room observation.
                             MessageBubble( // Keeps bubble layout separate from screen and command logic.
-                                message = message, // Supplies saved text, role, status and error category.
+                                message = message, // Supplies saved text, role, status, relative imagePath and error category.
                                 showRetry = message.id == state.messages.lastOrNull()?.id, // Displays the action only beside the final saved row.
                                 retryEnabled = state.canRetry, // Shares the ViewModel's current key, connection and ownership guard.
                                 canEdit = state.canRewrite, // Enables rewrite only when online, configured and idle.
                                 canDelete = state.canModifyMessages, // Enables local deletion whenever no request is active.
+                                resolveImageFile = model::resolveAttachmentFile, // Resolves relative path inside filesDir/images/.
+                                onOpenImage = { fullscreenImageFile = it }, // Opens full-screen image preview on thumbnail tap.
                                 onRetry = model::retry, // Delegates same-row retry validation to the ViewModel and repository.
                                 onEdit = { editingMessage = message }, // Opens the prefilled rewrite dialog with truncation warning.
                                 onCopy = { // Copies bubble text to clipboard and confirms via snackbar.
@@ -312,14 +344,23 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     Text(stringResource(R.string.chat_waiting)) // Explains that the saved attempt is still pending.
                 } // Ends the waiting indicator.
             } // Ends in-flight feedback.
-            state.pendingImagePath?.let { _ -> // Displays uncommitted gallery/camera image bar above composer with a remove control.
+            state.pendingImagePath?.let { path -> // Displays uncommitted gallery/camera thumbnail bar above composer with a remove control.
+                val previewFile = remember(path) { model.resolveAttachmentFile(path) } // Resolves app-private image file for composer preview.
                 Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium)) { // Highlights the attached image before sending.
-                    Row( // Groups attached indicator and explicit removal action.
+                    Row( // Groups thumbnail, attached indicator and explicit removal action.
                         modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies balanced spacing.
-                        horizontalArrangement = Arrangement.SpaceBetween, // Separates label and Remove button.
-                        verticalAlignment = Alignment.CenterVertically, // Aligns label and button cleanly.
+                        horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates preview elements cleanly.
+                        verticalAlignment = Alignment.CenterVertically, // Aligns thumbnail, label and button cleanly.
                     ) { // Starts pending attachment row.
-                        Text(stringResource(R.string.chat_image_attached), style = MaterialTheme.typography.bodySmall) // Confirms image attachment cleanly without leaking file paths.
+                        if (previewFile != null && previewFile.exists()) { // Shows compact Coil thumbnail when file exists on disk.
+                            AsyncImage( // Renders small composer preview thumbnail.
+                                model = previewFile, // Loads app-private preview file.
+                                contentDescription = stringResource(R.string.chat_image_attachment_cd), // Accessibility label.
+                                contentScale = ContentScale.Crop, // Fills square preview cleanly.
+                                modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small), // Keeps composer bar compact.
+                            ) // Ends composer thumbnail.
+                        } // Ends optional thumbnail check.
+                        Text(stringResource(R.string.chat_image_attached), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)) // Confirms image attachment cleanly without leaking file paths.
                         TextButton(onClick = model::clearPendingImage) { Text(stringResource(R.string.chat_remove_attachment)) } // Deletes uncommitted copy on disk and clears state.
                     } // Ends pending attachment row.
                 } // Ends attachment bar container.
@@ -366,12 +407,14 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
 
 @OptIn(ExperimentalFoundationApi::class) // Uses combinedClickable to open the bubble context menu on long-press.
 @Composable // Renders one saved row without owning networking or persistence.
-private fun MessageBubble( // Receives callbacks from the screen for retry and long-press context actions.
-    message: Message, // Supplies role, text, status and error category.
+private fun MessageBubble( // Receives callbacks from the screen for retry, image preview and long-press context actions.
+    message: Message, // Supplies role, text, status, imagePath and error category.
     showRetry: Boolean, // Shows Retry only on the final failed user message.
     retryEnabled: Boolean, // Mirrors current send/retry prerequisite guards.
     canEdit: Boolean, // Enables Edit on user bubbles when online, configured and idle.
     canDelete: Boolean, // Enables Delete on user bubbles when idle.
+    resolveImageFile: (String) -> File?, // Resolves sandbox-safe relative imagePath into private File.
+    onOpenImage: (File) -> Unit, // Opens tapped thumbnail in full-screen preview dialog.
     onRetry: () -> Unit, // Retries the final failed user row.
     onEdit: () -> Unit, // Opens the rewrite dialog for this user bubble.
     onCopy: () -> Unit, // Copies this bubble's text to the clipboard.
@@ -392,12 +435,39 @@ private fun MessageBubble( // Receives callbacks from the screen for retry and l
                 shape = MaterialTheme.shapes.medium, // Uses the app's existing rounded shape.
                 color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer, // Uses theme-provided contrast for each participant.
             ) { // Displays saved content and any persisted failure.
-                Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, status, text and error feedback.
+                Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, status, image, text and error feedback.
                     Row(horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), verticalAlignment = Alignment.CenterVertically) { // Displays participant alongside per-message status.
                         Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
                         if (user) MessageStatusBadge(message.status) // Renders distinct SENDING, SENT or FAILED indicator for each user bubble.
                     } // Ends bubble header row.
-                    Text(message.text) // Displays full saved message text without altering history.
+                    message.imagePath?.let { path -> // Displays attached image thumbnail with loading placeholder and missing-file fallback (M3-14).
+                        val resolvedFile = remember(path) { resolveImageFile(path) } // Resolves app-private image file cleanly.
+                        if (resolvedFile != null && resolvedFile.exists()) { // Renders Coil preview only when file exists on disk.
+                            SubcomposeAsyncImage( // Displays loading spinner, cropped thumbnail or missing-file notice.
+                                model = resolvedFile, // Loads app-private image file via Coil.
+                                contentDescription = stringResource(R.string.chat_image_attachment_cd), // Accessibility label for image preview.
+                                contentScale = ContentScale.Crop, // Crops preview cleanly inside bubble bounds.
+                                modifier = Modifier
+                                    .fillMaxWidth() // Spans bubble width up to max 480dp.
+                                    .heightIn(max = 220.dp) // Keeps long images compact in the feed.
+                                    .clip(MaterialTheme.shapes.small) // Rounds thumbnail corners neatly.
+                                    .clickable { onOpenImage(resolvedFile) }, // Opens full-screen viewer on tap.
+                                loading = { // Shows compact loading placeholder while Coil decodes bitmap off main thread.
+                                    Box(Modifier.fillMaxWidth().heightIn(min = 100.dp), contentAlignment = Alignment.Center) { // Centers placeholder spinner.
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp)) // Visual loading placeholder.
+                                    } // Ends placeholder Box.
+                                }, // Ends loading placeholder.
+                                error = { // Handles decode failure cleanly without throwing.
+                                    Text(stringResource(R.string.chat_image_missing), style = MaterialTheme.typography.bodySmall) // Reports unavailable image safely.
+                                }, // Ends Coil error fallback.
+                            ) // Ends SubcomposeAsyncImage.
+                        } else { // Handles manually cleared or missing image files cleanly.
+                            Text(stringResource(R.string.chat_image_missing), style = MaterialTheme.typography.bodySmall) // Shows missing-file notice instead of broken icon.
+                        } // Ends missing-file fallback branch.
+                    } // Ends optional message image rendering.
+                    if (message.text.isNotBlank()) { // Shows message text when non-empty (allows image-only user bubbles cleanly).
+                        Text(message.text) // Displays full saved message text without altering history.
+                    } // Ends non-blank text rendering.
                     if (user && message.status == MessageStatus.FAILED) { // Reads failures from Room rather than a network event.
                         Text( // Translates the saved category into safe readable feedback.
                             text = stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource()), // Resolves error category string.

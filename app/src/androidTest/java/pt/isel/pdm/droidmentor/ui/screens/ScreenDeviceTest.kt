@@ -47,6 +47,7 @@ import org.junit.Rule // Owns the test UI activity lifecycle.
 import org.junit.Test // Marks the new device interaction cases.
 import org.junit.runner.RunWith // Selects AndroidJUnit4.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Uses the exact production Room schema.
+import pt.isel.pdm.droidmentor.data.local.LocalImageStorage // Resolves temporary local images for M3-14 preview tests.
 import pt.isel.pdm.droidmentor.data.remote.GeminiRemoteDataSource // Uses the real stateless source and result mapper around MockEngine.
 import pt.isel.pdm.droidmentor.data.remote.HttpClientFactory // Uses the real JSON, timeout and URL configuration.
 import pt.isel.pdm.droidmentor.data.repository.ChatCommandResult // Reads a saved local ID after creation.
@@ -361,6 +362,35 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Open Settings").assertIsEnabled().performClick() // Taps direct Settings action.
         assertEquals(1, openedSettings) // Confirms direct Settings navigation ran.
     } // Ends rejected-key shortcut device verification.
+
+    /** Checks missing image file fallback, Coil thumbnail rendering and fullscreen preview dialog. */
+    @Test // Exercises M3-14 UI image handling with both an existing file and a missing file path.
+    fun messageBubbleShowsMissingImageFallbackAndOpensFullscreenPreview() { // Creates one real temporary image and one missing path.
+        val context = InstrumentationRegistry.getInstrumentation().targetContext // Uses instrumentation storage cleanly.
+        val storage = LocalImageStorage(context) // Uses production relative-path storage adapter.
+        val id = runBlocking { (repository.createChat("Image UI chat") as ChatCommandResult.Created).chatId } // Creates chat.
+        val relative = runBlocking { storage.createCaptureTarget() } ?: error("Expected relative target") // Allocates image path.
+        val realFile = storage.resolveFile(relative) ?: error("Expected resolved path") // Resolves File on disk.
+        val onePixelPng = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=") // Valid 1x1 PNG.
+        realFile.writeBytes(onePixelPng) // Writes tiny real image file for Coil rendering.
+        try { // Ensures test file cleanup even on failure.
+            runBlocking { // Inserts one valid-image row and one missing-image row into Room.
+                database.messageDao().insert(pt.isel.pdm.droidmentor.data.local.entity.MessageEntity("m-ok", id, Role.USER, "Valid photo", 0, MessageStatus.SENT, 1_000, imagePath = relative)) // Valid photo.
+                database.messageDao().insert(pt.isel.pdm.droidmentor.data.local.entity.MessageEntity("m-reply", id, Role.MODEL, "Model reply", 1, MessageStatus.SENT, 1_100)) // Alternates role.
+                database.messageDao().insert(pt.isel.pdm.droidmentor.data.local.entity.MessageEntity("m-missing", id, Role.USER, "Gone photo", 2, MessageStatus.SENT, 1_200, imagePath = "images/gone.jpg")) // Missing file.
+            } // Finishes seeding Room rows.
+            val model = own("$id-img", ActiveChatViewModel(id, repository, preferences, network, SavedStateHandle(), storage)) // Wires ImageStorage.
+            compose.setContent { DroidMentorTheme { ActiveChatScreen(id, {}, model) } } // Mounts ActiveChatScreen.
+            compose.waitUntil(5_000) { model.state.value.messages.size == 3 && !model.state.value.loading } // Waits for Room snapshot.
+            compose.onNodeWithText("Image file is no longer available on this device.").assertExists() // Checks missing-file fallback.
+            compose.onNodeWithContentDescription("Attached image").performClick() // Taps valid Coil thumbnail.
+            compose.onNodeWithContentDescription("Full-screen image preview").assertExists() // Checks fullscreen preview opened.
+            compose.onNodeWithText("Close").performClick() // Closes fullscreen dialog.
+            compose.onNodeWithContentDescription("Full-screen image preview").assertDoesNotExist() // Confirms fullscreen preview closed.
+        } finally { // Cleans temporary test image from app filesDir/images/.
+            realFile.delete() // Deletes temporary PNG file cleanly.
+        } // Ends cleanup.
+    } // Ends M3-14 Coil preview & missing-file UI test.
 
     private fun showChat(onOpenSettings: () -> Unit = {}): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

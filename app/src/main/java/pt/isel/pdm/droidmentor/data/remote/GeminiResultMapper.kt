@@ -29,6 +29,13 @@ import pt.isel.pdm.droidmentor.data.remote.dto.GenerateContentResponse // Reads 
  */
 class GeminiResultMapper(private val clock: () -> Instant = Instant::now) { // Uses manual constructor injection to make date conversion testable.
 
+    /** Carries the typed result alongside transient retry metadata without exposing headers to callers. */
+    internal data class ExecutionOutcome( // Keeps Retry-After parsing and HTTP 503 vs 500 inside the remote boundary.
+        val result: ApiResult<String>, // Holds the exact typed outcome exposed by ApiResult.
+        val retryableStatus: Boolean = false, // True only for HTTP 429 and HTTP 503.
+        val retryAfterSeconds: Long? = null, // Optional server delay read from Retry-After on 429 or 503.
+    ) // Ends ExecutionOutcome.
+
     /**
      * Executes the supplied Ktor operation and handles network and response failures.
      *
@@ -38,7 +45,10 @@ class GeminiResultMapper(private val clock: () -> Instant = Instant::now) { // U
      * @param request Suspending HTTP operation whose response should be decoded.
      * @return Usable text or a failure without raw bodies, headers or exceptions.
      */
-    suspend fun execute(request: suspend () -> HttpResponse): ApiResult<String> { // Keeps the request and all decoding inside the same failure boundary.
+    suspend fun execute(request: suspend () -> HttpResponse): ApiResult<String> = executeDetailed(request).result // Preserves the public typed single-attempt contract.
+
+    /** Executes one attempt and retains transient 429/503 metadata for [GeminiRemoteDataSource]. */
+    internal suspend fun executeDetailed(request: suspend () -> HttpResponse): ExecutionOutcome { // Keeps the request and all decoding inside the same failure boundary.
         return try { // Handles both sending and reading the response.
             currentCoroutineContext().ensureActive() // Stops before invoking the operation if the caller is already cancelled.
             val response = try { // Also supports a client that throws for HTTP error statuses.
@@ -51,52 +61,60 @@ class GeminiResultMapper(private val clock: () -> Instant = Instant::now) { // U
             throw error // Preserves structured coroutine cancellation.
         } catch (error: Exception) { // Contains ordinary transport, conversion and unexpected failures in the data layer.
             currentCoroutineContext().ensureActive() // Preserves cancellation even if the engine reported it as an IOException.
-            when (error) { // Checks specific failures before the generic IO fallback.
+            val mapped = when (error) { // Checks specific failures before the generic IO fallback.
                 is HttpRequestTimeoutException, is ConnectTimeoutException, is SocketTimeoutException -> ApiResult.Timeout // Maps all Ktor network timeout types.
                 is SerializationException, is ContentConvertException, is NoTransformationFoundException -> ApiResult.MalformedResponse // Maps JSON and unsupported response conversion failures.
                 is IOException -> ApiResult.NetworkUnavailable // Maps the remaining connection and transport IO failures.
                 else -> ApiResult.Unknown // Hides details of an ordinary failure outside the known categories.
             } // Ends exception classification.
+            ExecutionOutcome(mapped) // Timeouts, IO and JSON errors do not trigger automatic retries.
         } // Ends the complete network and decoding boundary.
     } // Ends the safe operation wrapper.
 
-    private suspend fun mapResponse(response: HttpResponse): ApiResult<String> { // Uses status first so malformed error bodies cannot hide an HTTP failure.
+    private suspend fun mapResponse(response: HttpResponse): ExecutionOutcome { // Uses status first so malformed error bodies cannot hide an HTTP failure.
         val status = response.status.value // Reads only the numeric status needed for classification.
         if (status !in 200..299) { // Treats only successful HTTP statuses as candidate text responses.
             return when (status) { // Maps the status families required by the assignment.
-                400 -> ApiResult.BadRequest // Reports an invalid request without reading its raw error message.
-                401, 403 -> ApiResult.InvalidApiKey // Reports key rejection or insufficient access.
-                429 -> ApiResult.RateLimited(retryAfter(response.headers[HttpHeaders.RetryAfter])) // Preserves safe numeric server guidance without performing a retry.
-                in 500..599 -> ApiResult.ServerError // Keeps every server-side HTTP failure in the same category.
-                else -> ApiResult.Unknown // Covers redirects and other unclassified non-success statuses.
+                400 -> ExecutionOutcome(ApiResult.BadRequest) // Reports an invalid request without reading its raw error message.
+                401, 403 -> ExecutionOutcome(ApiResult.InvalidApiKey) // Reports key rejection or insufficient access.
+                429 -> { // Treats rate limiting as retryable while preserving Retry-After guidance.
+                    val retryAfter = retryAfter(response.headers[HttpHeaders.RetryAfter]) // Parses optional numeric or HTTP-date delay.
+                    ExecutionOutcome(ApiResult.RateLimited(retryAfter), retryableStatus = true, retryAfterSeconds = retryAfter) // Allows bounded retry.
+                } // Ends 429 branch.
+                503 -> { // Distinguishes 503 overload as retryable while exposing typed ServerError.
+                    val retryAfter = retryAfter(response.headers[HttpHeaders.RetryAfter]) // Honours optional Retry-After on 503 responses too.
+                    ExecutionOutcome(ApiResult.ServerError, retryableStatus = true, retryAfterSeconds = retryAfter) // Keeps public ServerError type.
+                } // Ends 503 branch.
+                in 500..599 -> ExecutionOutcome(ApiResult.ServerError) // Keeps other 5xx statuses non-retryable and typed.
+                else -> ExecutionOutcome(ApiResult.Unknown) // Covers redirects and other unclassified non-success statuses.
             } // Ends HTTP status classification.
         } // Ends the HTTP failure branch.
 
         if (response.bodyAsText().isBlank()) { // Checks the saved Ktor body for an absent or whitespace-only response.
-            return ApiResult.EmptyResponse // Avoids calling an empty body malformed JSON.
+            return ExecutionOutcome(ApiResult.EmptyResponse) // Avoids calling an empty body malformed JSON.
         } // Ends the empty body check.
         val decoded = response.body<GenerateContentResponse>() // Uses the existing ContentNegotiation JSON configuration to decode the saved body.
         val promptBlock = decoded.promptFeedback?.blockReason // Reads only the prompt-level blocking signal.
         if (!promptBlock.isNullOrBlank() && promptBlock != "BLOCK_REASON_UNSPECIFIED") { // Recognises known and future explicit prompt block reasons.
-            return ApiResult.BlockedResponse // Never accepts text from a response whose prompt was blocked.
+            return ExecutionOutcome(ApiResult.BlockedResponse) // Never accepts text from a response whose prompt was blocked.
         } // Ends the prompt block check.
-        val candidate = decoded.candidates.firstOrNull() ?: return ApiResult.EmptyResponse // Selects one alternative rather than merging unrelated generated candidates.
+        val candidate = decoded.candidates.firstOrNull() ?: return ExecutionOutcome(ApiResult.EmptyResponse) // Selects one alternative rather than merging unrelated generated candidates.
         when (candidate.finishReason) { // Classifies the selected candidate before using any of its text.
-            "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION", "PUP_LIMITED_DISABLED" -> return ApiResult.BlockedResponse // Discards text from documented content and policy blocks.
-            "MALFORMED_RESPONSE" -> return ApiResult.MalformedResponse // Preserves the server's explicit malformed-response outcome.
+            "SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_RECITATION", "ESCALATION", "PUP_LIMITED_DISABLED" -> return ExecutionOutcome(ApiResult.BlockedResponse) // Discards text from documented content and policy blocks.
+            "MALFORMED_RESPONSE" -> return ExecutionOutcome(ApiResult.MalformedResponse) // Preserves the server's explicit malformed-response outcome.
             null, "", "FINISH_REASON_UNSPECIFIED", "STOP", "MAX_TOKENS" -> Unit // Allows usable text when stopping metadata is absent or reports normal completion or the output limit.
-            else -> return ApiResult.Unknown // Does not treat an unfamiliar or unsupported stopping reason as a successful answer.
+            else -> return ExecutionOutcome(ApiResult.Unknown) // Does not treat an unfamiliar or unsupported stopping reason as a successful answer.
         } // Ends stopping-reason classification.
 
-        val content = candidate.content ?: return ApiResult.EmptyResponse // Requires generated content before extracting a reply.
+        val content = candidate.content ?: return ExecutionOutcome(ApiResult.EmptyResponse) // Requires generated content before extracting a reply.
         if (content.role != null && content.role != "model") { // Accepts an omitted role but rejects a supplied author other than the model.
-            return ApiResult.MalformedResponse // Prevents a user-labelled response from being persisted as a mentor reply.
+            return ExecutionOutcome(ApiResult.MalformedResponse) // Prevents a user-labelled response from being persisted as a mentor reply.
         } // Ends the generated author check.
         val text = content.parts.filter { it.thought != true }.mapNotNull { it.text }.joinToString("") // Joins ordered answer text parts without thought parts, trimming or invented separators.
         if (text.isBlank()) { // Checks the selected candidate actually contains usable answer text.
-            return ApiResult.EmptyResponse // Rejects empty, non-text, thought-only and whitespace-only replies.
+            return ExecutionOutcome(ApiResult.EmptyResponse) // Rejects empty, non-text, thought-only and whitespace-only replies.
         } // Ends answer text validation.
-        return ApiResult.Success(text) // Returns only the selected usable reply, without response metadata or exceptions.
+        return ExecutionOutcome(ApiResult.Success(text)) // Returns only the selected usable reply, without response metadata or exceptions.
     } // Ends HTTP and response interpretation.
 
     private fun retryAfter(header: String?): Long? { // Converts optional server guidance into safe non-negative seconds.

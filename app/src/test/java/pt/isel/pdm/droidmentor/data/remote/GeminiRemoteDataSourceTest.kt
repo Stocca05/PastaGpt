@@ -298,6 +298,116 @@ class GeminiRemoteDataSourceTest { // Keeps every simulated request under the ow
         assertEquals(2, calls) // Checks both operations reached the same owned engine.
     } // Ends key lifetime and shared client ownership verification.
 
+    /** Checks transient 429 and 503 statuses retry up to three total attempts and return the later success. */
+    @Test // Exercises retry recovery when the server clears transient load or rate limits.
+    fun transient429And503RetryUpToThreeAttemptsAndCanSucceed() = runTest { // Covers both transient codes returning 200 on the 3rd attempt.
+        for (transientStatus in listOf(429, 503)) { // Verifies both 429 and 503 trigger bounded retries.
+            var attempts = 0 // Counts actual HTTP attempts made by the data source.
+            val engine = MockEngine.config { // Fails twice with the transient status then succeeds on attempt 3.
+                addHandler { // Responds sequentially based on attempt count.
+                    attempts += 1 // Increments before inspecting which attempt this is.
+                    if (attempts < 3) respond("busy", HttpStatusCode.fromValue(transientStatus), jsonHeaders) else respond(responseBody, headers = jsonHeaders) // Succeeds on the final allowed attempt.
+                } // Ends transient response selection.
+            } // Ends retry engine setup.
+            HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Owns the simulated client for this case.
+                val delays = mutableListOf<Long>() // Captures backoff waits without waiting in real time.
+                val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(maxAttempts = 3, baseDelayMs = 1_000L, jitterFraction = { 0.0 }, delayFn = { delays.add(it) })) // Uses deterministic zero jitter to check exact wait count.
+                assertEquals(ApiResult.Success("Reply"), source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Confirms recovery on attempt 3 returns Success.
+                assertEquals(listOf(1_000L, 2_000L), delays) // Confirms exponential backoff waits between attempts 1->2 and 2->3.
+            } // Closes the test client.
+            assertEquals(3, attempts) // Confirms all three attempts ran in order.
+        } // Ends 429/503 recovery loop.
+    } // Ends transient recovery test.
+
+    /** Checks repeated 429 and 503 stop at three attempts and preserve the final typed result. */
+    @Test // Prevents unbounded loops when the server remains overloaded.
+    fun persistent429And503StopAfterThreeAttemptsWithTypedFailure() = runTest { // Keeps returning 429 or 503 on every attempt.
+        val cases = listOf(429 to ApiResult.RateLimited(5), 503 to ApiResult.ServerError) // Maps expected typed outcome after exhausting retries.
+        for ((status, expected) in cases) { // Checks persistent 429 and persistent 503 separately.
+            var attempts = 0 // Counts HTTP calls to ensure a strict cap of 3.
+            val delays = mutableListOf<Long>() // Records Retry-After delays applied before each retry.
+            val headers = headersOf(HttpHeaders.ContentType to listOf(ContentType.Application.Json.toString()), HttpHeaders.RetryAfter to listOf("5")) // Supplies explicit server wait guidance.
+            val engine = MockEngine.config { addHandler { attempts += 1; respond("busy", HttpStatusCode.fromValue(status), headers) } } // Always responds with the transient error and Retry-After.
+            HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Creates an isolated client per case.
+                val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(maxAttempts = 3, delayFn = { delays.add(it) })) // Captures Retry-After delays deterministically.
+                assertEquals(expected, source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Confirms final typed failure matches the HTTP status.
+            } // Closes the test client.
+            assertEquals(3, attempts) // Confirms retries never exceed three total attempts.
+            assertEquals(listOf(5_000L, 5_000L), delays) // Confirms Retry-After replaces exponential backoff on both 429 and 503.
+        } // Ends persistent transient error verification.
+    } // Ends retry cap and Retry-After verification.
+
+    /** Checks exponential backoff adds bounded jitter when Retry-After is absent. */
+    @Test // Ensures jitter modulates exponential backoff without exceeding configured bounds.
+    fun exponentialBackoffAppliesJitterWithoutRetryAfter() = runTest { // Fixes jitter output so the calculation is deterministic in tests.
+        var attempts = 0 // Counts attempts across the persistent 503 sequence.
+        val delays = mutableListOf<Long>() // Captures computed backoff delays.
+        val engine = MockEngine.config { addHandler { attempts += 1; respond("busy", HttpStatusCode.ServiceUnavailable, jsonHeaders) } } // Omits Retry-After so exponential backoff + jitter is used.
+        HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Supplies simulated HTTP client.
+            val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(maxAttempts = 3, baseDelayMs = 1_000L, jitterFraction = { 0.2 }, delayFn = { delays.add(it) })) // Applies +20% jitter deterministically.
+            assertEquals(ApiResult.ServerError, source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Confirms exhausted 503 returns ServerError.
+        } // Closes test client.
+        assertEquals(3, attempts) // Confirms three attempts total.
+        assertEquals(listOf(1_200L, 2_400L), delays) // Confirms 1000ms + 20% = 1200ms and 2000ms + 20% = 2400ms.
+    } // Ends backoff + jitter calculation test.
+
+    /** Checks non-transient failures (400, 401, 403, 500, timeout, malformed) make one attempt only. */
+    @Test // Ensures client errors, auth errors, 500, timeouts and malformed replies never retry.
+    fun nonRetryableFailuresNeverRetry() = runTest { // Evaluates every non-retryable HTTP and client/response failure.
+        val httpCases = listOf(400 to ApiResult.BadRequest, 401 to ApiResult.InvalidApiKey, 403 to ApiResult.InvalidApiKey, 500 to ApiResult.ServerError) // Lists permanent HTTP statuses that must stop immediately.
+        for ((status, expected) in httpCases) { // Checks each status starts exactly one HTTP operation.
+            var attempts = 0 // Counts accidental retries.
+            val engine = MockEngine.config { addHandler { attempts += 1; respond("err", HttpStatusCode.fromValue(status), jsonHeaders) } } // Always emits the non-retryable HTTP status.
+            HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Owns test HTTP client.
+                val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(delayFn = { error("Retry delay must not run for $status") })) // Fails immediately if any retry wait occurs.
+                assertEquals(expected, source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Checks typed outcome.
+            } // Closes client.
+            assertEquals(1, attempts) // Checks only one attempt ran.
+        } // Ends HTTP non-retry loop.
+        val nonHttpCases = listOf(SocketTimeoutException("Timed out") to null, null to "{") // Pairs timeout exception and malformed JSON response cases.
+        for ((failure, body) in nonHttpCases) { // Checks transport timeout and malformed JSON execute once only.
+            var attempts = 0 // Counts accidental retries.
+            val engine = MockEngine.config { addHandler { attempts += 1; if (failure != null) throw failure else respond(body ?: "", headers = jsonHeaders) } } // Triggers timeout or invalid JSON once.
+            HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Owns test client.
+                val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(delayFn = { error("Retry delay must not run") })) // Fails test if delay runs.
+                val expected = if (failure != null) ApiResult.Timeout else ApiResult.MalformedResponse // Selects expected typed outcome.
+                assertEquals(expected, source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Verifies outcome without retries.
+            } // Closes client.
+            assertEquals(1, attempts) // Checks only one attempt ran.
+        } // Ends non-HTTP non-retry loop.
+    } // Ends non-retryable error verification.
+
+    /** Checks connectivity is rechecked before every retry and offline mid-backoff stops before HTTP. */
+    @Test // Protects Constraint #8 (connectivity check before every API call, including retries).
+    fun retryStopsBeforeHttpIfConnectivityDropsDuringBackoff() = runTest { // Drops connectivity while waiting before attempt 2.
+        var online = true // Starts online for attempt 1.
+        val events = mutableListOf<String>() // Tracks connectivity checks, requests and waits in sequence.
+        val engine = MockEngine.config { addHandler { events.add("request"); respond("busy", HttpStatusCode.ServiceUnavailable, jsonHeaders) } } // Always returns 503.
+        HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Creates isolated test client.
+            val source = GeminiRemoteDataSource(client, { events.add("check"); online }, retryPolicy = RetryPolicy(delayFn = { events.add("wait"); online = false })) // Drops network during backoff wait.
+            assertEquals(ApiResult.NetworkUnavailable, source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString())) // Returns NetworkUnavailable when offline check fails on attempt 2.
+        } // Closes test client.
+        assertEquals(listOf("check", "request", "wait", "check"), events) // Checks attempt 2 stops at connectivity gate before HTTP.
+    } // Ends retry connectivity check test.
+
+    /** Checks coroutine cancellation during retry backoff propagates without starting more attempts. */
+    @Test // Ensures structured concurrency cancels waiting retries immediately.
+    fun cancellationDuringRetryBackoffPropagatesWithoutFurtherAttempts() = runTest { // Cancels the waiting coroutine from the injected delay callback.
+        var attempts = 0 // Counts attempts before cancellation.
+        val engine = MockEngine.config { addHandler { attempts += 1; respond("busy", HttpStatusCode.TooManyRequests, jsonHeaders) } } // Always returns 429.
+        HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Owns test client.
+            val source = GeminiRemoteDataSource(client, { true }, retryPolicy = RetryPolicy(delayFn = { throw CancellationException("Cancelled while waiting") })) // Simulates caller cancellation during backoff.
+            var cancelled = false // Tracks cancellation propagation.
+            try { // Starts the request whose backoff will cancel.
+                source.generateContent(firstHistory(), apiKey = UUID.randomUUID().toString()) // Should cancel on first retry wait.
+            } catch (_: CancellationException) { // Captures expected CancellationException only.
+                cancelled = true // Marks cancellation propagated cleanly.
+            } // Ends cancellation catch.
+            assertTrue("Cancellation during retry wait must propagate", cancelled) // Confirms cancellation is never converted to an ApiResult.
+        } // Closes client.
+        assertEquals(1, attempts) // Confirms no second attempt started after cancellation.
+    } // Ends retry backoff cancellation test.
+
     private fun firstHistory() = listOf(ConversationTurn(Role.USER, "Question")) // Provides the smallest valid full history.
 
     private class TestLogger : Logger { // Captures only the factory's final fixed diagnostic messages.

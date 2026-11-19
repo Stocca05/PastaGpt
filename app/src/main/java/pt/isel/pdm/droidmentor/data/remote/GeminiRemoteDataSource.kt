@@ -25,6 +25,7 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
     private val client: HttpClient, // Reuses the client without changing its defaults or storing a key on it.
     private val isConnected: suspend () -> Boolean, // Allows a fresh Android connection check off the main dispatcher rather than assuming the device is online.
     private val resultMapper: GeminiResultMapper = GeminiResultMapper(), // Uses the already tested typed response boundary.
+    private val retryPolicy: RetryPolicy = RetryPolicy(), // Applies bounded exponential backoff + Retry-After on HTTP 429 and 503.
 ) { // Begins the request implementation.
 
     /** Contains the single editable model name used to build the endpoint. */
@@ -45,7 +46,7 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
      * @param apiKey Credential read from Preferences DataStore for this call only.
      * @return Usable mentor text or a typed failure; caller cancellation remains cancellation.
      */
-    suspend fun generateContent( // Exposes the single text-generation operation required by M2.
+    suspend fun generateContent( // Exposes stateless generation with bounded transient 429/503 retry support.
         history: List<ConversationTurn>, // Receives the entire caller-supplied conversation without a history limit.
         systemInstruction: String = MentorPersona.SYSTEM_INSTRUCTION, // Resends the central persona unless the caller explicitly supplies instructions.
         apiKey: String, // Keeps the credential only in this operation's memory and HTTP header.
@@ -59,18 +60,27 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
             return ApiResult.BadRequest // Rejects invalid local request input without an HTTP call.
         } // Ends the local request guard.
 
-        return resultMapper.execute { // Keeps connectivity checks, request construction, HTTP and decoding inside the typed error boundary.
-            if (!isConnected()) { // Rechecks the supplied current connection state immediately before this attempt.
-                throw IOException("No validated network connection") // Stops before POST; the mapper returns NetworkUnavailable without exposing this exception.
-            } // Ends the mandatory connectivity gate.
-            client.post("v1beta/models/$MODEL_NAME:generateContent") { // Uses the factory's Gemini HTTPS base URL and the single configured model.
-                header("x-goog-api-key", key) // Sends the key in this request only, never in its URL or body.
-                setBody(GenerateContentRequest( // Lets ContentNegotiation serialize a fresh stateless DTO for every call.
-                    systemInstruction = Content(parts = listOf(Part(text = systemInstruction))), // Keeps the persona in its own system_instruction object.
-                    contents = history.map { it.toContent() }, // Converts all supplied turns without dropping or trimming any text.
-                )) // Finishes the full request body without credentials or a session identifier.
-            } // Ends the one HTTP operation; the mapper reads its result.
-        } // Ends the typed request and response boundary.
+        val maxAttempts = retryPolicy.maxAttempts.coerceAtLeast(1) // Guarantees at least one HTTP attempt even if a custom policy passes zero.
+        for (attempt in 0 until maxAttempts) { // Runs initial call plus up to two retries on transient 429/503 responses.
+            currentCoroutineContext().ensureActive() // Stops before starting another attempt if the caller was cancelled.
+            val outcome = resultMapper.executeDetailed { // Rechecks connectivity on EVERY attempt inside the safe error boundary.
+                if (!isConnected()) { // Rechecks current network availability before each initial or retried POST.
+                    throw IOException("No validated network connection") // Stops before POST; the mapper returns NetworkUnavailable safely.
+                } // Ends mandatory connectivity gate.
+                client.post("v1beta/models/$MODEL_NAME:generateContent") { // Uses the factory's Gemini HTTPS base URL and the single configured model.
+                    header("x-goog-api-key", key) // Sends the key in this request only, never in its URL or body.
+                    setBody(GenerateContentRequest( // Lets ContentNegotiation serialize a fresh stateless DTO for every attempt.
+                        systemInstruction = Content(parts = listOf(Part(text = systemInstruction))), // Keeps the persona in its own system_instruction object.
+                        contents = history.map { it.toContent() }, // Converts all supplied turns without dropping or trimming any text.
+                    )) // Finishes the full request body without credentials or a session identifier.
+                } // Ends one HTTP operation; the mapper classifies the response.
+            } // Ends one typed attempt.
+            if (!outcome.retryableStatus || attempt == maxAttempts - 1) { // Stops immediately on success, permanent error, offline, or exhausted attempts.
+                return outcome.result // Returns the final typed outcome to the repository.
+            } // Ends retry termination check.
+            retryPolicy.waitBeforeRetry(attempt, outcome.retryAfterSeconds) // Waits with Retry-After or exponential backoff + jitter before the next attempt.
+        } // Ends bounded retry loop.
+        return ApiResult.Unknown // Fallback unreachable because maxAttempts >= 1 always returns in the loop.
     } // Ends stateless text generation.
 
     private fun validHistory(history: List<ConversationTurn>): Boolean { // Checks the wire-level rules without duplicating saved-message state validation.

@@ -120,17 +120,23 @@ class RoomChatRepository( // Receives every dependency manually without a framew
 
     /** Saves the pending user, sends complete history and persists its success or error before returning. */
     override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult { // Supplies new text to the shared send/retry lifecycle.
-        return attempt(chatId, text, null) // Never returns a network answer to the caller.
+        return attempt(chatId, text, targetId = null, rewrite = false) // Never returns a network answer to the caller.
     } // Ends new-message sending.
 
     /** Retries the existing final failed user with the same identity, position, text and creation time. */
     override suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult { // Supplies an existing row rather than appending a new one.
-        return attempt(chatId, null, messageId) // Uses the same prerequisites and persistence lifecycle as a new send.
+        return attempt(chatId, text = null, targetId = messageId, rewrite = false) // Uses the same prerequisites and persistence lifecycle as a new send.
     } // Ends manual retry.
 
-    private suspend fun attempt(chatId: String, text: String?, retryId: String?): ChatCommandResult { // Centralises the shared lifecycle without starting a background coroutine.
+    /** Edits any user message, deletes later exchanges atomically and resends the truncated history. */
+    override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult { // Shares prerequisites, network call and outcome persistence.
+        return attempt(chatId, newText, targetId = messageId, rewrite = true) // Truncates only after prerequisites pass and inside a transaction.
+    } // Ends conversation rewrite.
+
+    private suspend fun attempt(chatId: String, text: String?, targetId: String?, rewrite: Boolean): ChatCommandResult { // Centralises send, retry and rewrite without starting a background coroutine.
         currentCoroutineContext().ensureActive() // Preserves cancellation before validation or locking.
-        if (chatId.isBlank() || (retryId == null && text.isNullOrBlank()) || retryId?.isBlank() == true) return ChatCommandResult.InvalidInput // Requires usable input for either a new send or a selected retry.
+        val missingText = (targetId == null || rewrite) && text.isNullOrBlank() // Requires nonblank text for new sends and rewrites.
+        if (chatId.isBlank() || missingText || targetId?.isBlank() == true) return ChatCommandResult.InvalidInput // Rejects unusable arguments early.
         val lock = lock(chatId) // Gives only this conversation an active operation owner.
         if (!lock.tryLock()) return ChatCommandResult.Busy // Rejects a second request instead of queueing another user turn.
         var pendingId: String? = null // Tracks only the row owned by this attempt for cancellation or storage-failure cleanup.
@@ -143,31 +149,53 @@ class RoomChatRepository( // Receives every dependency manually without a framew
             if (text?.contains(initialKey) == true) return ChatCommandResult.InvalidInput // Prevents the configured credential from being saved as incoming user text.
             if (!isConnected()) return ChatCommandResult.Offline // Leaves the draft and local history unchanged when initially offline.
 
-            val rejected = database.withTransaction { // Makes unresolved-row checks and optimistic insertion/reactivation indivisible.
+            val rejected = database.withTransaction { // Makes unresolved-row checks and optimistic insertion/reactivation/rewrite indivisible.
                 val currentChat = chats.getById(chatId) ?: return@withTransaction ChatCommandResult.NotFound // Rechecks existence inside the preparation transaction.
                 val saved = messages.getMessages(chatId) // Reads every prior row in sequence order while preparation owns the transaction.
                 if (saved.any { it.text.contains(initialKey) }) return@withTransaction ChatCommandResult.InvalidHistory // Refuses to transmit configured credential text from legacy history.
                 val candidate: MessageEntity // Describes the one pending user that this attempt will own.
-                if (retryId == null) { // Prepares a new user row only when no unresolved turn exists.
-                    if (saved.any { it.status != MessageStatus.SENT }) return@withTransaction ChatCommandResult.UnresolvedMessage // Blocks both SENDING and FAILED prior rows.
-                    if (saved.lastOrNull()?.seq == Long.MAX_VALUE) return@withTransaction ChatCommandResult.InvalidHistory // Rejects sequence overflow before the DAO allocates the next position.
-                    val sequence = saved.lastOrNull()?.seq?.plus(1) ?: 0L // Predicts only the position needed to validate prospective full history.
-                    candidate = MessageEntity(newId(), chatId, Role.USER, text.orEmpty(), sequence, MessageStatus.SENDING, clock()) // Keeps the supplied message text unchanged.
-                } else { // Prepares only the selected final failed user row for retry.
-                    val existing = messages.getById(retryId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing local retry target.
-                    if (existing.chatId != chatId || existing.role != Role.USER || existing.status != MessageStatus.FAILED || saved.lastOrNull()?.id != retryId) return@withTransaction ChatCommandResult.InvalidRetry // Refuses foreign, model, completed or non-final rows.
-                    candidate = existing.copy(status = MessageStatus.SENDING, errorCategory = null) // Preserves ID, sequence, text and timestamp while clearing the old failure.
-                } // Ends new-versus-retry row selection.
-                val prospective = if (retryId == null) saved + candidate else saved.map { if (it.id == retryId) candidate else it } // Includes every prior row and exactly one current user.
+                val prospective: List<MessageEntity> // Describes the full history that must pass validation before modifying Room.
+                when { // Separates new send, same-row retry and user-message rewrite cleanly.
+                    targetId == null -> { // Prepares a new user row only when no unresolved turn exists.
+                        if (saved.any { it.status != MessageStatus.SENT }) return@withTransaction ChatCommandResult.UnresolvedMessage // Blocks both SENDING and FAILED prior rows.
+                        if (saved.lastOrNull()?.seq == Long.MAX_VALUE) return@withTransaction ChatCommandResult.InvalidHistory // Rejects sequence overflow before the DAO allocates the next position.
+                        val sequence = saved.lastOrNull()?.seq?.plus(1) ?: 0L // Predicts only the position needed to validate prospective full history.
+                        candidate = MessageEntity(newId(), chatId, Role.USER, text.orEmpty(), sequence, MessageStatus.SENDING, clock()) // Keeps the supplied message text unchanged.
+                        prospective = saved + candidate // Appends the new pending turn after all completed exchanges.
+                    } // Ends new-send preparation.
+                    rewrite -> { // Prepares an existing user turn at any sequence position for rewrite and tail truncation.
+                        if (saved.any { it.status == MessageStatus.SENDING }) return@withTransaction ChatCommandResult.UnresolvedMessage // Refuses rewriting while another row is sending.
+                        val existing = messages.getById(targetId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing local rewrite target.
+                        if (existing.chatId != chatId || existing.role != Role.USER) return@withTransaction ChatCommandResult.InvalidRetry // Refuses foreign or model rows.
+                        candidate = existing.copy(text = text.orEmpty(), status = MessageStatus.SENDING, errorCategory = null) // Updates text and clears any previous error on the same row.
+                        prospective = saved.filter { it.seq < existing.seq } + candidate // Drops turns after the edited row when validating the truncated history.
+                    } // Ends rewrite preparation.
+                    else -> { // Prepares only the selected final failed user row for retry.
+                        val existing = messages.getById(targetId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing local retry target.
+                        if (existing.chatId != chatId || existing.role != Role.USER || existing.status != MessageStatus.FAILED || saved.lastOrNull()?.id != targetId) return@withTransaction ChatCommandResult.InvalidRetry // Refuses foreign, model, completed or non-final rows.
+                        candidate = existing.copy(status = MessageStatus.SENDING, errorCategory = null) // Preserves ID, sequence, text and timestamp while clearing the old failure.
+                        prospective = saved.map { if (it.id == targetId) candidate else it } // Keeps the full history with the reactivated final row.
+                    } // Ends retry preparation.
+                } // Ends preparation mode selection.
                 if (HistoryPayloadBuilder.build(chatId, prospective.map { message(it) }) is HistoryPayloadResult.Invalid) return@withTransaction ChatCommandResult.InvalidHistory // Rejects invalid prior states or alternation before changing storage.
                 pendingId = candidate.id // Records ownership before the suspend write so cancellation after commit can still settle the row.
-                if (retryId == null) { // Performs the optimistic new-user insertion.
-                    messages.insert(candidate) // Lets the DAO allocate the sequence and update recency atomically.
-                    if (saved.isEmpty() && currentChat.title == ChatTitleFormatter.DEFAULT_TITLE) { // Auto-titles an untitled chat from its first user question.
-                        chats.updateTitle(chatId, ChatTitleFormatter.fromFirstMessage(candidate.text), candidate.createdAt) // Preserves any user-chosen manual title.
-                    } // Ends first-message auto-titling.
-                } else if (!messages.updateStatus(candidate.id, MessageStatus.SENDING)) { // Reactivates the same failed row in this transaction.
-                    return@withTransaction ChatCommandResult.StorageError // Reports a failed guarded state change without sending.
+                when { // Applies the validated Room write inside the same transaction.
+                    targetId == null -> { // Performs the optimistic new-user insertion.
+                        messages.insert(candidate) // Lets the DAO allocate the sequence and update recency atomically.
+                        if (saved.isEmpty() && currentChat.title == ChatTitleFormatter.DEFAULT_TITLE) { // Auto-titles an untitled chat from its first user question.
+                            chats.updateTitle(chatId, ChatTitleFormatter.fromFirstMessage(candidate.text), candidate.createdAt) // Preserves any user-chosen manual title.
+                        } // Ends first-message auto-titling.
+                    } // Ends new-send persistence.
+                    rewrite -> { // Performs the atomic edit + deleteFromSeq(seq + 1) rewrite preparation.
+                        if (!messages.prepareRewrite(chatId, candidate.id, candidate.text, clock())) { // Updates the user row and removes later turns.
+                            return@withTransaction ChatCommandResult.StorageError // Reports an unexpected preparation failure without sending.
+                        } // Ends rewrite persistence check.
+                    } // Ends rewrite persistence.
+                    else -> { // Reactivates the same failed row in this transaction.
+                        if (!messages.updateStatus(candidate.id, MessageStatus.SENDING)) { // Guards status transition in SQL.
+                            return@withTransaction ChatCommandResult.StorageError // Reports a failed guarded state change without sending.
+                        } // Ends retry status update check.
+                    } // Ends retry persistence.
                 } // Ends optimistic row persistence.
                 null // Signals preparation succeeded without returning a network result or row to the UI.
             } // Commits preparation before any HTTP operation begins.

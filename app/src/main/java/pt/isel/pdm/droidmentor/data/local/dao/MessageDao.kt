@@ -97,6 +97,32 @@ abstract class MessageDao { // Allows both generated queries and small transacti
     @Query("DELETE FROM messages WHERE chatId = :chatId AND seq >= :fromSeq") // Keeps earlier turns intact in sequence order.
     abstract suspend fun deleteFromSeq(chatId: String, fromSeq: Long): Int // Returns how many tail rows were removed.
 
+    /**
+     * Atomically updates a user message's text, sets it to SENDING with no error,
+     * removes all messages after its sequence position, and updates chat recency.
+     */
+    @Transaction // Ensures editing the row and deleting later turns commit or roll back together.
+    open suspend fun prepareRewrite( // Prepares any user turn for an edited stateless resend.
+        chatId: String, // Identifies the conversation being rewritten.
+        messageId: String, // Identifies the user message being edited.
+        newText: String, // Supplies the nonblank edited user prompt.
+        updatedAt: Long, // Updates conversation recency atomically.
+    ): Boolean { // Reports whether the rewrite target existed as a user row in this chat.
+        if (newText.isBlank()) return false // Refuses saving blank rewritten text.
+        val target = getById(messageId) ?: return false // Stops if the target message no longer exists.
+        if (target.chatId != chatId || target.role != Role.USER) return false // Allows rewriting only user messages in this chat.
+        if (updateUserRewriteRow(messageId, newText) != 1) return false // Updates text, status SENDING and clears errorCategory.
+        deleteFromSeq(chatId, target.seq + 1L) // Removes all subsequent user and model exchanges.
+        touchChat(chatId, updatedAt) // Updates chat recency in the same transaction.
+        return true // Confirms the truncated history is persisted and ready to send.
+    } // Ends atomic rewrite preparation.
+
+    @Query( // Updates one user message row for a conversation rewrite.
+        "UPDATE messages SET text = :newText, status = 'SENDING', errorCategory = NULL " + // Sets edited text and pending status.
+            "WHERE id = :messageId AND role = 'USER'" // Guards against modifying a model row.
+    ) // Ends rewrite row update.
+    protected abstract suspend fun updateUserRewriteRow(messageId: String, newText: String): Int // Returns modified row count.
+
     @Insert // Keeps raw inserts inside the DAO transaction methods.
     protected abstract suspend fun insertRow(message: MessageEntity) // Inserts the row without replacing existing history.
 

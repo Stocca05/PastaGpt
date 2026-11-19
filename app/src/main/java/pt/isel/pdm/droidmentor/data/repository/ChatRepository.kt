@@ -30,4 +30,7 @@ interface ChatRepository { // Can be supplied manually to ViewModels and replace
 
     /** Reactivates the same final failed user row and resends the full history without appending a duplicate. */
     suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult // Preserves the failed row's ID, sequence, text and creation timestamp.
+
+    /** Edits any user message, deletes all subsequent messages, and resends the truncated history. */
+    suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult // Keeps Room consistent if the network resend fails.
 } // Ends the chat repository contract.

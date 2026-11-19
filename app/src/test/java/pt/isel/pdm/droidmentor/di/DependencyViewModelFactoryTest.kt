@@ -152,6 +152,7 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
             override suspend fun deleteChat(chatId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no stored row to delete.
             override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult = ChatCommandResult.Offline // Never starts HTTP from a factory test.
             override suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no failed message to replay.
+            override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult = ChatCommandResult.NotFound // Has no message to rewrite.
         } // Ends the in-memory chat fake.
     } // Ends the complete fake dependency graph.
 } // Ends manual ViewModel factory tests.

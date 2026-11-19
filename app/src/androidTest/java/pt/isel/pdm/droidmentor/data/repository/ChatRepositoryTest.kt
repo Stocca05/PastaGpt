@@ -492,6 +492,72 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertEquals("My custom title", database.chatDao().getById(untitled)?.title) // Confirms later messages never overwrite a manual title.
     } // Ends auto-titling verification.
 
+    /** Checks rewriting an intermediate user message truncates later turns and resends truncated history. */
+    @Test // Tests M3-03 intermediate-turn rewrite end-to-end before repository implementation.
+    fun rewritingIntermediateMessageTruncatesLaterTurnsAndResends() = runBlocking { // Uses isolated Room and MockEngine.
+        val sentHistories = mutableListOf<List<String>>() // Records exact turns sent on each HTTP call.
+        var replyCounter = 0 // Produces distinct replies per exchange.
+        onRequest = { request -> // Captures the wire payload sent to Gemini.
+            sentHistories.add(requestTexts(request)) // Records all turns in contents.
+            replyCounter += 1 // Advances simulated reply number.
+            body = """{"candidates":[{"content":{"parts":[{"text":"Reply $replyCounter"}]},"finishReason":"STOP"}]}""" // Returns distinct model text.
+        } // Ends request capture.
+        val repository = repository() // Creates the production repository.
+        val id = createChat(repository) // Creates one conversation.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q1")) // Turn 0-1.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q2")) // Turn 2-3.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q3")) // Turn 4-5.
+        val initial = messages(repository, id) // Captures all 6 saved rows.
+        val targetQ2 = initial[2] // Selects the intermediate user message at seq 2.
+
+        assertEquals(ChatCommandResult.Stored, repository.rewriteMessage(id, targetQ2.id, "Q2 edited")) // Rewrites seq 2.
+        val afterRewrite = messages(repository, id) // Reads updated history from Room.
+        assertEquals(listOf("Q1", "Reply 1", "Q2 edited", "Reply 4"), afterRewrite.map { it.text }) // Confirms Q3/Reply 3 were deleted and Q2 was replaced.
+        assertEquals(listOf(0L, 1L, 2L, 3L), afterRewrite.map { it.seq }) // Confirms monotonic sequences with no gap.
+        assertTrue(afterRewrite.all { it.status == MessageStatus.SENT }) // Confirms the rewritten exchange completed.
+        assertEquals(listOf("Q1", "Reply 1", "Q2 edited"), sentHistories.last()) // Confirms stateless API received only the truncated history.
+    } // Ends intermediate rewrite verification.
+
+    /** Checks failed prerequisites leave existing history intact and post-truncate network failures remain retryable. */
+    @Test // Verifies M3-03 failure consistency both before and after Room truncation.
+    fun rewritePreservesConsistentStateOnOfflineAndNetworkFailures() = runBlocking { // Tests both offline preflight and HTTP 500 failure.
+        val repository = repository() // Creates the production repository.
+        val id = createChat(repository) // Creates one conversation.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "First")) // Completes first exchange.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Second")) // Completes second exchange.
+        val before = messages(repository, id) // Captures all 4 saved rows.
+
+        online = false // Simulates offline before rewrite starts.
+        assertEquals(ChatCommandResult.Offline, repository.rewriteMessage(id, before[0].id, "First edited offline")) // Rejects before mutating Room.
+        assertEquals(before, messages(repository, id)) // Confirms nothing was truncated while offline.
+
+        online = true // Restores network.
+        status = 500 // Simulates server failure after truncation.
+        assertEquals(ChatCommandResult.Stored, repository.rewriteMessage(id, before[0].id, "First edited online")) // Saves typed failure on the rewritten row.
+        val failedState = messages(repository, id) // Reads Room after the failed resend.
+        assertEquals(1, failedState.size) // Confirms turns after seq 0 were removed and no stale model reply remains.
+        assertEquals("First edited online", failedState.single().text) // Confirms edited text persisted.
+        assertEquals(MessageStatus.FAILED, failedState.single().status) // Confirms retryable failure state.
+        assertEquals(MessageErrorCategory.SERVER_ERROR, failedState.single().errorCategory) // Confirms typed error persisted.
+
+        status = 200 // Restores provider success.
+        assertEquals(ChatCommandResult.Stored, repository.retryMessage(id, failedState.single().id)) // Retries the rewritten row directly.
+        assertEquals(listOf(Role.USER, Role.MODEL), messages(repository, id).map { it.role }) // Confirms consistent recovery.
+    } // Ends rewrite failure-consistency verification.
+
+    /** Checks invalid rewrite targets (model rows, blank text, missing IDs) are rejected safely. */
+    @Test // Verifies M3-03 validation guards.
+    fun invalidRewriteRequestsAreRejectedWithoutChangingRoom() = runBlocking { // Tests model, blank and missing targets.
+        val repository = repository() // Creates the production repository.
+        val id = createChat(repository) // Creates one conversation.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Question")) // Saves user + model exchange.
+        val saved = messages(repository, id) // Reads both rows.
+        assertEquals(ChatCommandResult.InvalidInput, repository.rewriteMessage(id, saved[0].id, "   ")) // Rejects blank text.
+        assertEquals(ChatCommandResult.InvalidRetry, repository.rewriteMessage(id, saved[1].id, "Model edit")) // Rejects editing a model row.
+        assertEquals(ChatCommandResult.NotFound, repository.rewriteMessage(id, "missing", "Edit")) // Rejects missing row ID.
+        assertEquals(saved, messages(repository, id)) // Confirms Room stayed unchanged.
+    } // Ends rewrite validation verification.
+
     private fun repository(preferences: SettingsRepository = settings, newId: () -> String = { UUID.randomUUID().toString() }): RoomChatRepository { // Builds production collaborators around a test-owned engine and selected preference implementation.
         val connected: suspend () -> Boolean = { onCheck(checks.incrementAndGet()); online } // Shares fresh prerequisite checks with repository and source.
         val engine = MockEngine.config { // Keeps actual request construction and decoding inside the test process.

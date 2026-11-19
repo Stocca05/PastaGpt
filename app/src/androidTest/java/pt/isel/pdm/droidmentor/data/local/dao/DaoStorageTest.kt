@@ -270,6 +270,28 @@ class DaoStorageTest { // Groups the DAO behaviour checks.
         assertEquals(listOf("u0", "m1", "u2-new"), messages.getMessages("chat-1").map { it.id }) // Confirms deterministic ordering after truncation.
     } // Ends the deterministic ordering test.
 
+    /** Checks atomic rewrite preparation updates text, clears errors, sets SENDING and deletes later turns. */
+    @Test // Tests M3-03 DAO rewrite transaction before repository implementation.
+    fun prepareRewriteUpdatesUserAndDeletesSubsequentMessages() = runBlocking { // Uses in-memory Room with real SQLite.
+        chats.insert(chat("chat-1")) // Creates the parent conversation.
+        val u0 = messages.insert(message("u0", "chat-1", role = Role.USER, status = MessageStatus.SENT)) // Inserts seq 0.
+        val m1 = messages.insert(message("m1", "chat-1", role = Role.MODEL, status = MessageStatus.SENT)) // Inserts seq 1.
+        val u2 = messages.insert(message("u2", "chat-1", role = Role.USER, status = MessageStatus.SENT)) // Inserts seq 2.
+        messages.insert(message("m3", "chat-1", role = Role.MODEL, status = MessageStatus.SENT)) // Inserts seq 3.
+        messages.insert(message("u4", "chat-1", role = Role.USER, status = MessageStatus.FAILED).copy(errorCategory = MessageErrorCategory.TIMEOUT)) // Inserts seq 4.
+
+        assertTrue(messages.prepareRewrite("chat-1", u2.id, "Edited second question", 5000L)) // Rewrites seq 2 and truncates seq 3..4.
+        val after = messages.getMessages("chat-1") // Reads remaining history in seq order.
+        assertEquals(listOf(u0.id, m1.id, u2.id), after.map { it.id }) // Confirms turns after u2 were deleted.
+        assertEquals("Edited second question", after.last().text) // Confirms text updated on the same row.
+        assertEquals(u2.seq, after.last().seq) // Confirms sequence position was preserved.
+        assertEquals(MessageStatus.SENDING, after.last().status) // Confirms row is ready for resend.
+        assertNull(after.last().errorCategory) // Confirms error label is null.
+        assertEquals(5000L, chats.getById("chat-1")?.updatedAt) // Confirms chat recency updated atomically.
+        assertFalse(messages.prepareRewrite("chat-1", m1.id, "Cannot edit model", 6000L)) // Refuses rewriting a model turn.
+        assertFalse(messages.prepareRewrite("chat-1", u2.id, "   ", 6000L)) // Refuses blank rewrite text.
+    } // Ends DAO rewrite preparation verification.
+
     private suspend fun expectConstraintViolation(action: suspend () -> Unit) { // Checks a real failed database write.
         var rejected = false // Records whether SQLite rejected the operation.
         try { // Runs the caller's insert or transaction.

@@ -485,5 +485,6 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
             retriedId = messageId // Captures only the local ID needed by the retry assertion.
             return commandResult // Returns the controlled local retry acknowledgement.
         } // Ends the fake retry operation.
+        override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult = commandResult // Returns the controlled acknowledgement for fake rewrite calls.
     } // Ends the Room-like repository fake.
 } // Ends screen ViewModel unit verification.

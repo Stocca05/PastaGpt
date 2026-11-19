@@ -31,7 +31,7 @@ import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the stat
  * @param navController The host's controller; normally created and saved by Compose.
  * @param titleContent Content receiving history, settings and about navigation callbacks, in that order.
  * @param chatHistoryContent Content receiving chat selection and Back callbacks, in that order.
- * @param activeChatContent Content receiving the decoded local chat ID and the Back callback.
+ * @param activeChatContent Content receiving the decoded local chat ID, Back callback and Settings shortcut callback.
  * @param aboutContent Content receiving the Back callback to the previous Title destination.
  * @param settingsContent Content receiving the Back callback to the previous Title destination.
  */
@@ -47,8 +47,8 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
     chatHistoryContent: @Composable ((String) -> Unit, () -> Unit) -> Unit = { onOpenChat, onBack -> // Supplies the saved list with its two navigation events.
         ChatHistoryScreen(onOpenChat, onBack) // Uses its own manually injected repository ViewModel.
     }, // Ends the real history content.
-    activeChatContent: @Composable (String, () -> Unit) -> Unit = { chatId, onBack -> // Supplies only the saved local ID and return event.
-        ActiveChatScreen(chatId, onBack) // Uses the selected entry's manually constructed ViewModel.
+    activeChatContent: @Composable (String, () -> Unit, () -> Unit) -> Unit = { chatId, onBack, onOpenSettings -> // Supplies local ID, explicit return and Settings shortcut.
+        ActiveChatScreen(chatId, onBack, onOpenSettings = onOpenSettings) // Uses the selected entry's manually constructed ViewModel.
     }, // Ends the real active conversation content.
     aboutContent: @Composable (() -> Unit) -> Unit = { onBack -> // Supplies the information screen with its existing return event.
         AboutScreen(onBack) // Keeps public app metadata in its own screen package.
@@ -103,7 +103,7 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
                     Unit // Satisfies the Unit callback type cleanly.
                 } // Ends explicit-exit handler.
                 BackHandler { leaveExplicitly() } // Intercepts hardware/gesture Back so explicit exit clears activeChatId.
-                activeChatContent(chatId, leaveExplicitly) // Passes the explicit-exit callback to Active Chat.
+                activeChatContent(chatId, leaveExplicitly) { navController.openDestination(DroidMentorRoutes.SETTINGS) } // Passes explicit-exit and Settings shortcut callbacks.
             } // Ends the active conversation destination.
             composable(DroidMentorRoutes.ABOUT) { // Registers application information separately from Title.
                 aboutContent { navController.popBackStack() } // Returns to the existing Title entry.

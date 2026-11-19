@@ -593,7 +593,7 @@ Implementare i requisiti a più alta complessità logica — cancellazione delle
 | M3-07 | Sopravvivenza a process death | `SavedStateHandle` per la bozza di testo non inviata e per la posizione di scroll. Verifica con l'opzione *Non mantenere le attività* e con `adb shell am kill`. | S | 🟡 | 4 h | M2-22 | ☑ |
 | M3-08 | Politica di ritentativi | Backoff esponenziale con jitter per 429 e 503, lettura dell'header `Retry-After` quando presente, massimo 3 tentativi, operazione annullabile dall'utente, nessun ritentativo su 400/401/403. | M | 🔴 | 5 h | M2-09 | ☑ |
 | M3-09 | Stato per singolo messaggio | Rendering differenziato per `SENDING` (indicatore di attesa), `SENT`, `FAILED` (icona + azione *Riprova* sulla bubble). Il reinvio riusa il payload ricostruito dalla cronologia corrente. | M | 🟡 | 4 h | M3-08 | ☑ |
-| M3-10 | Chiave mancante o non valida | Se la chiave è assente o l'API risponde 401/403: messaggio contestuale e azione diretta che porta alla schermata Settings, senza vicoli ciechi. | M | 🟡 | 3 h | M2-19, M2-09 | ☐ |
+| M3-10 | Chiave mancante o non valida | Se la chiave è assente o l'API risponde 401/403: messaggio contestuale e azione diretta che porta alla schermata Settings, senza vicoli ciechi. | M | 🟡 | 3 h | M2-19, M2-09 | ☑ |
 
 ### 10.4 WBS — Requisito opzionale: immagini nella conversazione
 

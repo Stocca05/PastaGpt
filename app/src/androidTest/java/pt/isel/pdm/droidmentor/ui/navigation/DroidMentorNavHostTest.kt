@@ -184,7 +184,7 @@ class DroidMentorNavHostTest { // Test content contains controls only, never fak
                             Button(onClick = onBack) { Text("Return") } // Returns from History to Title.
                         } // Ends History layout.
                     }, // Ends History slot.
-                    activeChatContent = { id, onBack -> // Minimal Active Chat placeholder.
+                    activeChatContent = { id, onBack, _ -> // Minimal Active Chat placeholder.
                         Column { // Separates ID and Return button.
                             Text("Active screen") // Marks Active Chat destination.
                             Text("Local ID: $id") // Exposes restored chat ID.
@@ -217,7 +217,7 @@ class DroidMentorNavHostTest { // Test content contains controls only, never fak
                     onActiveChatExited = { exitedCount += 1 }, // Counts explicit exit clears.
                     titleContent = { onHistory, _, _ -> Button(onClick = onHistory) { Text("Open history") } }, // Minimal Title.
                     chatHistoryContent = { onSelect, _ -> Button(onClick = { onSelect("chat-1") }) { Text("Select chat") } }, // Minimal History.
-                    activeChatContent = { _, _ -> Text("Active screen") }, // Minimal Active Chat.
+                    activeChatContent = { _, _, _ -> Text("Active screen") }, // Minimal Active Chat.
                 ) // Ends NavHost setup.
             } // Ends theme.
         } // Ends composition.
@@ -228,6 +228,36 @@ class DroidMentorNavHostTest { // Test content contains controls only, never fak
         assertEquals(1, exitedCount) // Confirms system Back cleared the active session.
         assertScreen("History screen", DroidMentorRoutes.CHAT_HISTORY) // Confirms return to History.
     } // Ends system-Back session clear verification.
+
+    /** Checks Active Chat can jump straight to Settings and return without clearing the active session. */
+    @Test // Protects M3-10 zero-dead-end navigation to Settings.
+    fun activeChatOpensSettingsWithoutClearingSessionAndReturns() { // Exercises missing/invalid key Settings shortcut.
+        var exitedCount = 0 // Ensures opening Settings does not count as exiting the conversation.
+        compose.setContent { // Builds graph with active session hooks.
+            controller = rememberNavController() // Captures live NavHostController.
+            DroidMentorTheme { // Applies theme.
+                DroidMentorNavHost( // Uses modified host signature with onOpenSettings.
+                    navController = controller, // Allows route assertions.
+                    onActiveChatExited = { exitedCount += 1 }, // Tracks accidental exit clears.
+                    titleContent = { onHistory, _, _ -> Button(onClick = onHistory) { Text("Open history") } }, // Minimal Title.
+                    chatHistoryContent = { onSelect, _ -> Button(onClick = { onSelect("chat-1") }) { Text("Select chat") } }, // Minimal History.
+                    activeChatContent = { _, _, onOpenSettings -> // Exposes the direct Settings button from Active Chat.
+                        Button(onClick = onOpenSettings) { Text("Shortcut settings") } // Navigates directly to Settings.
+                    }, // Ends Active Chat content.
+                    settingsContent = { onBack -> // Exposes Settings Return callback.
+                        Button(onClick = onBack) { Text("Return from settings") } // Returns back to Active Chat.
+                    }, // Ends Settings content.
+                ) // Ends NavHost setup.
+            } // Ends theme.
+        } // Ends composition.
+        compose.onNodeWithText("Open history").performClick() // Moves to History.
+        compose.onNodeWithText("Select chat").performClick() // Enters Active Chat.
+        compose.onNodeWithText("Shortcut settings").performClick() // Jumps directly from Active Chat to Settings.
+        assertScreen("Return from settings", DroidMentorRoutes.SETTINGS) // Confirms Settings opened.
+        assertEquals(0, exitedCount) // Confirms active session remained intact.
+        compose.onNodeWithText("Return from settings").performClick() // Returns from Settings.
+        assertScreen("Shortcut settings", DroidMentorRoutes.ACTIVE_CHAT) // Confirms return lands straight back in Active Chat.
+    } // Ends Active Chat Settings shortcut navigation verification.
 
     private fun showGraph() { // Installs the same graph for ordinary tests.
         compose.setContent { GraphContent() } // Keeps graph and controller ownership inside the Compose activity.
@@ -256,7 +286,7 @@ class DroidMentorNavHostTest { // Test content contains controls only, never fak
                         Button(onClick = onBack) { Text("Return") } // Uses the graph's real popBackStack callback.
                     } // Ends the test destination control layout.
                 }, // Ends the test-only history controls.
-                activeChatContent = { id, onBack -> // Receives the decoded ID from the actual graph argument.
+                activeChatContent = { id, onBack, _ -> // Receives the decoded ID from the actual graph argument.
                     Column { // Places labels and buttons in separate rows rather than overlapping host children.
                         Text("Active screen") // Labels the active destination without starting a send operation.
                         Text("Local ID: $id") // Makes the harmless decoded ID observable to the test.

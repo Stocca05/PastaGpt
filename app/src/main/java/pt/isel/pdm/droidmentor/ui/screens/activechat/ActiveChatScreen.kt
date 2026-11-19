@@ -71,6 +71,7 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     chatId: String, // Identifies the local conversation selected by the graph.
     onBack: () -> Unit, // Returns to the existing history entry.
     model: ActiveChatViewModel = viewModel(key = chatId, factory = remember(chatId) { ActiveChatViewModel.factory(chatId) }), // Uses ID-specific ownership by default and allows an isolated model in device tests.
+    onOpenSettings: () -> Unit = {}, // Navigates directly to Settings when no key is configured or an auth failure occurs.
 ) { // Starts the selected conversation UI without changing production dependency construction.
     val state by model.state.collectAsStateWithLifecycle() // Observes only immutable Room-derived message state.
     val snackbar = remember { SnackbarHostState() } // Owns local feedback for this conversation.
@@ -176,8 +177,22 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     Text(stringResource(R.string.notice_offline), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Explains that new interactions are unavailable while history stays visible.
                 } // Ends the offline banner.
             } // Ends connectivity feedback.
-            if (state.settingsError || !state.hasKey) { // Explains the separate key prerequisite without reading its value.
-                Text(stringResource(if (state.settingsError) R.string.notice_settings_error else R.string.notice_missing_key), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Keeps configuration feedback visible while the draft remains editable.
+            if (!state.loading && (state.settingsError || !state.hasKey || state.hasInvalidKeyFailure)) { // Explains missing, unreadable or rejected key with a direct Settings action.
+                val keyNotice = when { // Chooses safe contextual copy for missing vs rejected credentials.
+                    state.settingsError -> R.string.notice_settings_error // Explains settings storage could not be read.
+                    !state.hasKey -> R.string.notice_missing_key // Explains no API key is configured yet.
+                    else -> R.string.notice_rejected_key // Explains a 401/403 authentication failure happened.
+                } // Ends contextual key message choice.
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) { // Frames the guidance and direct Settings button clearly.
+                    Row( // Places explanation text beside the direct Open Settings shortcut.
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies comfortable banner padding.
+                        horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates copy and action button.
+                        verticalAlignment = Alignment.CenterVertically, // Centres the action beside wrapping text.
+                    ) { // Starts contextual banner row.
+                        Text(stringResource(keyNotice), modifier = Modifier.weight(1f)) // Keeps configuration feedback visible while the draft stays editable.
+                        TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) } // Leads straight to Settings with zero dead ends.
+                    } // Ends contextual banner row.
+                } // Ends key-status banner container.
             } // Ends key-status feedback.
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { // Gives the saved message body the remaining screen height.
                 when { // Keeps storage errors and missing conversations distinct from empty messages.

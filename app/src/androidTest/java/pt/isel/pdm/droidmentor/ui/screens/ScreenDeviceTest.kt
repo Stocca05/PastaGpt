@@ -268,6 +268,7 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.waitUntil(5_000) { !model.state.value.loading } // Waits for the first local history snapshot.
         compose.onNode(hasSetTextAction()).performTextInput("Question without configuration") // Keeps editing available before configuration.
         compose.onNodeWithText("Configure an API key in Settings before sending.").assertExists() // Explains the missing prerequisite safely.
+        compose.onNodeWithText("Open Settings").assertExists() // Provides direct Settings shortcut with zero dead ends.
         compose.onNodeWithText("Send").assertIsNotEnabled() // Checks no request can start from the widget.
         assertEquals(0, calls.get()) // Checks the remote engine received nothing.
     } // Ends unconfigured UI verification.
@@ -346,7 +347,22 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Question 2").assertExists() // Confirms scroll stayed near the restored item instead of jumping to bottom.
     } // Ends process-death UI verification.
 
-    private fun showChat(): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
+    /** Checks HTTP 401/403 key rejection shows contextual guidance and opens Settings directly. */
+    @Test // Covers M3-10 missing/rejected API key navigation path without dead ends.
+    fun invalidApiKeyFailureOffersDirectSettingsShortcut() { // Simulates HTTP 401 on send and taps Open Settings.
+        responseCode.set(401) // Forces InvalidApiKey failure category in Room.
+        var openedSettings = 0 // Tracks direct Settings navigation callback.
+        val (_, model) = showChat(onOpenSettings = { openedSettings += 1 }) // Displays chat with Settings shortcut wired.
+        compose.onNode(hasSetTextAction()).performTextInput("Test invalid key") // Enters harmless prompt.
+        compose.onNodeWithText("Send").performClick() // Sends once to trigger 401.
+        compose.waitUntil(5_000) { model.state.value.hasInvalidKeyFailure && !model.state.value.working } // Waits for Room failure persistence.
+        compose.onNodeWithText("Your API key was rejected. Update it in Settings.").assertExists() // Checks contextual rejected-key banner.
+        compose.onNodeWithText("The API key or model access was rejected. Check Settings.").assertExists() // Checks persisted bubble failure reason.
+        compose.onNodeWithText("Open Settings").assertIsEnabled().performClick() // Taps direct Settings action.
+        assertEquals(1, openedSettings) // Confirms direct Settings navigation ran.
+    } // Ends rejected-key shortcut device verification.
+
+    private fun showChat(onOpenSettings: () -> Unit = {}): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.
             when (val result = repository.createChat("UI test conversation")) { // Creates real empty Room history without a network operation.
                 is ChatCommandResult.Created -> result.chatId // Receives only the persisted local ID.
@@ -354,7 +370,7 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
             } // Ends local creation handling.
         } // Ends test-only creation.
         val model = own(id, ActiveChatViewModel(id, repository, preferences, network)) // Constructs the real model with explicit isolated dependencies.
-        compose.setContent { DroidMentorTheme { ActiveChatScreen(id, {}, model) } } // Tests actual widgets without the production app database or key.
+        compose.setContent { DroidMentorTheme { ActiveChatScreen(id, {}, model, onOpenSettings) } } // Tests actual widgets without the production app database or key.
         compose.waitUntil(5_000) { !model.state.value.loading && model.state.value.connected } // Waits for local observation and the injected initial network snapshot.
         return id to model // Returns only local identity and the controlled model for persistence assertions.
     } // Ends actual chat test composition.

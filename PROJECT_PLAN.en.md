@@ -593,7 +593,7 @@ Implement the requirements with the highest logical complexity — conversation 
 | M3-07 | Surviving process death | `SavedStateHandle` for the unsent draft text and the scroll position. Verified with the *Don't keep activities* option and with `adb shell am kill`. | S | 🟡 | 4 h | M2-22 | ☑ |
 | M3-08 | Retry policy | Exponential backoff with jitter for 429 and 503, reading the `Retry-After` header when present, at most 3 attempts, user-cancellable operation, no retry on 400/401/403. | M | 🔴 | 5 h | M2-09 | ☑ |
 | M3-09 | Per-message status | Differentiated rendering for `SENDING` (progress indicator), `SENT`, `FAILED` (icon + *Retry* action on the bubble). Resending reuses the payload rebuilt from the current history. | M | 🟡 | 4 h | M3-08 | ☑ |
-| M3-10 | Missing or invalid key | If the key is absent or the API returns 401/403: contextual message with a direct action leading to the Settings screen, no dead ends. | M | 🟡 | 3 h | M2-19, M2-09 | ☐ |
+| M3-10 | Missing or invalid key | If the key is absent or the API returns 401/403: contextual message with a direct action leading to the Settings screen, no dead ends. | M | 🟡 | 3 h | M2-19, M2-09 | ☑ |
 
 ### 10.4 WBS — Optional requirement: images in the conversation
 

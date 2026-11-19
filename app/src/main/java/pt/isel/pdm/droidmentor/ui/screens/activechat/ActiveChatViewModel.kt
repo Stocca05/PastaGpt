@@ -21,6 +21,7 @@ import pt.isel.pdm.droidmentor.di.dependencyViewModelFactoryWithSavedState // Bu
 import pt.isel.pdm.droidmentor.domain.Chat // Holds Room-derived conversation metadata.
 import pt.isel.pdm.droidmentor.domain.ConnectivityStatus // Describes validated connectivity without Android imports in the domain.
 import pt.isel.pdm.droidmentor.domain.Message // Holds Room-derived message content and error categories.
+import pt.isel.pdm.droidmentor.domain.MessageErrorCategory // Detects rejected-key failures (401/403) persisted in Room.
 import pt.isel.pdm.droidmentor.domain.MessageStatus // Identifies unresolved pending and failed turns.
 import pt.isel.pdm.droidmentor.domain.Role // Restricts retry to the final failed user turn.
 import pt.isel.pdm.droidmentor.ui.components.UiEvent // Publishes safe local notices rather than network results.
@@ -46,6 +47,9 @@ data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from 
 
     /** Whether a failed saved turn must be retried before a new user turn. */
     val failed: Boolean get() = messages.any { it.status == MessageStatus.FAILED } // Keeps full-history validation consistent with the repository.
+
+    /** Whether any saved failed turn reported a rejected or missing API key (401/403). */
+    val hasInvalidKeyFailure: Boolean get() = messages.any { it.status == MessageStatus.FAILED && it.errorCategory == MessageErrorCategory.INVALID_API_KEY } // Prompts direct navigation to Settings without leaving a dead end.
 
     /** Whether the current draft may start a new explicit send. */
     val canSend: Boolean // Derives availability from the complete local snapshot.

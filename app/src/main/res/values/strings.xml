@@ -35,6 +35,8 @@
     <string name="notice_busy">An operation is already in progress.</string>
     <string name="notice_unresolved">Retry the failed message before sending a new one.</string>
     <string name="notice_missing_key">Configure an API key in Settings before sending.</string>
+    <string name="notice_rejected_key">Your API key was rejected. Update it in Settings.</string>
+    <string name="action_open_settings">Open Settings</string>
     <string name="notice_settings_error">Settings could not be read. Try again later.</string>
     <string name="notice_offline">You are offline. New interactions are unavailable.</string>
     <string name="notice_invalid_history">This saved conversation cannot be sent.</string>

@@ -265,11 +265,18 @@ private fun MessageBubble( // Receives callbacks from the screen for retry and l
                 shape = MaterialTheme.shapes.medium, // Uses the app's existing rounded shape.
                 color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer, // Uses theme-provided contrast for each participant.
             ) { // Displays saved content and any persisted failure.
-                Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, text and error feedback.
-                    Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
+                Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, status, text and error feedback.
+                    Row(horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), verticalAlignment = Alignment.CenterVertically) { // Displays participant alongside per-message status.
+                        Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
+                        if (user) MessageStatusBadge(message.status) // Renders distinct SENDING, SENT or FAILED indicator for each user bubble.
+                    } // Ends bubble header row.
                     Text(message.text) // Displays full saved message text without altering history.
                     if (user && message.status == MessageStatus.FAILED) { // Reads failures from Room rather than a network event.
-                        Text(stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource())) // Translates the saved category into safe readable feedback.
+                        Text( // Translates the saved category into safe readable feedback.
+                            text = stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource()), // Resolves error category string.
+                            style = MaterialTheme.typography.bodySmall, // Uses compact explanatory style inside the bubble.
+                            color = MaterialTheme.colorScheme.error, // Highlights persisted failure clearly.
+                        ) // Ends failure explanation text.
                         if (showRetry) Button(onClick = onRetry, enabled = retryEnabled) { Text(stringResource(R.string.chat_retry)) } // Retries the same final failed row through the repository.
                     } // Ends persisted error content.
                 } // Ends bubble content.
@@ -297,6 +304,26 @@ private fun MessageBubble( // Receives callbacks from the screen for retry and l
         } // Ends anchored menu container.
     } // Ends saved-row alignment.
 } // Ends the message bubble.
+
+@Composable // Displays distinct SENDING, SENT or FAILED indicator inside a user bubble.
+private fun MessageStatusBadge(status: MessageStatus) { // Keeps per-message state rendering single-purpose and readable.
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) { // Aligns icon/progress with compact text label.
+        when (status) { // Renders each saved message status distinctly.
+            MessageStatus.SENDING -> { // Shows active wait spinner while the attempt is running.
+                CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp) // Marks in-flight request clearly.
+                Text(stringResource(R.string.message_status_sending), style = MaterialTheme.typography.labelSmall) // Explains sending state.
+            } // Ends SENDING indicator.
+            MessageStatus.SENT -> { // Shows settled confirmation check mark.
+                Icon(painter = painterResource(R.drawable.ic_check), contentDescription = stringResource(R.string.message_status_sent), modifier = Modifier.size(14.dp)) // Marks sent turn.
+                Text(stringResource(R.string.message_status_sent), style = MaterialTheme.typography.labelSmall) // Displays compact sent label.
+            } // Ends SENT indicator.
+            MessageStatus.FAILED -> { // Shows error icon and colour highlight for failed turns.
+                Icon(painter = painterResource(R.drawable.ic_error), contentDescription = stringResource(R.string.message_status_failed), modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error) // Marks failure visually.
+                Text(stringResource(R.string.message_status_failed), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) // Highlights failure status text.
+            } // Ends FAILED indicator.
+        } // Ends per-status badge switch.
+    } // Ends badge layout.
+} // Ends MessageStatusBadge.
 
 @Composable // Displays the pre-filled rewrite dialog with an explicit truncation warning.
 private fun RewriteMessageDialog( // Requires confirmation before truncating later messages.

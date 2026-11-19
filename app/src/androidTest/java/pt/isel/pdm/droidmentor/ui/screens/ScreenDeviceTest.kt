@@ -210,10 +210,12 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.waitUntil(5_000) { calls.get() == 1 && model.state.value.pending } // Waits for the saved user row and actual simulated request.
         compose.onNodeWithText("Send").assertIsNotEnabled() // Checks a second UI send is blocked while the attempt owns the chat.
         compose.onNodeWithText("Waiting for a reply…").assertExists() // Checks in-flight feedback is visible.
+        compose.onNodeWithText("Sending…").assertExists() // Checks bubble-level SENDING badge is displayed.
         runBlocking { assertEquals(MessageStatus.SENDING, database.messageDao().getMessages(id).single().status) } // Checks progress came from a real pending Room row.
         replyGate?.complete(Unit) // Supplies the simulated reply after pending-state assertions.
         compose.waitUntil(5_000) { model.state.value.messages.size == 2 && !model.state.value.working } // Waits for atomic Room completion and local command cleanup.
         compose.onNodeWithText("Mentor UI test reply").assertExists() // Checks persisted model content reached the actual UI.
+        compose.onNodeWithText("Sent").assertExists() // Checks user bubble transitioned to the distinct SENT indicator.
         runBlocking { assertTrue(database.messageDao().getMessages(id).all { it.status == MessageStatus.SENT }) } // Checks both saved turns settled together.
     } // Ends the full pending-to-reply device interaction.
 
@@ -226,11 +228,13 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Send").performClick() // Starts one real repository attempt.
         compose.waitUntil(5_000) { model.state.value.failed && !model.state.value.working } // Waits for the persisted error rather than a raw network event.
         val failedId = runBlocking { database.messageDao().getMessages(id).single().id } // Captures only the safe local row identity.
+        compose.onNodeWithText("Failed").assertExists() // Checks bubble-level FAILED badge is shown.
         compose.onNodeWithText("The provider is temporarily unavailable. Retry later.").assertExists() // Checks the saved category's safe resource text.
         compose.onNodeWithText("Send").assertIsNotEnabled() // Checks the unresolved failed row blocks a new turn.
         responseCode.set(200) // Makes the next explicit attempt usable.
         compose.onNodeWithText("Retry").assertIsEnabled().performClick() // Invokes the actual same-row retry action.
         compose.waitUntil(5_000) { model.state.value.messages.size == 2 && !model.state.value.working } // Waits for the settled retry and model row.
+        compose.onNodeWithText("Sent").assertExists() // Checks the retried bubble settled cleanly to SENT.
         runBlocking { // Reads only the isolated local database after UI-driven completion.
             val saved = database.messageDao().getMessages(id) // Retrieves the production DAO's ordered rows.
             assertEquals(failedId, saved.first().id) // Checks the original failed user row was reused.

@@ -75,6 +75,9 @@
     <string name="chat_retry">Retry</string>
     <string name="chat_you">You</string>
     <string name="chat_mentor">Mentor</string>
+    <string name="message_status_sending">Sending…</string>
+    <string name="message_status_sent">Sent</string>
+    <string name="message_status_failed">Failed</string>
     <string name="message_invalid_key">The API key or model access was rejected. Check Settings.</string>
     <string name="message_bad_request">The provider rejected this request.</string>
     <string name="message_rate_limited">The request limit was reached. Retry later.</string>

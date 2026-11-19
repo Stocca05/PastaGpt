@@ -9,7 +9,8 @@ import kotlinx.coroutines.currentCoroutineContext // Checks the caller's cancell
 import kotlinx.coroutines.ensureActive // Preserves cancellation even when no HTTP request is needed.
 import pt.isel.pdm.droidmentor.data.remote.dto.Content // Wraps the system instruction separately from the history.
 import pt.isel.pdm.droidmentor.data.remote.dto.GenerateContentRequest // Defines the stateless JSON request fields.
-import pt.isel.pdm.droidmentor.data.remote.dto.Part // Holds the system instruction as a text part.
+import pt.isel.pdm.droidmentor.data.remote.dto.InlineData // Attaches ephemeral in-memory Base64 image data (V9).
+import pt.isel.pdm.droidmentor.data.remote.dto.Part // Holds text and optional inline_data parts.
 import pt.isel.pdm.droidmentor.domain.ConversationTurn // Accepts validated domain turns instead of persistence entities.
 import pt.isel.pdm.droidmentor.domain.MentorPersona // Supplies the app's central mentor instructions by default.
 import pt.isel.pdm.droidmentor.domain.Role // Checks the request's user/model author sequence.
@@ -26,6 +27,7 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
     private val isConnected: suspend () -> Boolean, // Allows a fresh Android connection check off the main dispatcher rather than assuming the device is online.
     private val resultMapper: GeminiResultMapper = GeminiResultMapper(), // Uses the already tested typed response boundary.
     private val retryPolicy: RetryPolicy = RetryPolicy(), // Applies bounded exponential backoff + Retry-After on HTTP 429 and 503.
+    private val encodeImageBase64: suspend (String) -> Pair<String, String>? = { null }, // Encodes relative image paths in memory only at request build time.
 ) { // Begins the request implementation.
 
     /** Contains the single editable model name used to build the endpoint. */
@@ -56,9 +58,10 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
         if (key.isEmpty() || key.any { it <= ' ' || it == '\u007f' }) { // Rejects missing keys and unsafe whitespace or control characters in a header value.
             return ApiResult.InvalidApiKey // Blocks an unusable credential before invoking the network engine.
         } // Ends credential input validation.
-        if (systemInstruction.isBlank() || !validHistory(history)) { // Requires a usable persona and a complete alternating text conversation.
+        if (systemInstruction.isBlank() || !validHistory(history)) { // Requires a usable persona and a complete alternating conversation.
             return ApiResult.BadRequest // Rejects invalid local request input without an HTTP call.
         } // Ends the local request guard.
+        val wireContents = buildWireContents(history) ?: return ApiResult.BadRequest // Encodes any attached image paths cleanly in memory right before sending.
 
         val maxAttempts = retryPolicy.maxAttempts.coerceAtLeast(1) // Guarantees at least one HTTP attempt even if a custom policy passes zero.
         for (attempt in 0 until maxAttempts) { // Runs initial call plus up to two retries on transient 429/503 responses.
@@ -71,7 +74,7 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
                     header("x-goog-api-key", key) // Sends the key in this request only, never in its URL or body.
                     setBody(GenerateContentRequest( // Lets ContentNegotiation serialize a fresh stateless DTO for every attempt.
                         systemInstruction = Content(parts = listOf(Part(text = systemInstruction))), // Keeps the persona in its own system_instruction object.
-                        contents = history.map { it.toContent() }, // Converts all supplied turns without dropping or trimming any text.
+                        contents = wireContents, // Sends complete multimodal turns with Base64 generated solely in memory.
                     )) // Finishes the full request body without credentials or a session identifier.
                 } // Ends one HTTP operation; the mapper classifies the response.
             } // Ends one typed attempt.
@@ -83,13 +86,32 @@ class GeminiRemoteDataSource( // Uses explicit constructor dependencies without 
         return ApiResult.Unknown // Fallback unreachable because maxAttempts >= 1 always returns in the loop.
     } // Ends stateless text generation.
 
+    private suspend fun buildWireContents(history: List<ConversationTurn>): List<Content>? { // Produces wire DTOs with ephemeral inline_data in memory only.
+        return history.map { turn -> // Converts each domain turn cleanly in sequence order.
+            val parts = mutableListOf<Part>() // Collects text and/or inline_data parts for this turn.
+            if (turn.text.isNotBlank()) { // Omits blank caption text on image-only user messages.
+                parts.add(Part(text = turn.text)) // Adds exact preserved text part.
+            } // Ends text part check.
+            val path = turn.imagePath // Reads optional sandbox-safe relative image path.
+            if (!path.isNullOrBlank()) { // Produces Base64 purely in memory at request time (V9).
+                val encoded = encodeImageBase64(path) // Returns (mimeType, base64) from private storage or null if removed.
+                if (encoded != null) { // Attaches inline_data only when the local image bytes are available.
+                    parts.add(Part(inlineData = InlineData(encoded.first, encoded.second))) // Appends ephemeral Base64 payload.
+                } // Ends encoded bytes check.
+            } // Ends image part check.
+            if (parts.isEmpty()) return null // Rejects a turn whose sole image disappeared and has no fallback text.
+            Content(role = if (turn.role == Role.USER) "user" else "model", parts = parts) // Wraps parts under explicit Gemini role.
+        } // Ends turn mapping.
+    } // Ends ephemeral multimodal content conversion.
+
     private fun validHistory(history: List<ConversationTurn>): Boolean { // Checks the wire-level rules without duplicating saved-message state validation.
         if (history.isEmpty() || history.size % 2 == 0) { // Requires 2N + 1 turns so the request starts and ends with user.
             return false // Blocks missing questions and histories ending with a model reply.
         } // Ends the turn-count guard.
         for ((index, turn) in history.withIndex()) { // Checks every supplied turn rather than filtering invalid entries.
             val expectedRole = if (index % 2 == 0) Role.USER else Role.MODEL // Requires strict alternation from the first user turn.
-            if (turn.role != expectedRole || turn.text.isBlank()) { // Rejects repeated authors and blank historical or current text.
+            val hasImage = turn.role == Role.USER && !turn.imagePath.isNullOrBlank() // Allows image-only or text+image user turns.
+            if (turn.role != expectedRole || (turn.text.isBlank() && !hasImage)) { // Rejects invalid roles and completely empty turns.
                 return false // Keeps an invalid conversation out of the remote request.
             } // Ends validation of this turn.
         } // Ends the supplied history loop.

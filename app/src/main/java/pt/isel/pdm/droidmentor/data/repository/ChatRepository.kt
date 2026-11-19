@@ -25,8 +25,8 @@ interface ChatRepository { // Can be supplied manually to ViewModels and replace
     /** Deletes a conversation and its cascaded history when no send currently owns it. */
     suspend fun deleteChat(chatId: String): ChatCommandResult // Refuses to delete this repository's in-flight exchange.
 
-    /** Saves one pending user turn, sends the full history and persists the settled outcome. */
-    suspend fun sendMessage(chatId: String, text: String): ChatCommandResult // Returns only a local acknowledgement; observeMessages carries the outcome.
+    /** Saves one pending user turn (with optional relative image path), sends full history and persists outcome. */
+    suspend fun sendMessage(chatId: String, text: String, imagePath: String? = null): ChatCommandResult // Returns only a local acknowledgement; observeMessages carries the outcome.
 
     /** Reactivates the same final failed user row and resends the full history without appending a duplicate. */
     suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult // Preserves the failed row's ID, sequence, text and creation timestamp.

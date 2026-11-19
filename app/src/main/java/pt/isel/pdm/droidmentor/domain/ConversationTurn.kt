@@ -12,4 +12,5 @@ package pt.isel.pdm.droidmentor.domain // Groups the domain models.
 data class ConversationTurn( // Defines the fields of ConversationTurn; Kotlin also provides copy and equality functions.
     val role: Role, // Tells us whether the user or the model wrote this text.
     val text: String, // The text written by this participant.
+    val imagePath: String? = null, // Optional app-private relative image path encoded in memory at request time.
 ) // Ends the list of values passed above.

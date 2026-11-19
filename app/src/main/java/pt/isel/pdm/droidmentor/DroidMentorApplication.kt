@@ -65,9 +65,9 @@ class DroidMentorApplication : Application(), DependencyContainer { // Android c
         DataStoreSessionRepository(activeSessionDataStore) // Uses the separate session store.
     } // Ends session repository construction.
 
-    /** Shared Gemini source using the shared client and actual validated Android connection check. */
+    /** Shared Gemini source using the shared client, validated Android connection check and in-memory Base64 encoder. */
     val geminiRemoteDataSource: GeminiRemoteDataSource by lazy { // Keeps credentials and histories per operation rather than in this locator.
-        GeminiRemoteDataSource(httpClient, connectivityObserver::isConnected) // Requires the real suspend network gate before each POST.
+        GeminiRemoteDataSource(httpClient, connectivityObserver::isConnected, encodeImageBase64 = imageStorage::encodeAsBase64) // Produces Base64 in memory only (V9).
     } // Ends remote source construction.
 
     /** One offline-first repository instance, including one operation gate per chat for the app. */

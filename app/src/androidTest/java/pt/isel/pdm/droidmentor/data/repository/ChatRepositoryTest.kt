@@ -574,6 +574,32 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertEquals(listOf(0L, 1L, 2L, 3L), messages(repository, id).map { it.seq }) // Confirms clean sequence progression.
     } // Ends user-message deletion verification.
 
+    /** Checks image attachment persists ONLY relative path in Room while encoding Base64 in memory for HTTP. */
+    @Test // Guards V9 persistence invariant end to end across Repository -> Room -> Remote.
+    fun imageAttachmentPersistsOnlyRelativePathInRoomNeverBase64() = runBlocking { // Verifies SQLite stores path, HTTP receives inline_data.
+        var seenBody = "" // Captures outgoing HTTP JSON body in memory.
+        val connected: suspend () -> Boolean = { online } // Reuses harness connectivity flag.
+        val engine = MockEngine.config { // Captures HTTP JSON and returns harmless reply.
+            addHandler { request -> // Records outgoing request body.
+                seenBody = (request.body as TextContent).text // Reads JSON serialized by Ktor.
+                respond(body, headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())) // Returns reply.
+            } // Ends mock response handler.
+        } // Ends engine setup.
+        val client = HttpClientFactory.create(false, engine, object : Logger { override fun log(message: String) = Unit }) // Builds test client.
+        clients.add(client) // Registers cleanup.
+        val fakeBase64 = "U0FNUExFX0JBU0U2NF9QQVlMT0FE" // Distinctive fake Base64 string that must never enter Room.
+        val remote = GeminiRemoteDataSource(client, connected, encodeImageBase64 = { path -> if (path == "images/sample.jpg") "image/jpeg" to fakeBase64 else null }) // Produces Base64 in memory only.
+        val repo = RoomChatRepository(database, settings, remote, connected, clock::getAndIncrement, { UUID.randomUUID().toString() }) // Uses real Room + remote.
+        val chatId = createChat(repo) // Creates empty local chat.
+
+        assertEquals(ChatCommandResult.Stored, repo.sendMessage(chatId, "What is this?", imagePath = "images/sample.jpg")) // Sends text + relative image path.
+        val storedRows = database.messageDao().getMessages(chatId) // Reads raw Room entities.
+        assertEquals(2, storedRows.size) // Confirms user + model saved.
+        assertEquals("images/sample.jpg", storedRows[0].imagePath) // Confirms ONLY relative path stored in Room.
+        assertFalse("Room must never persist Base64 data", storedRows.any { it.text.contains(fakeBase64) || it.imagePath?.contains(fakeBase64) == true }) // Guards V9 strictly.
+        assertTrue("HTTP request must carry inline_data Base64", seenBody.contains("inline_data") && seenBody.contains(fakeBase64)) // Confirms Base64 was produced at request build time.
+    } // Ends V9 relative-path-only repository verification.
+
     private fun repository(preferences: SettingsRepository = settings, newId: () -> String = { UUID.randomUUID().toString() }): RoomChatRepository { // Builds production collaborators around a test-owned engine and selected preference implementation.
         val connected: suspend () -> Boolean = { onCheck(checks.incrementAndGet()); online } // Shares fresh prerequisite checks with repository and source.
         val engine = MockEngine.config { // Keeps actual request construction and decoding inside the test process.

@@ -92,4 +92,17 @@ class LocalImageStorageTest { // Runs directly on the JVM without Android depend
         assertNull(storage.finalizeCapture(emptyTarget, succeeded = true)) // Rejects zero-byte output cleanly.
         assertFalse(emptyFile.exists()) // Confirms empty file was removed.
     } // Ends capture target lifecycle test.
+
+    /** Checks in-memory Base64 encoding detects MIME headers and returns Base64 bytes cleanly. */
+    @Test // Exercises M3-13 V9 encoder without touching Room or Android APIs.
+    fun encodeAsBase64DetectsMimeAndEncodesBytesInMemory() = runTest { // Tests PNG and JPEG sample payloads.
+        val storage = LocalImageStorage(tempFolder.root, streamOpener = { null }) // Builds local temp storage.
+        val target = storage.createCaptureTarget() ?: error("Expected target") // Creates file path under images/.
+        val pngHeader = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2) // Valid PNG signature + bytes.
+        storage.resolveFile(target)?.writeBytes(pngHeader) // Writes sample PNG bytes on disk.
+        val encoded = storage.encodeAsBase64(target) // Encodes purely in memory.
+        assertEquals("image/png", encoded?.first) // Confirms PNG MIME detection.
+        assertEquals(java.util.Base64.getEncoder().encodeToString(pngHeader), encoded?.second) // Confirms exact standard Base64 output.
+        assertNull(storage.encodeAsBase64("images/missing.jpg")) // Returns null safely for missing files.
+    } // Ends Base64 encoder test.
 } // Ends LocalImageStorageTest.

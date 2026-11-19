@@ -53,12 +53,12 @@ data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from 
     /** Whether any saved failed turn reported a rejected or missing API key (401/403). */
     val hasInvalidKeyFailure: Boolean get() = messages.any { it.status == MessageStatus.FAILED && it.errorCategory == MessageErrorCategory.INVALID_API_KEY } // Prompts direct navigation to Settings without leaving a dead end.
 
-    /** Whether the current draft may start a new explicit send. */
+    /** Whether the current draft or pending image may start a new explicit send. */
     val canSend: Boolean // Derives availability from the complete local snapshot.
         get() = !loading && !storageError && chat != null // Requires readable saved conversation metadata.
             && connected && hasKey && !settingsError // Blocks new interactions while offline or unconfigured.
             && !working && !pending && !failed // Rejects concurrent and unresolved turns.
-            && draft.isNotBlank() // Requires actual user input.
+            && (draft.isNotBlank() || pendingImagePath != null) // Allows text, image+text or image-only user messages.
 
     /** Whether the final saved failed user row can be retried now. */
     val canRetry: Boolean // Shares the same guard between the visible action and its event.
@@ -201,11 +201,12 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         } // Ends camera capture finalization.
     } // Ends camera capture completion.
 
-    /** Sends one nonblank draft through the repository, leaving rejected drafts intact. */
+    /** Sends one nonblank draft or attached image through the repository, leaving rejected drafts intact. */
     fun send() { // Relies on repository prerequisite checks before every network operation.
         if (!state.value.canSend) return // Prevents blank, concurrent or unresolved-turn sends.
         val text = state.value.draft // Captures the unchanged user text for this attempt.
-        perform(clearDraft = true) { repository.sendMessage(chatId, text) } // Clears input only after a locally settled outcome.
+        val imagePath = state.value.pendingImagePath // Captures any attached sandbox-safe relative image path.
+        perform(clearDraft = true) { repository.sendMessage(chatId, text, imagePath) } // Clears input only after a locally settled outcome.
     } // Ends explicit sending.
 
     /** Retries only the final failed user row, preserving its ID and the current unsent draft. */
@@ -246,9 +247,10 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         viewModelScope.launch { // Performs suspend repository coordination without IO in the Composable.
             try { // Preserves cancellation and avoids exposing unexpected local exception text.
                 val result = command() // Receives only a local acknowledgement, never the model answer.
-                if (clearDraft && result == ChatCommandResult.Stored) { // Clears the sent draft after success or failure was saved in Room.
+                if (clearDraft && result == ChatCommandResult.Stored) { // Clears draft and hands image ownership to Room once saved.
                     savedStateHandle[draftKey] = "" // Clears saved process-death draft once sent.
-                    mutableState.update { it.copy(draft = "") } // Clears visible input field.
+                    savedStateHandle[pendingImageKey] = null // Clears saved pending attachment without deleting committed disk file.
+                    mutableState.update { it.copy(draft = "", pendingImagePath = null) } // Clears visible composer inputs.
                 } // Ends sent draft cleanup.
                 result.toUiNotice()?.let { eventChannel.send(UiEvent.Notice(it)) } // Reports rejected commands while saved API errors remain in the Room message list.
             } catch (cancelled: CancellationException) { // Lets the repository finish its cancellation cleanup when the destination is left.

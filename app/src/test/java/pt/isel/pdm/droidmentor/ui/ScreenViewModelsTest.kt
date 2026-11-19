@@ -554,6 +554,36 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertTrue(deletedPaths.contains("images/cam_2.jpg")) // Confirms cancelled file target was cleaned up.
     } // Ends camera ViewModel capture test.
 
+    /** Checks pending image allows sending with blank draft and clears state without deleting the committed file. */
+    @Test // Tests M3-13 ViewModel integration with repository sendMessage + attachment handoff.
+    fun pendingImageAllowsSendingWithBlankDraftAndClearsOnlyOnStored() = runTest { // Verifies imagePath flows to ChatRepository.
+        val deletedPaths = mutableListOf<String>() // Tracks any file cleanup calls.
+        val fakeStorage = object : ImageStorage { // Fake storage returning relative image path.
+            override suspend fun importFromUri(uriString: String) = "images/picked.jpg" // Scripts picked file path.
+            override suspend fun createCaptureTarget(): String? = null // Unused here.
+            override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = null // Unused here.
+            override fun resolveFile(relativePath: String) = null // Unused here.
+            override fun deleteRelativePath(relativePath: String): Boolean { deletedPaths.add(relativePath); return true } // Records deletions.
+        } // Ends fake storage.
+        val fakeChats = FakeChats() // Tracks sent text and imagePath.
+        val handle = SavedStateHandle() // Confirms pending attachment clears on Stored.
+        val settings = FakeSettings().apply { read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") } // Supplies key.
+        val model = own(ActiveChatViewModel("saved", fakeChats, settings, MutableStateFlow(ConnectivityStatus.CONNECTED), handle, fakeStorage)) // Builds ViewModel.
+        advanceUntilIdle() // Waits for Room snapshot.
+
+        model.attachGalleryImage("content://picker/photo") // Attaches image while draft is still blank.
+        advanceUntilIdle() // Completes import.
+        assertTrue(model.state.value.canSend) // Confirms image-only turn is sendable without text.
+
+        model.send() // Sends image-only prompt to repository.
+        advanceUntilIdle() // Completes repository send.
+        assertEquals(1, fakeChats.sends) // Confirms repository send ran.
+        assertEquals("" to "images/picked.jpg", fakeChats.lastSent) // Confirms empty text + relative imagePath passed.
+        assertNull(model.state.value.pendingImagePath) // Confirms attachment UI indicator cleared after Stored.
+        assertNull(handle["pending_image_saved"]) // Confirms SavedStateHandle attachment cleared after Stored.
+        assertTrue("Committed image file must NOT be deleted on send", deletedPaths.isEmpty()) // Leaves committed file owned by Room.
+    } // Ends image send handoff ViewModel test.
+
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 
     private fun active(fake: FakeChats): ActiveChatViewModel { // Supplies simple fake dependencies for active-chat cases.
@@ -595,6 +625,7 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         val messages = MutableStateFlow<ChatReadResult<List<Message>>>(ChatReadResult.Success(emptyList())) // Lets tests publish actual local message state separately from acknowledgements.
         var commandResult: ChatCommandResult = ChatCommandResult.Stored // Controls send and retry acknowledgement outcomes.
         var sends = 0 // Counts requested send commands.
+        var lastSent: Pair<String, String?>? = null // Records latest sent text and relative imagePath.
         var retriedId: String? = null // Records only the harmless local retry ID.
         var renamed: Pair<String, String>? = null // Records the latest manual rename target and title.
         var rewritten: Pair<String, String>? = null // Records the latest rewrite target ID and text.
@@ -616,8 +647,9 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
             } // Ends fake list update.
             return ChatCommandResult.Stored // Reports local deletion succeeded.
         } // Ends fake chat deletion.
-        override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult { // Records a command without synthesising a model response.
+        override suspend fun sendMessage(chatId: String, text: String, imagePath: String?): ChatCommandResult { // Records a command without synthesising a model response.
             sends += 1 // Counts the ViewModel's explicit operation.
+            lastSent = text to imagePath // Captures text and relative imagePath handed off by ViewModel.
             return commandResult // Returns the controlled local acknowledgement.
         } // Ends the fake send operation.
         override suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult { // Records the selected persisted row.

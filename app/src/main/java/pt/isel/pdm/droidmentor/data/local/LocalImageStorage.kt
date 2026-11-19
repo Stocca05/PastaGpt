@@ -4,6 +4,7 @@ import android.content.Context // Opens picked URIs via ContentResolver and loca
 import android.net.Uri // Parses picked gallery or camera content URIs inside the Android storage adapter.
 import java.io.File // References app-private files inside filesDir/images.
 import java.io.InputStream // Reads picked media bytes without holding full Bitmaps unnecessarily.
+import java.util.Base64 // Encodes saved image bytes to Base64 strictly in memory (minSdk 26+).
 import java.util.UUID // Generates unique filenames inside filesDir/images.
 import kotlinx.coroutines.CancellationException // Preserves structured coroutine cancellation during file I/O.
 import kotlinx.coroutines.CoroutineDispatcher // Allows unit tests to inject a deterministic IO dispatcher.
@@ -26,6 +27,9 @@ interface ImageStorage { // Keeps ViewModels and repositories independent of And
 
     /** Deletes one stored relative image file if it exists inside app storage. */
     fun deleteRelativePath(relativePath: String): Boolean // Cleans up uncommitted, deleted or rewritten attachments.
+
+    /** Reads bytes from [relativePath] and encodes Base64 in memory only for Gemini inline_data. */
+    suspend fun encodeAsBase64(relativePath: String): Pair<String, String>? = null // Keeps Base64 out of Room per V9.
 } // Ends app-private image storage contract.
 
 /** Stores conversation images under filesDir/images/ using unique relative filenames. */
@@ -105,6 +109,27 @@ class LocalImageStorage internal constructor( // Accepts injectable files root a
         val target = resolveFile(relativePath) ?: return false // Ignores unsafe or invalid relative paths cleanly.
         return target.exists() && target.delete() // Deletes file if present on disk.
     } // Ends safe deletion.
+
+    /** Reads [relativePath] off main thread and returns (mimeType, base64) strictly in memory. */
+    override suspend fun encodeAsBase64(relativePath: String): Pair<String, String>? = withContext(ioDispatcher) { // Performs disk read and encoding off main dispatcher.
+        val target = resolveFile(relativePath)?.takeIf { it.exists() && it.isFile } ?: return@withContext null // Stops cleanly if image file is missing.
+        try { // Guards against unexpected disk read errors.
+            val bytes = target.readBytes() // Reads saved image bytes transiently into memory.
+            if (bytes.isEmpty()) return@withContext null // Rejects empty image files safely.
+            val mimeType = detectMimeType(bytes) // Inspects file magic bytes cleanly without relying on extension only.
+            mimeType to Base64.getEncoder().encodeToString(bytes) // Produces Base64 in memory only, never persisted to disk.
+        } catch (cancelled: CancellationException) { // Preserves structured coroutine cancellation.
+            throw cancelled // Propagates cancellation cleanly.
+        } catch (_: Exception) { // Traps IO errors cleanly.
+            null // Allows text-only fallback or typed rejection cleanly.
+        } // Ends encoding guard.
+    } // Ends transient Base64 encoding.
+
+    private fun detectMimeType(bytes: ByteArray): String = when { // Matches standard PNG/WebP headers before defaulting to JPEG.
+        bytes.size >= 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() && bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte() -> "image/png" // PNG magic bytes.
+        bytes.size >= 12 && bytes[0] == 0x52.toByte() && bytes[1] == 0x49.toByte() && bytes[2] == 0x46.toByte() && bytes[3] == 0x46.toByte() && bytes[8] == 0x57.toByte() && bytes[9] == 0x45.toByte() && bytes[10] == 0x42.toByte() && bytes[11] == 0x50.toByte() -> "image/webp" // WEBP RIFF header.
+        else -> "image/jpeg" // Defaults Photo Picker / camera JPEG captures to image/jpeg.
+    } // Ends magic-byte MIME detection.
 
     companion object { // Exposes the relative subdirectory name used across storage and FileProvider checks.
         const val IMAGES_SUBDIR = "images" // Stores all imported/captured chat images under filesDir/images/.

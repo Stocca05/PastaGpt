@@ -158,7 +158,7 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
             override suspend fun createChat(title: String): ChatCommandResult = ChatCommandResult.StorageError // Keeps construction tests free from history writes.
             override suspend fun renameChat(chatId: String, title: String): ChatCommandResult = ChatCommandResult.NotFound // Has no stored row to rename.
             override suspend fun deleteChat(chatId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no stored row to delete.
-            override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult = ChatCommandResult.Offline // Never starts HTTP from a factory test.
+            override suspend fun sendMessage(chatId: String, text: String, imagePath: String?): ChatCommandResult = ChatCommandResult.Offline // Never starts HTTP from a factory test.
             override suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no failed message to replay.
             override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult = ChatCommandResult.NotFound // Has no message to rewrite.
             override suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no message to delete.

@@ -40,9 +40,10 @@ object HistoryPayloadBuilder { // Provides a stateless builder with no shared mu
             if (message.role != expectedRole) { // Checks the saved author agrees with its turn position.
                 return HistoryPayloadResult.Invalid(HistoryValidationError.INVALID_ROLE_ORDER) // Blocks a missing or repeated participant turn.
             } // Ends the role order check.
-            if (message.text.isBlank()) { // Checks all historical and current turns have usable text.
-                return HistoryPayloadResult.Invalid(HistoryValidationError.BLANK_TEXT) // Rejects blank turns without skipping them.
-            } // Ends the text check.
+            val hasImage = message.role == Role.USER && !message.imagePath.isNullOrBlank() // Allows image-only or text+image user turns (V9 relative path).
+            if (message.text.isBlank() && !hasImage) { // Requires usable text on model turns and text or image on user turns.
+                return HistoryPayloadResult.Invalid(HistoryValidationError.BLANK_TEXT) // Rejects empty turns without skipping them.
+            } // Ends content check.
 
             if (message.status == MessageStatus.FAILED) { // Checks failures before any turn can be considered complete or pending.
                 val reason = if (message.role == Role.USER) HistoryValidationError.UNRESOLVED_FAILURE else HistoryValidationError.INVALID_MESSAGE_STATE // Only user rows can represent a saved failed attempt.
@@ -61,7 +62,7 @@ object HistoryPayloadBuilder { // Provides a stateless builder with no shared mu
                 return HistoryPayloadResult.Invalid(HistoryValidationError.INVALID_MESSAGE_STATE) // Blocks unfinished historical exchanges or invalid model states.
             } // Ends the completed-versus-current state check.
 
-            turns.add(ConversationTurn(message.role, message.text)) // Preserves the entire text and role without local persistence metadata.
+            turns.add(ConversationTurn(message.role, message.text, message.imagePath)) // Preserves text, role and optional relative image path.
         } // Ends validation of the ordered message rows.
 
         if (ordered.last().role != Role.USER) { // Checks the full conversation ends with the current user rather than a completed reply.

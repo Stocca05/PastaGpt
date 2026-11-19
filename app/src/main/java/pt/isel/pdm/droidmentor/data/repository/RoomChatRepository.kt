@@ -118,19 +118,19 @@ class RoomChatRepository( // Receives every dependency manually without a framew
         } // Ends protected deletion.
     } // Ends local chat removal.
 
-    /** Saves the pending user, sends complete history and persists its success or error before returning. */
-    override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult { // Supplies new text to the shared send/retry lifecycle.
-        return attempt(chatId, text, targetId = null, rewrite = false) // Never returns a network answer to the caller.
+    /** Saves the pending user turn (plus optional relative imagePath), sends full history and persists outcome. */
+    override suspend fun sendMessage(chatId: String, text: String, imagePath: String?): ChatCommandResult { // Supplies new text/image to the shared lifecycle.
+        return attempt(chatId, text, imagePath, targetId = null, rewrite = false) // Never returns a network answer to the caller.
     } // Ends new-message sending.
 
-    /** Retries the existing final failed user with the same identity, position, text and creation time. */
+    /** Retries the existing final failed user with the same identity, position, text, imagePath and creation time. */
     override suspend fun retryMessage(chatId: String, messageId: String): ChatCommandResult { // Supplies an existing row rather than appending a new one.
-        return attempt(chatId, text = null, targetId = messageId, rewrite = false) // Uses the same prerequisites and persistence lifecycle as a new send.
+        return attempt(chatId, text = null, imagePath = null, targetId = messageId, rewrite = false) // Uses the same prerequisites and persistence lifecycle as a new send.
     } // Ends manual retry.
 
     /** Edits any user message, deletes later exchanges atomically and resends the truncated history. */
     override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult { // Shares prerequisites, network call and outcome persistence.
-        return attempt(chatId, newText, targetId = messageId, rewrite = true) // Truncates only after prerequisites pass and inside a transaction.
+        return attempt(chatId, newText, imagePath = null, targetId = messageId, rewrite = true) // Truncates only after prerequisites pass and inside a transaction.
     } // Ends conversation rewrite.
 
     /** Deletes a user message and all subsequent turns in one transaction, keeping history alternating. */
@@ -159,10 +159,12 @@ class RoomChatRepository( // Receives every dependency manually without a framew
         } // Ends guarded message deletion.
     } // Ends single-turn and tail deletion.
 
-    private suspend fun attempt(chatId: String, text: String?, targetId: String?, rewrite: Boolean): ChatCommandResult { // Centralises send, retry and rewrite without starting a background coroutine.
+    private suspend fun attempt(chatId: String, text: String?, imagePath: String?, targetId: String?, rewrite: Boolean): ChatCommandResult { // Centralises send, retry and rewrite without starting a background coroutine.
         currentCoroutineContext().ensureActive() // Preserves cancellation before validation or locking.
-        val missingText = (targetId == null || rewrite) && text.isNullOrBlank() // Requires nonblank text for new sends and rewrites.
-        if (chatId.isBlank() || missingText || targetId?.isBlank() == true) return ChatCommandResult.InvalidInput // Rejects unusable arguments early.
+        val missingNewSendContent = targetId == null && text.isNullOrBlank() && imagePath.isNullOrBlank() // Allows image-only sends on new turns.
+        val missingRewriteText = rewrite && text.isNullOrBlank() // Rewrites still require replacement text.
+        val unsafeImagePath = !imagePath.isNullOrBlank() && (!imagePath.startsWith("images/") || imagePath.contains("..")) // Blocks non-relative paths or Base64 blobs (V9).
+        if (chatId.isBlank() || missingNewSendContent || missingRewriteText || unsafeImagePath || targetId?.isBlank() == true) return ChatCommandResult.InvalidInput // Rejects unusable arguments early.
         val lock = lock(chatId) // Gives only this conversation an active operation owner.
         if (!lock.tryLock()) return ChatCommandResult.Busy // Rejects a second request instead of queueing another user turn.
         var pendingId: String? = null // Tracks only the row owned by this attempt for cancellation or storage-failure cleanup.
@@ -186,7 +188,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
                         if (saved.any { it.status != MessageStatus.SENT }) return@withTransaction ChatCommandResult.UnresolvedMessage // Blocks both SENDING and FAILED prior rows.
                         if (saved.lastOrNull()?.seq == Long.MAX_VALUE) return@withTransaction ChatCommandResult.InvalidHistory // Rejects sequence overflow before the DAO allocates the next position.
                         val sequence = saved.lastOrNull()?.seq?.plus(1) ?: 0L // Predicts only the position needed to validate prospective full history.
-                        candidate = MessageEntity(newId(), chatId, Role.USER, text.orEmpty(), sequence, MessageStatus.SENDING, clock()) // Keeps the supplied message text unchanged.
+                        candidate = MessageEntity(newId(), chatId, Role.USER, text.orEmpty(), sequence, MessageStatus.SENDING, clock(), imagePath = imagePath) // Persists ONLY relative path (V9).
                         prospective = saved + candidate // Appends the new pending turn after all completed exchanges.
                     } // Ends new-send preparation.
                     rewrite -> { // Prepares an existing user turn at any sequence position for rewrite and tail truncation.
@@ -208,8 +210,8 @@ class RoomChatRepository( // Receives every dependency manually without a framew
                 when { // Applies the validated Room write inside the same transaction.
                     targetId == null -> { // Performs the optimistic new-user insertion.
                         messages.insert(candidate) // Lets the DAO allocate the sequence and update recency atomically.
-                        if (saved.isEmpty() && currentChat.title == ChatTitleFormatter.DEFAULT_TITLE) { // Auto-titles an untitled chat from its first user question.
-                            chats.updateTitle(chatId, ChatTitleFormatter.fromFirstMessage(candidate.text), candidate.createdAt) // Preserves any user-chosen manual title.
+                        if (saved.isEmpty() && currentChat.title == ChatTitleFormatter.DEFAULT_TITLE) { // Auto-titles an untitled chat from its first user question or photo.
+                            chats.updateTitle(chatId, ChatTitleFormatter.fromFirstMessage(candidate.text, !candidate.imagePath.isNullOrBlank()), candidate.createdAt) // Preserves any user-chosen manual title.
                         } // Ends first-message auto-titling.
                     } // Ends new-send persistence.
                     rewrite -> { // Performs the atomic edit + deleteFromSeq(seq + 1) rewrite preparation.
@@ -294,5 +296,5 @@ class RoomChatRepository( // Receives every dependency manually without a framew
 
     private fun chat(row: ChatEntity) = Chat(row.id, row.title, row.createdAt, row.updatedAt) // Maps only saved conversation metadata to the domain.
 
-    private fun message(row: MessageEntity) = Message(row.id, row.chatId, row.role, row.text, row.seq, row.status, row.createdAt, row.errorCategory) // Preserves every saved message field, including the failure label.
+    private fun message(row: MessageEntity) = Message(row.id, row.chatId, row.role, row.text, row.seq, row.status, row.createdAt, row.errorCategory, row.imagePath) // Preserves every saved message field, including failure label and relative image path.
 } // Ends the Room-only observed chat repository.

@@ -48,4 +48,5 @@ data class MessageEntity( // Defines the columns of one message row.
     val status: MessageStatus, // Stores the exchange state through its converter.
     val createdAt: Long, // Stores when this message was created.
     val errorCategory: MessageErrorCategory? = null, // Allows a null error for waiting or completed messages.
+    val imagePath: String? = null, // Stores ONLY a relative path inside filesDir/images/; Base64 is forbidden in Room.
 ) // Ends the list of message columns.

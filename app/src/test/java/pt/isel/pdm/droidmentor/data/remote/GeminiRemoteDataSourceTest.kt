@@ -408,6 +408,42 @@ class GeminiRemoteDataSourceTest { // Keeps every simulated request under the ow
         assertEquals(1, attempts) // Confirms no second attempt started after cancellation.
     } // Ends retry backoff cancellation test.
 
+    /** Checks image turns encode inline_data Base64 only in memory when building the request payload. */
+    @Test // Covers V9 request serialization with text+image and image-only user turns.
+    fun imageTurnsSerializeInlineDataInMemoryAtRequestTime() = runTest { // Verifies inline_data JSON structure and mime_type/data fields.
+        val history = listOf( // Includes an image-only turn followed by model text and text+image turn.
+            ConversationTurn(Role.USER, "", imagePath = "images/first.jpg"), // Image-only prompt.
+            ConversationTurn(Role.MODEL, "I see a stack trace."), // Model reply.
+            ConversationTurn(Role.USER, "Check this updated layout", imagePath = "images/second.jpg"), // Text + image follow-up.
+        ) // Ends multimodal conversation fixture.
+        val engine = MockEngine.config { // Inspects exact JSON parts emitted by kotlinx.serialization.
+            addHandler { request -> // Parses outgoing contents array.
+                val contents = Json.parseToJsonElement((request.body as TextContent).text).jsonObject.getValue("contents").jsonArray // Reads serialized turns.
+                val firstParts = contents[0].jsonObject.getValue("parts").jsonArray // Reads parts for image-only turn.
+                assertEquals(1, firstParts.size) // Image-only turn omits blank text part.
+                val firstInline = firstParts[0].jsonObject.getValue("inline_data").jsonObject // Reads inline_data object.
+                assertEquals("image/jpeg", firstInline.getValue("mime_type").jsonPrimitive.content) // Confirms snake_case mime_type.
+                assertEquals("Rk9PVF9JTUFHRQ==", firstInline.getValue("data").jsonPrimitive.content) // Confirms encoded Base64 payload.
+
+                val thirdParts = contents[2].jsonObject.getValue("parts").jsonArray // Reads parts for text+image turn.
+                assertEquals(2, thirdParts.size) // Includes text part followed by inline_data part.
+                assertEquals("Check this updated layout", thirdParts[0].jsonObject.getValue("text").jsonPrimitive.content) // Checks caption text.
+                assertEquals("U0VDT05EX0lNQUdF", thirdParts[1].jsonObject.getValue("inline_data").jsonObject.getValue("data").jsonPrimitive.content) // Checks second image Base64.
+                respond(responseBody, headers = jsonHeaders) // Returns simulated reply.
+            } // Ends request JSON inspection.
+        } // Ends engine setup.
+        HttpClientFactory.create(false, engine, TestLogger()).use { client -> // Owns simulated client.
+            val source = GeminiRemoteDataSource(client, { true }, encodeImageBase64 = { path -> // Encodes relative paths in memory only.
+                when (path) { // Maps relative path fixtures to Base64 pairs.
+                    "images/first.jpg" -> "image/jpeg" to "Rk9PVF9JTUFHRQ==" // First sample Base64.
+                    "images/second.jpg" -> "image/jpeg" to "U0VDT05EX0lNQUdF" // Second sample Base64.
+                    else -> null // Rejects unexpected paths.
+                } // Ends relative path lookup.
+            }) // Builds data source with in-memory encoder.
+            assertEquals(ApiResult.Success("Reply"), source.generateContent(history, apiKey = UUID.randomUUID().toString())) // Checks full request succeeds.
+        } // Closes test client.
+    } // Ends inline_data in-memory serialization test.
+
     private fun firstHistory() = listOf(ConversationTurn(Role.USER, "Question")) // Provides the smallest valid full history.
 
     private class TestLogger : Logger { // Captures only the factory's final fixed diagnostic messages.

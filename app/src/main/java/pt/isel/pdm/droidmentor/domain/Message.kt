@@ -25,4 +25,5 @@ data class Message( // Defines the fields of Message; Kotlin also provides copy 
     val status: MessageStatus, // Tells us whether the message is waiting, completed or failed.
     val createdAt: Long, // Creation time, stored as milliseconds since the Unix epoch.
     val errorCategory: MessageErrorCategory? = null, // The failure type; null means there is no recorded error.
+    val imagePath: String? = null, // App-private relative image path; Base64 data is never stored in Room.
 ) // Ends the list of values passed above.

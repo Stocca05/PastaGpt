@@ -217,6 +217,28 @@ class HistoryPayloadBuilderTest { // Groups the domain rules required for M2-08.
         assertEquals(HistoryPayloadResult.Success(listOf(ConversationTurn(Role.USER, next.text))), result) // Checks only this chat's turn is returned.
     } // Ends the independent call test.
 
+    /** Checks image-only and text+image user turns preserve relative paths while model replies still need text. */
+    @Test // Protects V9 relative-path domain rules before DTO encoding tests.
+    fun imageTurnsPreserveRelativePathsWhileBlankModelTurnsFail() { // Tests image-only, text+image and invalid blank model.
+        val imageOnly = row(0, Role.USER, MessageStatus.SENDING, "").copy(imagePath = "images/only.jpg") // User sends image without caption.
+        val turnsOnly = readyTurns(listOf(imageOnly)) // Requires user image-only turn to succeed.
+        assertEquals(listOf(ConversationTurn(Role.USER, "", "images/only.jpg")), turnsOnly) // Checks relative path is preserved.
+
+        val withText = listOf( // Completed image question + reply + text+image follow-up.
+            row(0, Role.USER, MessageStatus.SENT, "").copy(imagePath = "images/first.jpg"), // Completed image question.
+            row(1, Role.MODEL, MessageStatus.SENT, "It looks like a ViewModel."), // Completed text reply.
+            row(2, Role.USER, MessageStatus.SENDING, "What about this?").copy(imagePath = "images/second.jpg"), // Current text+image question.
+        ) // Ends mixed history.
+        assertEquals(listOf("images/first.jpg", null, "images/second.jpg"), readyTurns(withText).map { it.imagePath }) // Checks relative paths map cleanly per turn.
+
+        val invalidModel = listOf( // Model turns cannot omit text even if imagePath were forged.
+            row(0, Role.USER, MessageStatus.SENT, "Hi"),
+            row(1, Role.MODEL, MessageStatus.SENT, " ").copy(imagePath = "images/forged.jpg"),
+            row(2, Role.USER, MessageStatus.SENDING, "Next"),
+        ) // Ends invalid model turn list.
+        assertInvalid(invalidModel, HistoryValidationError.BLANK_TEXT) // Rejects blank model text cleanly.
+    } // Ends image-turn payload builder verification.
+
     private fun history(exchanges: Int): List<Message> { // Builds only valid local fixtures for the contract tests.
         val messages = mutableListOf<Message>() // Collects completed pairs followed by the current user.
         for (index in 0 until exchanges) { // Adds each completed exchange in sequence order.

@@ -46,6 +46,13 @@
     <string name="history_empty">No conversations yet. Start a new one.</string>
     <string name="history_no_messages">No messages yet</string>
     <string name="history_read_error">Saved conversations could not be read.</string>
+    <string name="history_delete_action">Delete conversation</string>
+    <string name="history_delete_confirm_title">Delete conversation?</string>
+    <string name="history_delete_confirm_body">This will permanently delete \"%1$s\" and all its messages.</string>
+    <string name="history_delete_confirm">Delete</string>
+    <string name="history_delete_cancel">Cancel</string>
+    <string name="history_deleted_snackbar">Conversation deleted</string>
+    <string name="history_undo_action">Undo</string>
     <string name="chat_read_error">Saved messages could not be read.</string>
     <string name="chat_empty">Ask your Android mentor a question.</string>
     <string name="chat_waiting">Waiting for a reply…</string>

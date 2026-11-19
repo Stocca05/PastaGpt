@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow // Publishes controlled local sn
 import kotlinx.coroutines.flow.first // Reads a single buffered screen event.
 import kotlinx.coroutines.flow.map // Projects fake settings into their nullable key contract.
 import kotlinx.coroutines.test.StandardTestDispatcher // Runs ViewModel coroutines on a deterministic scheduler.
+import kotlinx.coroutines.test.advanceTimeBy // Advances virtual time across the 5-second undo window.
 import kotlinx.coroutines.test.advanceUntilIdle // Waits for scheduled collector and command work.
 import kotlinx.coroutines.test.resetMain // Restores the normal Main dispatcher after each test.
 import kotlinx.coroutines.test.runTest // Runs suspend assertions without an Android device.
@@ -342,6 +343,60 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertEquals(0, fake.sends) // Checks no interaction was started.
     } // Ends unreadable-settings gating verification.
 
+    /** Checks confirmed deletion hides the chat during the 5-second undo window and commits after timeout. */
+    @Test // Exercises M3-01 undo window timing without waiting in real time.
+    fun deleteHidesChatDuringUndoWindowAndDeletesAfterTimeout() = runTest { // Uses test virtual time.
+        val fake = FakeChats() // Supplies two saved conversations.
+        fake.summaries.value = ChatReadResult.Success(listOf(summary("chat-1"), summary("chat-2"))) // Starts with two visible chats.
+        val model = own(ChatHistoryViewModel(fake)) // Uses the default 5-second undo window.
+        advanceUntilIdle() // Loads both summaries.
+        model.requestDelete("chat-1") // Schedules deletion of the first chat.
+        advanceTimeBy(4_000L) // Moves near the end of the 5-second undo window.
+        assertEquals(listOf("chat-2"), model.state.value.visibleChats.map { it.chat.id }) // Checks chat-1 is hidden from UI.
+        assertTrue(fake.deletedIds.isEmpty()) // Checks Room delete has not run yet during the undo window.
+        advanceTimeBy(1_500L) // Crosses the 5-second threshold.
+        advanceUntilIdle() // Lets the repository delete settle.
+        assertEquals(listOf("chat-1"), fake.deletedIds) // Checks the deletion was committed once the window expired.
+        assertEquals(null, model.state.value.pendingDeleteId) // Checks pending state cleared after commit.
+    } // Ends delayed-delete verification.
+
+    /** Checks Undo cancels the pending deletion and restores the conversation immediately. */
+    @Test // Verifies M3-01 undo cancellation path.
+    fun undoDeleteRestoresChatWithoutCallingRepository() = runTest { // Uses virtual time to verify cancellation.
+        val fake = FakeChats() // Supplies one saved conversation.
+        fake.summaries.value = ChatReadResult.Success(listOf(summary("chat-1"))) // Starts with one visible chat.
+        val model = own(ChatHistoryViewModel(fake)) // Creates the history ViewModel.
+        advanceUntilIdle() // Collects initial list.
+        model.requestDelete("chat-1") // Starts the 5-second undo window.
+        advanceTimeBy(2_000L) // Waits partway through the window.
+        assertTrue(model.state.value.visibleChats.isEmpty()) // Confirms it is hidden before Undo.
+        model.undoDelete() // User taps Undo in the snackbar.
+        advanceTimeBy(10_000L) // Advances well past the original 5-second deadline.
+        advanceUntilIdle() // Ensures no background delete ran anyway.
+        assertEquals(listOf("chat-1"), model.state.value.visibleChats.map { it.chat.id }) // Checks the chat reappeared.
+        assertTrue(fake.deletedIds.isEmpty()) // Confirms the repository delete was never called.
+    } // Ends undo-restoration verification.
+
+    /** Checks requesting a second delete flushes the first pending deletion immediately. */
+    @Test // Ensures rapid consecutive deletes never drop the earlier confirmed deletion.
+    fun requestingSecondDeleteFlushesFirstImmediately() = runTest { // Uses virtual time to inspect flush order.
+        val fake = FakeChats() // Supplies two saved conversations.
+        fake.summaries.value = ChatReadResult.Success(listOf(summary("chat-1"), summary("chat-2"))) // Starts with two chats.
+        val model = own(ChatHistoryViewModel(fake)) // Creates the history ViewModel.
+        advanceUntilIdle() // Collects initial summaries.
+        model.requestDelete("chat-1") // Starts undo window for chat-1.
+        advanceTimeBy(1_000L) // Waits 1 second before deleting chat-2.
+        model.requestDelete("chat-2") // Replaces chat-1 in the undo window.
+        advanceTimeBy(100L) // Allows the immediate flush of chat-1 without expiring chat-2's 5s window.
+        assertEquals(listOf("chat-1"), fake.deletedIds) // Confirms chat-1 was flushed immediately.
+        assertEquals("chat-2", model.state.value.pendingDeleteId) // Confirms chat-2 now owns the undo window.
+        model.undoDelete() // Undoes chat-2 to verify only chat-1 was deleted.
+        advanceUntilIdle() // Settles undo.
+        assertEquals(listOf("chat-1"), fake.deletedIds) // Confirms chat-2 stayed untouched.
+    } // Ends consecutive-delete verification.
+
+    private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
+
     private fun active(fake: FakeChats): ActiveChatViewModel { // Supplies simple fake dependencies for active-chat cases.
         val settings = FakeSettings() // Creates a preferences contract without a file.
         settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Represents a configured key without a source constant.
@@ -382,12 +437,20 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         var commandResult: ChatCommandResult = ChatCommandResult.Stored // Controls send and retry acknowledgement outcomes.
         var sends = 0 // Counts requested send commands.
         var retriedId: String? = null // Records only the harmless local retry ID.
+        val deletedIds = mutableListOf<String>() // Records deleted chat IDs in order for M3-01 tests.
         override fun observeChats(): Flow<ChatReadResult<List<ChatSummary>>> = summaries // Supplies saved summary snapshots.
         override fun observeChat(chatId: String): Flow<ChatReadResult<Chat?>> = chat // Supplies saved conversation metadata.
         override fun observeMessages(chatId: String): Flow<ChatReadResult<List<Message>>> = messages // Supplies saved messages only.
         override suspend fun createChat(title: String): ChatCommandResult = ChatCommandResult.Created("saved") // Acknowledges a local ID without fabricating a list emission.
         override suspend fun renameChat(chatId: String, title: String): ChatCommandResult = ChatCommandResult.Stored // Leaves unused local operations harmless.
-        override suspend fun deleteChat(chatId: String): ChatCommandResult = ChatCommandResult.Stored // Performs no real database deletion.
+        override suspend fun deleteChat(chatId: String): ChatCommandResult { // Records the deleted chat ID and updates fake summaries.
+            deletedIds.add(chatId) // Tracks which chat was committed to deletion.
+            val current = summaries.value // Reads current fake summaries.
+            if (current is ChatReadResult.Success) { // Removes the deleted chat from the fake stream like Room does.
+                summaries.value = ChatReadResult.Success(current.value.filterNot { it.chat.id == chatId }) // Publishes updated list.
+            } // Ends fake list update.
+            return ChatCommandResult.Stored // Reports local deletion succeeded.
+        } // Ends fake chat deletion.
         override suspend fun sendMessage(chatId: String, text: String): ChatCommandResult { // Records a command without synthesising a model response.
             sends += 1 // Counts the ViewModel's explicit operation.
             return commandResult // Returns the controlled local acknowledgement.

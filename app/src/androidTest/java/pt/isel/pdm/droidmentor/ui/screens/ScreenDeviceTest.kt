@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsEnabled // Checks available user actions
 import androidx.compose.ui.test.assertIsNotEnabled // Checks blocked sends and retries.
 import androidx.compose.ui.test.hasSetTextAction // Finds the single input field without querying its value.
 import androidx.compose.ui.test.junit4.createComposeRule // Hosts real screen content on the emulator.
+import androidx.compose.ui.test.onNodeWithContentDescription // Finds icon buttons by their accessible description.
 import androidx.compose.ui.test.onNodeWithText // Finds safe resource labels and harmless test messages.
 import androidx.compose.ui.test.performClick // Invokes the actual screen event bindings.
 import androidx.compose.ui.test.performScrollTo // Keeps form actions reachable when the keyboard reduces space.
@@ -261,6 +262,24 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Send").assertIsNotEnabled() // Checks no request can start from the widget.
         assertEquals(0, calls.get()) // Checks the remote engine received nothing.
     } // Ends unconfigured UI verification.
+
+    /** Checks history deletion shows confirmation, supports Undo, and removes the chat when committed. */
+    @Test // Exercises M3-01 confirmation dialog, undo snackbar and Room cascade delete together.
+    fun historyDeleteSupportsUndoAndCascadesOnCommit() { // Uses isolated in-memory Room with a short undo window.
+        val created = runBlocking { repository.createChat("Chat to delete") as ChatCommandResult.Created } // Creates one persisted chat.
+        val model = own("history", ChatHistoryViewModel(repository, undoWindowMs = 1_500L)) // Uses a short window for fast device verification.
+        compose.setContent { DroidMentorTheme { ChatHistoryScreen({}, {}, model) } } // Displays the real history screen.
+        compose.waitUntil(5_000) { model.state.value.visibleChats.size == 1 } // Waits for the saved chat card.
+        compose.onNodeWithContentDescription("Delete conversation").performClick() // Opens the delete confirmation dialog.
+        compose.onNodeWithText("Delete conversation?").assertExists() // Checks confirmation is shown before deleting.
+        compose.onNodeWithText("Delete").performClick() // Confirms deletion to start the undo window.
+        compose.waitUntil(5_000) { model.state.value.visibleChats.isEmpty() } // Confirms the card is hidden immediately.
+        compose.onNodeWithText("Undo").performClick() // Cancels deletion inside the undo window.
+        compose.waitUntil(5_000) { model.state.value.visibleChats.size == 1 } // Confirms the card returned.
+        compose.onNodeWithContentDescription("Delete conversation").performClick() // Requests deletion again.
+        compose.onNodeWithText("Delete").performClick() // Confirms without pressing Undo this time.
+        compose.waitUntil(5_000) { runBlocking { database.chatDao().getById(created.chatId) == null } } // Confirms Room removed the chat after the undo window.
+    } // Ends history deletion device verification.
 
     private fun showChat(): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

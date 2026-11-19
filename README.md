@@ -16,11 +16,11 @@ It uses Google Gemini's REST API in stateless mode and acts as a senior Android 
 | Milestone | Tag | Due date | Video |
 | :--- | :--- | :--- | :--- |
 | 1 — Project plan | `mentor_1` | 2026-09-21 | — (see [PROJECT_PLAN.md](PROJECT_PLAN.md)) |
-| 2 — Core functionality | [`mentor_2`](https://github.com/Stocca05/PastaGpt/tree/mentor_2) | 2026-10-12 | Pending — author plans upload on 2026-10-18 |
+| 2 — Core functionality | [`mentor_2`](https://github.com/Stocca05/PastaGpt/tree/mentor_2) | 2026-10-12 | [Milestone 2 video](https://iselpt-my.sharepoint.com/:v:/g/personal/a55603_alunos_isel_pt/IQCSpouM0ShnSbLWgaog6XnWAcEwAT8aDULCsKv3zy2SaKs?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=bxrkPE) |
 | 3 — Advanced features | `mentor_3` | 2026-11-16 | _pending_ |
 | Final — Delivery | `mentor_f` | 2026-12-12 | _pending_ |
 
-M2 code is delivered on 2026-10-17 through `main` and the annotated `mentor_2` tag. At the author's request, code delivery precedes the video upload. The video link and its accessibility check are still outstanding; the complete milestone acceptance checklist therefore remains open. Once uploaded, its link will be added in a follow-up documentation commit.
+M2 code was delivered on 2026-10-17 through `main` and the annotated `mentor_2` tag. On 2026-11-19 the 6:31 Milestone 2 video was recorded, uploaded to ISEL OneDrive, and linked in the table above, completing M2-30 and M2-31.
 
 ## Documentation
 

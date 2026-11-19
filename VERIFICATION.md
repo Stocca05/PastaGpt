@@ -73,7 +73,7 @@ A clean build is useful in this cloud-synchronised workspace because older gener
 - [x] Confirm Send/Retry stay disabled with missing prerequisites or an unresolved attempt; verify retry reuses the saved row.
 - [x] Exercise actual input, keyboard and message widgets during emulator tests; inspect scrollable Title under enlarged font and landscape. Other APIs/physical-device layouts remain pending.
 - [x] Confirm typed persisted error text is shown without raw provider response or credential content.
-- [ ] Confirm screenshots and the milestone video never reveal a credential.
+- [x] Confirm screenshots and the milestone video never reveal a credential.
 
 A real provider check is separate from MockEngine tests. The author reported a successful two-turn live check on 2026-10-14; access and quota must still be checked before recording the demo.
 
@@ -95,6 +95,8 @@ Local exit criteria: debug/release compilation and unit tests pass, instrumentat
 Implementation is complete through M2-29. Delivery work now covers M2-30 and M2-31: the recording script is ready, while the actual video, accessible link and annotated `mentor_2` tag remain pending.
 
 Code delivery update — 2026-10-17: the author requested publication of the code and annotated `mentor_2` tag before the video, whose upload is planned for 2026-10-18. The code is integrated through a pull request into `main`; video acceptance remains pending and is not claimed by the code tag. The [CI run for `a0622fe`](https://github.com/Stocca05/PastaGpt/actions/runs/38578312143) completed successfully. This delivery changes documentation only; the previously verified application code is unchanged.
+
+Video delivery update — 2026-11-19: the 6:31 Milestone 2 video is now recorded, uploaded to ISEL OneDrive, and linked in `README.md`, completing M2-30 and M2-31.
 
 ## M2-26 history coverage audit — 2026-10-12
 

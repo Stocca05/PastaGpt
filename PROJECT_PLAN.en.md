@@ -42,7 +42,7 @@
 | 1.0.30 | 12/10/2026 | Luca Raona | M2-29 | GitHub Actions push/PR workflow, JDK 17, SDK 35, official actions pinned to verified commits, build/test/lint and badge; first hosted execution remains to be verified after push. |
 | 1.0.31 | 14/10/2026 | Luca Raona | M2-30 preparation | Hosted CI passed; author confirmed two real Gemini replies; recording script ready, actual recording/link/tag still pending. |
 | 1.0.32 | 17/10/2026 | Luca Raona | M2 code delivery | At the author's request, integrate into main and tag mentor_2 before the video; upload planned for 18/10, video checklist remains open. |
-| 1.1 | *(to be filled in)* | | Draft | Post-M2 revision |
+| 1.1 | 19/11/2026 | Luca Raona | M2 completed | M2 video (6:31) recorded and published on ISEL OneDrive; link added to README; M2-30 and M2-31 completed. |
 | 1.2 | *(to be filled in)* | | Draft | Post-M3 revision |
 
 > **Maintenance note.** This is a living document: at the end of every milestone the task status must be updated (`☐` → `☑`), along with actual effort and any rescheduling of unfinished tasks. The revision history is tracked in the table above and in the Git log.
@@ -544,20 +544,20 @@ pt/isel/pdm/droidmentor/
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M2-30 | Milestone 2 video | **5–7 minute** recording following the Appendix D script: demonstration of the implemented functionalities, discussion of the most relevant decisions (manual service locator, stateless design, offline-first), **description of the verification strategy**, current project status. Upload to a platform with a stable link, access verified in a private browsing window. | M | 🟡 | 4 h | all M2 | ☐ |
-| M2-31 | `mentor_2` tag | Add the video link to the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M2-30 | ☐ |
+| M2-30 | Milestone 2 video | **5–7 minute** recording following the Appendix D script: demonstration of the implemented functionalities, discussion of the most relevant decisions (manual service locator, stateless design, offline-first), **description of the verification strategy**, current project status. Upload to a platform with a stable link, access verified in a private browsing window. | M | 🟡 | 4 h | all M2 | ☑ |
+| M2-31 | `mentor_2` tag | Add the video link to the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M2-30 | ☑ |
 
 **Estimated Milestone 2 total:** ~92 ideal hours, all solo — about 31 ideal hours a week over the 3 weeks (≈43 calendar hours a week at the 1.4× factor). This is the heaviest sprint block in the whole plan; see the workload note in §7.
 
 ### 9.9 Acceptance checklist (Milestone 2)
 
-- ☑ The repository is correctly tagged **`mentor_2`** and the tag has been pushed (code delivery; video still pending).
-- ☐ The `README.md` contains the **video link**, verified as reachable from an outside account.
-- ☐ The video is **between 5 and 7 minutes** long.
-- ☐ The video **demonstrates the implemented functionalities**.
-- ☐ The video **discusses the most relevant decisions**.
-- ☐ The video **describes the elected verification strategy**.
-- ☐ The video **presents the current status of the project**.
+- ☑ The repository is correctly tagged **`mentor_2`** and the tag has been pushed.
+- ☑ The `README.md` contains the **video link**, verified as reachable from an outside account.
+- ☑ The video is **between 5 and 7 minutes** long (6:31).
+- ☑ The video **demonstrates the implemented functionalities**.
+- ☑ The video **discusses the most relevant decisions**.
+- ☑ The video **describes the elected verification strategy**.
+- ☑ The video **presents the current status of the project**.
 
 **Additional internal verification (not required by the statement, but necessary to avoid accumulating debt):**
 
@@ -890,7 +890,7 @@ Solo project, developed under the name **PastaGPT**.
 | Milestone | Tag | Date | Video |
 |---|---|---|---|
 | 1 — Project plan | `mentor_1` | 21/09/2026 | — (see PROJECT_PLAN.md) |
-| 2 | `mentor_2` | 12/10/2026 | Pending — upload planned 18/10/2026; code delivered 17/10/2026 |
+| 2 | `mentor_2` | 12/10/2026 | [Milestone 2 video](https://iselpt-my.sharepoint.com/:v:/g/personal/a55603_alunos_isel_pt/IQCSpouM0ShnSbLWgaog6XnWAcEwAT8aDULCsKv3zy2SaKs?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=bxrkPE) |
 | 3 | `mentor_3` | 16/11/2026 | [link] |
 | Final | `mentor_f` | 12/12/2026 | [link] |
 

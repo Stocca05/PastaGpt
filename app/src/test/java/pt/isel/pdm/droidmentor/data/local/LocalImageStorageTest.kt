@@ -105,4 +105,23 @@ class LocalImageStorageTest { // Runs directly on the JVM without Android depend
         assertEquals(java.util.Base64.getEncoder().encodeToString(pngHeader), encoded?.second) // Confirms exact standard Base64 output.
         assertNull(storage.encodeAsBase64("images/missing.jpg")) // Returns null safely for missing files.
     } // Ends Base64 encoder test.
+
+    /** Checks orphan cleanup removes only unreferenced files and payloadOptimizer output wins when supplied. */
+    @Test // Verifies M3-15 orphan sweeping and optional resize/compression hook cleanly.
+    fun cleanupOrphansAndPayloadOptimizationBehaveSafely() = runTest { // Uses real temp files under images/.
+        val storage = LocalImageStorage(tempFolder.root, streamOpener = { null }, payloadOptimizer = { bytes -> "image/jpeg" to byteArrayOf(bytes.size.toByte()) }) // Injects mock optimizer.
+        val active = storage.createCaptureTarget() ?: error("Expected active target") // Creates referenced path.
+        val orphan = storage.createCaptureTarget() ?: error("Expected orphan target") // Creates unreferenced path.
+        storage.resolveFile(active)?.writeBytes(byteArrayOf(1, 2, 3, 4)) // Writes active image bytes.
+        storage.resolveFile(orphan)?.writeBytes(byteArrayOf(9, 9)) // Writes orphaned file bytes.
+
+        val optimized = storage.encodeAsBase64(active) // Uses optimizer instead of raw bytes.
+        assertEquals("image/jpeg", optimized?.first) // Confirms compressed MIME.
+        assertEquals(java.util.Base64.getEncoder().encodeToString(byteArrayOf(4)), optimized?.second) // Confirms optimized bytes encoded.
+
+        val removed = storage.cleanupOrphans(setOf(active)) // Keeps active file, removes orphan file.
+        assertEquals(1, removed) // Confirms exactly one orphan file removed.
+        assertTrue(storage.resolveFile(active)?.exists() == true) // Confirms active file survived.
+        assertFalse(storage.resolveFile(orphan)?.exists() == true) // Confirms orphan file deleted.
+    } // Ends M3-15 storage lifecycle verification.
 } // Ends LocalImageStorageTest.

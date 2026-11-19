@@ -48,6 +48,7 @@ import org.junit.Before // Creates isolated production-schema storage for every 
 import org.junit.Test // Marks repository verification cases.
 import org.junit.runner.RunWith // Selects the Android test runner.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Uses the real application database.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Verifies file deletion and orphan cleanup on disk cleanly.
 import pt.isel.pdm.droidmentor.data.local.entity.MessageEntity // Seeds deliberately invalid persisted histories for rejection tests.
 import pt.isel.pdm.droidmentor.data.remote.GeminiRemoteDataSource // Exercises the actual request builder and typed error boundary.
 import pt.isel.pdm.droidmentor.data.remote.HttpClientFactory // Uses the actual client plugins around MockEngine.
@@ -599,6 +600,41 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertFalse("Room must never persist Base64 data", storedRows.any { it.text.contains(fakeBase64) || it.imagePath?.contains(fakeBase64) == true }) // Guards V9 strictly.
         assertTrue("HTTP request must carry inline_data Base64", seenBody.contains("inline_data") && seenBody.contains(fakeBase64)) // Confirms Base64 was produced at request build time.
     } // Ends V9 relative-path-only repository verification.
+
+    /** Checks deleting a message, rewriting a turn or deleting a chat removes obsolete image files cleanly. */
+    @Test // Guards M3-15 file lifecycle synchronization with Room deletions and rewrites.
+    fun deletingChatDeletingMessageAndRewriteCleanUpAssociatedImageFiles() = runBlocking { // Tracks relative paths deleted by RoomChatRepository.
+        val deleted = mutableListOf<String>() // Collects paths deleted after committed transactions.
+        val fakeStorage = object : ImageStorage { // Fake ImageStorage capturing deleted relative paths.
+            override suspend fun importFromUri(uriString: String): String? = null // Unused in deletion test.
+            override suspend fun createCaptureTarget(): String? = null // Unused in deletion test.
+            override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = null // Unused.
+            override fun resolveFile(relativePath: String) = null // Unused.
+            override fun deleteRelativePath(relativePath: String): Boolean { deleted.add(relativePath); return true } // Records deleted paths.
+        } // Ends fake ImageStorage.
+        val connected: suspend () -> Boolean = { online } // Uses harness connectivity.
+        val engine = MockEngine.config { addHandler { respond(body, headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())) } } // Always replies OK.
+        val client = HttpClientFactory.create(false, engine, object : Logger { override fun log(message: String) = Unit }) // Builds test client.
+        clients.add(client) // Registers cleanup.
+        val repo = RoomChatRepository(database, settings, GeminiRemoteDataSource(client, connected), connected, clock::getAndIncrement, { UUID.randomUUID().toString() }, fakeStorage) // Injects imageStorage.
+        val chatId = createChat(repo) // Creates isolated chat.
+
+        assertEquals(ChatCommandResult.Stored, repo.sendMessage(chatId, "Q1", "images/img1.jpg")) // Turn 0 (kept on rewrite).
+        assertEquals(ChatCommandResult.Stored, repo.sendMessage(chatId, "Q2", "images/img2.jpg")) // Turn 2 (kept when rewritten).
+        assertEquals(ChatCommandResult.Stored, repo.sendMessage(chatId, "Q3", "images/img3.jpg")) // Turn 4 (tail removed on rewrite).
+        val savedBeforeRewrite = messages(repo, chatId) // Reads 6 messages.
+
+        assertEquals(ChatCommandResult.Stored, repo.rewriteMessage(chatId, savedBeforeRewrite[2].id, "Q2 edited")) // Rewrites Q2 -> invalidates Q3/img3.
+        assertEquals(listOf("images/img3.jpg"), deleted) // Confirms Q3's image deleted, Q1/Q2 kept.
+
+        deleted.clear() // Resets tracker before deleteMessage.
+        assertEquals(ChatCommandResult.Stored, repo.deleteMessage(chatId, savedBeforeRewrite[2].id)) // Deletes edited Q2 + reply.
+        assertEquals(listOf("images/img2.jpg"), deleted) // Confirms Q2's image deleted, Q1 still kept.
+
+        deleted.clear() // Resets tracker before deleteChat.
+        assertEquals(ChatCommandResult.Stored, repo.deleteChat(chatId)) // Deletes whole chat cleanly.
+        assertEquals(listOf("images/img1.jpg"), deleted) // Confirms remaining Q1 image deleted on chat delete.
+    } // Ends M3-15 image file deletion verification.
 
     private fun repository(preferences: SettingsRepository = settings, newId: () -> String = { UUID.randomUUID().toString() }): RoomChatRepository { // Builds production collaborators around a test-owned engine and selected preference implementation.
         val connected: suspend () -> Boolean = { onCheck(checks.incrementAndGet()); online } // Shares fresh prerequisite checks with repository and source.

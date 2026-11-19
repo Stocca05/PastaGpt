@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.map // Converts each stored snapshot to domain va
 import kotlinx.coroutines.sync.Mutex // Prevents concurrent operations in the same chat without blocking different chats.
 import kotlinx.coroutines.withContext // Runs cancellation cleanup in a context that can finish its Room write.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Supplies the real transaction owner and DAOs.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Deletes associated image files after deletions and rewrites commit (M3-15).
 import pt.isel.pdm.droidmentor.data.local.entity.ChatEntity // Builds and maps persisted conversation rows.
 import pt.isel.pdm.droidmentor.data.local.entity.MessageEntity // Builds and maps persisted user/model rows.
 import pt.isel.pdm.droidmentor.data.remote.ApiResult // Handles network outcomes privately inside the data layer.
@@ -46,6 +47,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
     private val isConnected: suspend () -> Boolean, // Rechecks validated connectivity before preparing and sending.
     private val clock: () -> Long = System::currentTimeMillis, // Supplies local timestamps without network metadata.
     private val newId: () -> String = { UUID.randomUUID().toString() }, // Creates local IDs unrelated to server response IDs.
+    private val imageStorage: ImageStorage? = null, // Removes obsolete relative image files after committed Room deletions.
 ) : ChatRepository { // Implements the Room-only observation contract.
     private val chats = database.chatDao() // Reuses the production chat DAO.
     private val messages = database.messageDao() // Reuses the production transactional message DAO.
@@ -101,14 +103,20 @@ class RoomChatRepository( // Receives every dependency manually without a framew
         } // Ends guarded renaming.
     } // Ends local title editing.
 
-    /** Deletes one local conversation and its cascaded history while protecting active exchanges. */
+    /** Deletes one local conversation, its cascaded history, and its saved image files while protecting active sends. */
     override suspend fun deleteChat(chatId: String): ChatCommandResult { // Requires no key or connectivity.
         currentCoroutineContext().ensureActive() // Stops cancelled local work before deletion.
         if (chatId.isBlank()) return ChatCommandResult.InvalidInput // Requires a local target identity.
         val lock = lock(chatId) // Shares the active exchange's operation gate.
         if (!lock.tryLock()) return ChatCommandResult.Busy // Refuses deletion while this repository is sending.
         return try { // Contains ordinary deletion failures.
-            if (chats.deleteById(chatId) == 1) ChatCommandResult.Stored else ChatCommandResult.NotFound // Lets Room's foreign key cascade remove messages.
+            val imagePaths = messages.getMessages(chatId).mapNotNull { it.imagePath } // Captures image files owned by this chat before cascade delete.
+            if (chats.deleteById(chatId) == 1) { // Lets Room cascade delete messages before removing disk files.
+                deleteImagePaths(imagePaths) // Removes image files once database deletion succeeds (M3-15).
+                ChatCommandResult.Stored // Confirms chat and associated files removed cleanly.
+            } else { // Leaves files untouched if chat row did not exist.
+                ChatCommandResult.NotFound // Reports missing chat row.
+            } // Ends deletion check.
         } catch (error: CancellationException) { // Preserves normal cancellation.
             throw error // Does not turn cancelled work into a local error.
         } catch (error: Exception) { // Contains database exceptions.
@@ -133,23 +141,27 @@ class RoomChatRepository( // Receives every dependency manually without a framew
         return attempt(chatId, newText, imagePath = null, targetId = messageId, rewrite = true) // Truncates only after prerequisites pass and inside a transaction.
     } // Ends conversation rewrite.
 
-    /** Deletes a user message and all subsequent turns in one transaction, keeping history alternating. */
+    /** Deletes a user message, all subsequent turns, and their image files atomically. */
     override suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult { // Performs local tail deletion offline or online.
         currentCoroutineContext().ensureActive() // Preserves cancellation before acquiring the chat lock.
         if (chatId.isBlank() || messageId.isBlank()) return ChatCommandResult.InvalidInput // Requires valid local IDs.
         val lock = lock(chatId) // Shares the per-chat operation gate with active sends.
         if (!lock.tryLock()) return ChatCommandResult.Busy // Refuses deleting while a request owns this chat.
         return try { // Contains ordinary database exceptions.
-            database.withTransaction { // Keeps target checks, deletion and recency update atomic.
+            var removedPaths = emptyList<String>() // Tracks removed tail image files to clean up after commit.
+            val outcome = database.withTransaction { // Keeps target checks, deletion and recency update atomic.
                 if (chats.getById(chatId) == null) return@withTransaction ChatCommandResult.NotFound // Requires an existing parent conversation.
                 val saved = messages.getMessages(chatId) // Reads current history to check pending operations.
                 if (saved.any { it.status == MessageStatus.SENDING }) return@withTransaction ChatCommandResult.UnresolvedMessage // Refuses deleting while another row is sending.
                 val target = messages.getById(messageId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing message row.
                 if (target.chatId != chatId || target.role != Role.USER) return@withTransaction ChatCommandResult.InvalidRetry // Allows deleting only user turns in this chat.
+                removedPaths = saved.filter { it.seq >= target.seq }.mapNotNull { it.imagePath } // Identifies image files belonging to removed turns.
                 messages.deleteFromSeq(chatId, target.seq) // Removes the user message and all subsequent turns together.
                 messages.touchChat(chatId, clock()) // Updates conversation recency.
                 ChatCommandResult.Stored // Reports local deletion completed.
             } // Ends atomic message deletion transaction.
+            if (outcome == ChatCommandResult.Stored) deleteImagePaths(removedPaths) // Cleans disk files only after transaction commits (M3-15).
+            outcome // Returns local persistence result cleanly.
         } catch (error: CancellationException) { // Preserves structured coroutine cancellation.
             throw error // Leaves coroutine cancellation intact.
         } catch (_: Exception) { // Converts unexpected storage errors into a safe acknowledgement.
@@ -177,6 +189,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
             if (text?.contains(initialKey) == true) return ChatCommandResult.InvalidInput // Prevents the configured credential from being saved as incoming user text.
             if (!isConnected()) return ChatCommandResult.Offline // Leaves the draft and local history unchanged when initially offline.
 
+            var invalidatedImagePaths = emptyList<String>() // Tracks image files invalidated when a rewrite truncates later turns.
             val rejected = database.withTransaction { // Makes unresolved-row checks and optimistic insertion/reactivation/rewrite indivisible.
                 val currentChat = chats.getById(chatId) ?: return@withTransaction ChatCommandResult.NotFound // Rechecks existence inside the preparation transaction.
                 val saved = messages.getMessages(chatId) // Reads every prior row in sequence order while preparation owns the transaction.
@@ -195,6 +208,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
                         if (saved.any { it.status == MessageStatus.SENDING }) return@withTransaction ChatCommandResult.UnresolvedMessage // Refuses rewriting while another row is sending.
                         val existing = messages.getById(targetId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing local rewrite target.
                         if (existing.chatId != chatId || existing.role != Role.USER) return@withTransaction ChatCommandResult.InvalidRetry // Refuses foreign or model rows.
+                        invalidatedImagePaths = saved.filter { it.seq > existing.seq }.mapNotNull { it.imagePath } // Marks subsequent invalidated image attachments for disk deletion.
                         candidate = existing.copy(text = text.orEmpty(), status = MessageStatus.SENDING, errorCategory = null) // Updates text and clears any previous error on the same row.
                         prospective = saved.filter { it.seq < existing.seq } + candidate // Drops turns after the edited row when validating the truncated history.
                     } // Ends rewrite preparation.
@@ -228,6 +242,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
                 null // Signals preparation succeeded without returning a network result or row to the UI.
             } // Commits preparation before any HTTP operation begins.
             if (rejected != null) return rejected // Returns only a typed local reason when preparation was blocked.
+            deleteImagePaths(invalidatedImagePaths) // Deletes image files whose rows were removed by rewrite truncation (M3-15).
             val userId = pendingId ?: return ChatCommandResult.StorageError // Requires the saved row identity before proceeding.
 
             val current = readSettings() // Rereads the key after optimistic insertion instead of trusting the initial snapshot.
@@ -297,4 +312,9 @@ class RoomChatRepository( // Receives every dependency manually without a framew
     private fun chat(row: ChatEntity) = Chat(row.id, row.title, row.createdAt, row.updatedAt) // Maps only saved conversation metadata to the domain.
 
     private fun message(row: MessageEntity) = Message(row.id, row.chatId, row.role, row.text, row.seq, row.status, row.createdAt, row.errorCategory, row.imagePath) // Preserves every saved message field, including failure label and relative image path.
+
+    private fun deleteImagePaths(paths: List<String>) { // Removes committed-deleted or invalidated attachment files safely.
+        val storage = imageStorage ?: return // Skips disk deletion cleanly when repository runs without image storage.
+        for (path in paths) storage.deleteRelativePath(path) // Deletes each referenced relative image path.
+    } // Ends image-file cleanup helper.
 } // Ends the Room-only observed chat repository.

@@ -5,7 +5,11 @@ import android.content.Context // Allows activities and context wrappers to find
 import androidx.datastore.core.DataStore // Exposes the asynchronous preference storage instance.
 import androidx.datastore.preferences.core.Preferences // Identifies the dedicated key store's value type.
 import io.ktor.client.HttpClient // Shares the configured Ktor client across API operations.
+import kotlinx.coroutines.CoroutineScope // Launches startup orphan image cleanup without blocking the main thread (M3-15).
+import kotlinx.coroutines.Dispatchers // Performs startup DB query and disk sweep on IO.
+import kotlinx.coroutines.SupervisorJob // Prevents background cleanup errors from tearing down app scope.
 import kotlinx.coroutines.flow.Flow // Exposes connectivity observation through the replaceable container contract.
+import kotlinx.coroutines.launch // Schedules one-shot orphan file cleanup at app launch.
 import pt.isel.pdm.droidmentor.data.connectivity.ConnectivityObserver // Supplies the real Android network observation and fresh send checks.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Owns the persistent Room history database.
 import pt.isel.pdm.droidmentor.data.local.ImageStorage // Exposes app-private conversation image storage contract.
@@ -72,13 +76,28 @@ class DroidMentorApplication : Application(), DependencyContainer { // Android c
 
     /** One offline-first repository instance, including one operation gate per chat for the app. */
     override val chatRepository: ChatRepository by lazy { // Implements the replaceable contract and shares its per-chat locks across every screen.
-        RoomChatRepository(database, settingsRepository, geminiRemoteDataSource, connectivityObserver::isConnected) // Supplies each dependency explicitly without any injection framework.
+        RoomChatRepository(database, settingsRepository, geminiRemoteDataSource, connectivityObserver::isConnected, imageStorage = imageStorage) // Wires image cleanup on deletes and rewrites.
     } // Ends chat repository construction.
 
     /** Shared app-private image storage rooted in filesDir/images. */
     override val imageStorage: ImageStorage by lazy { // Implements manual DI for gallery/camera attachment management.
         LocalImageStorage(this) // Keeps copied images private inside application storage.
     } // Ends image storage construction.
+
+    private val maintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO) // Runs fire-and-forget startup orphan cleanup off main thread.
+
+    override fun onCreate() { // Schedules background cleanup of orphaned image files on startup (M3-15).
+        super.onCreate() // Performs standard Android Application initialization.
+        maintenanceScope.launch { cleanupOrphanImages() } // Sweeps leftover unreferenced files from killed sessions off Main.
+    } // Ends Application.onCreate.
+
+    /** Removes image files in filesDir/images/ that are no longer referenced by any Room message. */
+    internal suspend fun cleanupOrphanImages(): Int = try { // Exposes deterministic orphan cleanup for startup and tests.
+        val referenced = database.messageDao().getAllReferencedImagePaths().toSet() // Reads every active relative imagePath in Room.
+        imageStorage.cleanupOrphans(referenced) // Deletes unreferenced orphan files cleanly.
+    } catch (_: Exception) { // Avoids crashing app startup if storage is temporarily unavailable.
+        0 // Returns zero safely.
+    } // Ends orphan cleanup helper.
 } // Ends the application service locator.
 
 /** Finds the manifest-registered locator through the application context without retaining an activity. */

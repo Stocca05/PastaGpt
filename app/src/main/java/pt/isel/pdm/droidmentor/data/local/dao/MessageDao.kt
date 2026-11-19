@@ -28,6 +28,10 @@ abstract class MessageDao { // Allows both generated queries and small transacti
     @Query("SELECT * FROM messages WHERE id = :messageId") // Searches by local message ID.
     abstract suspend fun getById(messageId: String): MessageEntity? // Returns the row needed by a state change.
 
+    /** Returns every non-null relative image path still referenced in Room for startup orphan cleanup (M3-15). */
+    @Query("SELECT imagePath FROM messages WHERE imagePath IS NOT NULL") // Selects only active attachment paths.
+    abstract suspend fun getAllReferencedImagePaths(): List<String> // Prevents startup cleanup from deleting active files.
+
     /**
      * Allocates and inserts the next position atomically, also updating chat recency.
      * The supplied sequence is replaced; the returned row contains its saved sequence.

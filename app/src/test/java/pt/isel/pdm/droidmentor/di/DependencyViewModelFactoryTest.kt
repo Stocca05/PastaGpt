@@ -165,6 +165,8 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
         } // Ends the in-memory chat fake.
         override val imageStorage = object : ImageStorage { // Performs no filesystem work in factory tests.
             override suspend fun importFromUri(uriString: String): String? = null // Rejects imports in fake container.
+            override suspend fun createCaptureTarget(): String? = null // Allocates nothing in factory tests.
+            override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = null // Finalizes nothing in factory tests.
             override fun resolveFile(relativePath: String) = null // Never resolves local files in factory tests.
             override fun deleteRelativePath(relativePath: String): Boolean = false // Performs no disk deletion.
         } // Ends the in-memory image storage fake.

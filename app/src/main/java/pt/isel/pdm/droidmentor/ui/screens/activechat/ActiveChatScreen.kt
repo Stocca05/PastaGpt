@@ -1,8 +1,19 @@
 package pt.isel.pdm.droidmentor.ui.screens.activechat // Groups the selected conversation's Room-backed UI.
 
+import android.Manifest // Declares the CAMERA runtime permission required before launching TakePicture.
+import android.app.Activity // Resolves Activity for ActivityCompat.shouldShowRequestPermissionRationale.
+import android.content.Context // Unwraps ContextWrapper safely to find the host Activity.
+import android.content.ContextWrapper // Supports unwrapping Compose context wrappers cleanly.
+import android.content.Intent // Opens App Settings directly when camera permission is permanently denied.
+import android.content.pm.PackageManager // Checks whether CAMERA permission is already granted.
+import android.net.Uri // Builds the package: URI for App Settings navigation.
+import android.provider.Settings // Targets Android Application Details Settings on permanent denial.
 import androidx.activity.compose.rememberLauncherForActivityResult // Launches Android Photo Picker without runtime storage permissions (M3-11).
 import androidx.activity.result.PickVisualMediaRequest // Requests image-only media from the system Photo Picker.
-import androidx.activity.result.contract.ActivityResultContracts // Uses PickVisualMedia for Android-compliant gallery picking.
+import androidx.activity.result.contract.ActivityResultContracts // Uses PickVisualMedia, TakePicture and RequestPermission contracts.
+import androidx.core.app.ActivityCompat // Inspects whether Android recommends showing a camera permission rationale.
+import androidx.core.content.ContextCompat // Checks current CAMERA runtime permission status safely.
+import androidx.core.content.FileProvider // Exposes app-private filesDir/images/ target cleanly to the Camera app.
 import androidx.compose.foundation.ExperimentalFoundationApi // Enables long-press combinedClickable on message bubbles.
 import androidx.compose.foundation.combinedClickable // Opens the bubble context menu on long-press.
 import androidx.compose.foundation.layout.Arrangement // Separates messages and input controls.
@@ -40,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf // Tracks previous message cou
 import androidx.compose.runtime.mutableStateOf // Tracks whether the manual rename dialog is open.
 import androidx.compose.runtime.remember // Owns the factory and feedback state for this selected ID.
 import androidx.compose.runtime.rememberCoroutineScope // Launches the clipboard-copied snackbar notice.
+import androidx.compose.runtime.saveable.rememberSaveable // Survives Activity recreation while external camera UI is open.
 import androidx.compose.runtime.setValue // Opens and closes the manual rename dialog.
 import androidx.compose.runtime.snapshotFlow // Observes LazyList scroll position cleanly for SavedStateHandle.
 import androidx.compose.ui.Alignment // Centres loading states and aligns draft controls.
@@ -89,9 +101,39 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
     var editingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message currently being rewritten.
     var deletingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message awaiting delete confirmation.
+    var pendingCapturePath by rememberSaveable { mutableStateOf<String?>(null) } // Preserves relative capture target if Activity recreates during camera flow.
+    var showCameraRationale by remember { mutableStateOf(false) } // Shows rationale explanation when Android asks before re-prompting.
+    var showCameraPermanentDenial by remember { mutableStateOf(false) } // Guides user to App Settings when CAMERA permission is permanently denied.
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> // Opens the Photo Picker without requesting storage permissions.
         if (uri != null) model.attachGalleryImage(uri.toString()) // Copies picked image into app-private filesDir/images/.
     } // Ends Photo Picker launcher.
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { succeeded -> // Commits captured photo or removes empty target file.
+        val capturedPath = pendingCapturePath // Reads saved relative target path.
+        pendingCapturePath = null // Consumes one-shot capture target.
+        if (capturedPath != null) model.completeCameraCapture(capturedPath, succeeded) // Finalizes or cleans captured image file.
+    } // Ends TakePicture launcher.
+    val launchCamera: () -> Unit = { // Allocates target in filesDir/images/ and opens camera via FileProvider.
+        scope.launch { // Reserves target off main thread cleanly.
+            val targetPath = model.prepareCameraCaptureTarget() // Creates relative destination path.
+            val targetFile = targetPath?.let(model::resolveAttachmentFile) // Resolves app-private File inside filesDir/images/.
+            if (targetPath == null || targetFile == null) { // Handles storage preparation error cleanly.
+                snackbar.showSnackbar(context.getString(R.string.notice_image_import_failed)) // Shows safe notice without leaking path.
+            } else { // Launches camera with tightly scoped FileProvider content URI.
+                val contentUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetFile) // Grants temporary URI access only to target file.
+                pendingCapturePath = targetPath // Saves target path across Activity recreation.
+                cameraLauncher.launch(contentUri) // Opens system Camera app.
+            } // Ends camera launch branch.
+        } // Ends coroutine scope.
+    } // Ends camera launch helper.
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> // Handles runtime CAMERA permission response.
+        if (granted) { // Launches camera immediately once permission is granted.
+            launchCamera() // Starts FileProvider camera capture.
+        } else if (shouldShowCameraRationale(context)) { // Explains why camera is needed when Android allows re-prompting.
+            showCameraRationale = true // Shows rationale dialog.
+        } else { // Recognizes permanent denial ("Don't ask again") when Android suppresses rationale.
+            showCameraPermanentDenial = true // Shows App Settings guidance dialog without dead ends.
+        } // Ends permission response handling.
+    } // Ends permission request launcher.
     EventEffect(model.events) { event -> // Handles prerequisite or persistence feedback outside the layout.
         if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays no direct API payload or raw exception text.
     } // Ends local event collection.
@@ -159,6 +201,39 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
             }, // Ends dismiss slot.
         ) // Ends delete message confirmation dialog.
     } // Ends delete message dialog check.
+    if (showCameraRationale) { // Explains why CAMERA access is needed before re-prompting.
+        AlertDialog( // Presents clear educational rationale per Android permission best practices.
+            onDismissRequest = { showCameraRationale = false }, // Dismisses without requesting permission.
+            title = { Text(stringResource(R.string.camera_rationale_title)) }, // Summarizes camera request.
+            text = { Text(stringResource(R.string.camera_rationale_body)) }, // Explains how captured photos are attached.
+            confirmButton = { // Re-triggers system permission dialog on explicit acceptance.
+                TextButton(onClick = { // Requests runtime CAMERA permission.
+                    showCameraRationale = false // Dismisses rationale dialog.
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA) // Opens Android runtime prompt.
+                }) { Text(stringResource(R.string.camera_rationale_continue)) } // Labels allow button.
+            }, // Ends confirm button.
+            dismissButton = { // Leaves photo capture ungranted cleanly.
+                TextButton(onClick = { showCameraRationale = false }) { Text(stringResource(R.string.history_delete_cancel)) } // Cancels smoothly.
+            }, // Ends dismiss button.
+        ) // Ends camera rationale dialog.
+    } // Ends camera rationale check.
+    if (showCameraPermanentDenial) { // Guides the user to App Settings when CAMERA permission was permanently denied.
+        AlertDialog( // Avoids dead ends when Android hides the permission prompt.
+            onDismissRequest = { showCameraPermanentDenial = false }, // Closes dialog cleanly.
+            title = { Text(stringResource(R.string.camera_denied_permanently_title)) }, // Reports permanent denial clearly.
+            text = { Text(stringResource(R.string.camera_denied_permanently_body)) }, // Tells the user how to re-enable Camera in Settings.
+            confirmButton = { // Navigates directly to this app's Android system Settings page.
+                TextButton(onClick = { // Opens Application Details Settings.
+                    showCameraPermanentDenial = false // Dismisses dialog first.
+                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)) // Targets this app's permissions screen.
+                    context.startActivity(settingsIntent) // Opens Android App Settings.
+                }) { Text(stringResource(R.string.camera_open_app_settings)) } // Labels settings shortcut.
+            }, // Ends confirm button.
+            dismissButton = { // Dismisses cleanly without opening Settings.
+                TextButton(onClick = { showCameraPermanentDenial = false }) { Text(stringResource(R.string.history_delete_cancel)) } // Cancels cleanly.
+            }, // Ends dismiss button.
+        ) // Ends permanent denial dialog.
+    } // Ends permanent denial check.
     ScreenScaffold( // Displays saved conversation metadata and manual rename action.
         title = state.chat?.title ?: stringResource(R.string.navigation_active_chat), // Uses the live Room-backed chat title.
         onBack = onBack, // Returns to the previous history destination.
@@ -261,6 +336,18 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                 ) { // Ends gallery IconButton setup.
                     Icon(painterResource(R.drawable.ic_photo_library), contentDescription = stringResource(R.string.chat_attach_gallery)) // Labels icon for accessibility.
                 } // Ends gallery attach button.
+                IconButton( // Checks CAMERA permission, shows rationale when appropriate, or launches TakePicture via FileProvider (M3-12).
+                    onClick = { // Evaluates permission state before calling TakePicture.
+                        when { // Branches on granted vs rationale vs initial prompt.
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> launchCamera() // Launches camera immediately when already permitted.
+                            shouldShowCameraRationale(context) -> showCameraRationale = true // Shows rationale first if previously denied.
+                            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA) // Requests runtime permission from Android.
+                        } // Ends permission check.
+                    }, // Ends camera tap handler.
+                    enabled = inputEnabled, // Disables capture while loading or actively sending.
+                ) { // Ends camera IconButton setup.
+                    Icon(painterResource(R.drawable.ic_camera), contentDescription = stringResource(R.string.chat_capture_camera)) // Labels camera icon for accessibility.
+                } // Ends camera capture button.
                 OutlinedTextField( // Keeps unsent user text only in memory.
                     value = state.draft, // Displays the controlled draft without replacing it after a rejected command.
                     onValueChange = model::updateDraft, // Routes editing through the ViewModel's command guard.
@@ -396,3 +483,14 @@ private fun RewriteMessageDialog( // Requires confirmation before truncating lat
         }, // Ends dismiss slot.
     ) // Ends AlertDialog.
 } // Ends rewrite message dialog.
+
+private fun shouldShowCameraRationale(context: Context): Boolean { // Checks ActivityCompat safely even if Context is wrapped.
+    val activity = context.findActivity() ?: return false // Falls back safely in non-Activity test environments.
+    return ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA) // Delegates to platform rationale check.
+} // Ends camera rationale helper.
+
+private tailrec fun Context.findActivity(): Activity? = when (this) { // Unwraps Compose ContextWrappers recursively.
+    is Activity -> this // Found the host Activity.
+    is ContextWrapper -> baseContext.findActivity() // Continues unwrapping outer ContextWrapper.
+    else -> null // Reached Application or non-Activity context cleanly.
+} // Ends Activity lookup.

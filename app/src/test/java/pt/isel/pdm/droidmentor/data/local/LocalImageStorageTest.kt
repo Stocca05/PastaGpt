@@ -5,6 +5,7 @@ import java.io.IOException // Simulates mid-stream read errors during import.
 import java.io.InputStream // Wraps test streams for LocalImageStorage.
 import kotlinx.coroutines.test.runTest // Runs suspend storage tests deterministically.
 import org.junit.Assert.assertArrayEquals // Verifies copied file bytes match the picked image bytes.
+import org.junit.Assert.assertEquals // Compares expected finalized capture relative paths.
 import org.junit.Assert.assertFalse // Verifies deleted or traversal files report false.
 import org.junit.Assert.assertNotNull // Confirms valid imports return a relative path.
 import org.junit.Assert.assertNull // Confirms invalid streams and traversal paths are rejected.
@@ -65,4 +66,30 @@ class LocalImageStorageTest { // Runs directly on the JVM without Android depend
         assertNull(storage.resolveFile("other/pic.jpg")) // Rejects non-images subdirectories.
         assertFalse(storage.deleteRelativePath("../secret.txt")) // Refuses deleting outside images/.
     } // Ends path traversal guard verification.
+
+    /** Checks camera capture target creation, commit of written bytes and cleanup of cancelled captures. */
+    @Test // Tests M3-12 TakePicture FileProvider target lifecycle before touching Android UI.
+    fun captureTargetCommitsNonEmptyFileAndCleansCancelledOrEmptyTargets() = runTest { // Simulates successful vs cancelled camera output.
+        val storage = LocalImageStorage(tempFolder.root, streamOpener = { null }) // Builds local temp storage.
+        val goodTarget = storage.createCaptureTarget() // Allocates first destination path inside images/.
+        assertNotNull(goodTarget) // Confirms target allocation succeeded.
+        val safeGood = goodTarget ?: error("Expected capture target") // Avoids !! cleanly.
+        assertTrue(safeGood.startsWith("images/") && safeGood.endsWith(".jpg")) // Enforces sandbox-safe relative path.
+        val goodFile = storage.resolveFile(safeGood) ?: error("Expected resolved capture file") // Reads resolved file.
+        goodFile.writeBytes(byteArrayOf(9, 8, 7, 6)) // Simulates Camera app writing photo bytes via FileProvider URI.
+        assertEquals(safeGood, storage.finalizeCapture(safeGood, succeeded = true)) // Confirms non-empty photo commits cleanly.
+        assertTrue(goodFile.exists()) // Confirms file remains on disk.
+
+        val cancelledTarget = storage.createCaptureTarget() ?: error("Expected second capture target") // Allocates second destination.
+        val cancelledFile = storage.resolveFile(cancelledTarget) ?: error("Expected second file") // Resolves second destination.
+        cancelledFile.createNewFile() // Simulates FileProvider destination touched with zero bytes before user pressed Back.
+        assertNull(storage.finalizeCapture(cancelledTarget, succeeded = false)) // Rejects cancelled capture cleanly.
+        assertFalse(cancelledFile.exists()) // Confirms zero-byte orphan file was deleted.
+
+        val emptyTarget = storage.createCaptureTarget() ?: error("Expected empty capture target") // Allocates third destination.
+        val emptyFile = storage.resolveFile(emptyTarget) ?: error("Expected empty file") // Resolves empty destination.
+        emptyFile.createNewFile() // Simulates camera returning success without writing bytes.
+        assertNull(storage.finalizeCapture(emptyTarget, succeeded = true)) // Rejects zero-byte output cleanly.
+        assertFalse(emptyFile.exists()) // Confirms empty file was removed.
+    } // Ends capture target lifecycle test.
 } // Ends LocalImageStorageTest.

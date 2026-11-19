@@ -15,6 +15,12 @@ interface ImageStorage { // Keeps ViewModels and repositories independent of And
     /** Copies picked media into app-private storage and returns a relative path, or null on failure. */
     suspend fun importFromUri(uriString: String): String? // Never stores raw Base64 or external content:// URIs in Room.
 
+    /** Allocates a unique relative target inside filesDir/images/ for camera capture via FileProvider. */
+    suspend fun createCaptureTarget(): String? // Prepares the target path before TakePicture runs.
+
+    /** Verifies a completed capture on disk or removes an aborted/empty file. */
+    suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? // Cleans up cancelled captures cleanly.
+
     /** Resolves a stored relative path into an existing file inside app storage, rejecting traversal. */
     fun resolveFile(relativePath: String): File? // Keeps stored paths sandbox-safe across app launches.
 
@@ -66,6 +72,24 @@ class LocalImageStorage internal constructor( // Accepts injectable files root a
             } // Ends copy guard.
         } // Ends IO context.
     } // Ends gallery URI copy.
+
+    /** Allocates a unique relative path inside filesDir/images/ for FileProvider camera capture. */
+    override suspend fun createCaptureTarget(): String? = withContext(ioDispatcher) { // Ensures images directory exists off the main thread.
+        val dir = imagesDir // Resolves filesDir/images/.
+        if (!dir.exists() && !dir.mkdirs()) return@withContext null // Fails cleanly if directory creation fails.
+        "$IMAGES_SUBDIR/${UUID.randomUUID()}.jpg" // Returns unique relative target path for FileProvider URI resolution.
+    } // Ends camera capture target allocation.
+
+    /** Commits a captured image when [succeeded] and non-empty, or deletes cancelled/empty files cleanly. */
+    override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = withContext(ioDispatcher) { // Validates disk state off main thread.
+        val target = resolveFile(relativePath) ?: return@withContext null // Rejects invalid relative paths safely.
+        if (!succeeded || !target.exists() || target.length() <= 0L) { // Cleans cancelled or empty output files.
+            target.delete() // Prevents 0-byte orphan files in filesDir/images/.
+            null // Signals cancelled or empty capture.
+        } else { // Keeps valid non-empty captured photo on disk.
+            relativePath // Returns confirmed sandbox-safe relative path.
+        } // Ends capture finalization check.
+    } // Ends camera capture validation.
 
     /** Resolves [relativePath] only if it stays safely within filesDir/images/. */
     override fun resolveFile(relativePath: String): File? { // Guards against path traversal or unexpected absolute paths.

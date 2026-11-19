@@ -179,6 +179,28 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         imageStorage?.deleteRelativePath(previous) // Deletes the uncommitted file copy inside filesDir/images/.
     } // Ends attachment removal.
 
+    /** Allocates a fresh sandbox-safe relative file path in filesDir/images/ for camera capture. */
+    suspend fun prepareCameraCaptureTarget(): String? = imageStorage?.createCaptureTarget() // Creates destination path off main thread.
+
+    /** Resolves an app-private relative image path to a File for FileProvider URI generation. */
+    fun resolveAttachmentFile(relativePath: String) = imageStorage?.resolveFile(relativePath) // Keeps path validation in LocalImageStorage.
+
+    /** Finalizes a TakePicture result, keeping non-empty photos or cleaning up cancelled targets. */
+    fun completeCameraCapture(relativePath: String, succeeded: Boolean) { // Updates attachment only after a non-empty capture.
+        val storage = imageStorage ?: return // Ignores camera result cleanly if storage is unavailable.
+        viewModelScope.launch { // Validates file length or deletes cancelled file on IO dispatcher.
+            val committed = storage.finalizeCapture(relativePath, succeeded) // Cleans empty/cancelled target files automatically.
+            if (committed == null) { // Handles cancelled capture or write failure without replacing existing attachment.
+                if (succeeded) eventChannel.send(UiEvent.Notice(UiNotice.IMAGE_IMPORT_FAILED)) // Warns user if camera succeeded without writing bytes.
+                return@launch // Keeps any previous pending attachment untouched.
+            } // Ends cancelled/failed capture branch.
+            val previous = state.value.pendingImagePath // Captures any replaced uncommitted attachment.
+            if (previous != null && previous != committed) storage.deleteRelativePath(previous) // Deletes obsolete draft image cleanly.
+            savedStateHandle[pendingImageKey] = committed // Preserves captured image path across process death.
+            mutableState.update { it.copy(pendingImagePath = committed) } // Shows attached photo indicator in composer.
+        } // Ends camera capture finalization.
+    } // Ends camera capture completion.
+
     /** Sends one nonblank draft through the repository, leaving rejected drafts intact. */
     fun send() { // Relies on repository prerequisite checks before every network operation.
         if (!state.value.canSend) return // Prevents blank, concurrent or unresolved-turn sends.

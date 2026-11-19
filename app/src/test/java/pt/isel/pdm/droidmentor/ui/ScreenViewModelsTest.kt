@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.setMain // Supplies the test dispatcher used by v
 import org.junit.After // Releases the test owner's ViewModels and dispatcher.
 import org.junit.Assert.assertEquals // Compares safe IDs, counts and typed labels.
 import org.junit.Assert.assertFalse // Checks guards and privacy without printing key values.
+import org.junit.Assert.assertNotNull // Checks prepared capture target relative paths.
 import org.junit.Assert.assertNull // Checks removed or cleared attachment state cleanly.
 import org.junit.Assert.assertTrue // Checks loading, read errors and fake dependency behaviour.
 import org.junit.Before // Creates an isolated owner and scheduler.
@@ -478,6 +479,8 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         val fakeStorage = object : ImageStorage { // Simulates LocalImageStorage entirely in memory.
             var nextPath: String? = "images/first.jpg" // Controls simulated import result per call.
             override suspend fun importFromUri(uriString: String): String? = nextPath // Returns scripted relative path or null.
+            override suspend fun createCaptureTarget(): String? = null // Unused in gallery-only test.
+            override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = null // Unused in gallery-only test.
             override fun resolveFile(relativePath: String) = null // Unused by ViewModel state tests.
             override fun deleteRelativePath(relativePath: String): Boolean { // Records cleaned-up uncommitted paths.
                 deletedPaths.add(relativePath) // Logs deleted relative path.
@@ -511,6 +514,45 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertNull(handle["pending_image_saved"]) // Confirms SavedStateHandle cleared.
         assertEquals(listOf("images/first.jpg", "images/second.jpg"), deletedPaths) // Confirms second uncommitted copy was deleted too.
     } // Ends gallery attachment ViewModel test.
+
+    /** Checks camera capture completion commits non-empty target, replaces prior attachment, and handles failed capture. */
+    @Test // Writes M3-12 ViewModel capture + permission-helper tests first.
+    fun cameraCaptureUpdatesAttachmentAndHandlesCancellationSafely() = runTest { // Tests camera target commit, replacement and failure notice.
+        val deletedPaths = mutableListOf<String>() // Tracks cleaned-up uncommitted files.
+        val finalizedResults = mutableMapOf<String, String?>() // Scripts finalizeCapture return per relative path.
+        val fakeStorage = object : ImageStorage { // Simulates LocalImageStorage capture operations in memory.
+            var counter = 0 // Generates distinct test paths.
+            override suspend fun importFromUri(uriString: String): String? = null // Unused in camera test.
+            override suspend fun createCaptureTarget(): String { // Returns a unique relative target per call.
+                counter += 1 // Increments fake file index.
+                return "images/cam_$counter.jpg" // Returns expected relative format.
+            } // Ends fake target allocation.
+            override suspend fun finalizeCapture(relativePath: String, succeeded: Boolean): String? = // Resolves scripted outcome or cleans cancelled file.
+                if (succeeded) finalizedResults[relativePath] else { deleteRelativePath(relativePath); null } // Deletes cancelled target cleanly.
+            override fun resolveFile(relativePath: String) = null // Unused here.
+            override fun deleteRelativePath(relativePath: String): Boolean { // Records cleaned-up paths.
+                deletedPaths.add(relativePath) // Logs deleted relative path.
+                return true // Signals cleanup ran.
+            } // Ends fake delete.
+        } // Ends fake storage.
+        val handle = SavedStateHandle() // Persists pending image across process death.
+        val settings = FakeSettings().apply { read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") } // Supplies key.
+        val model = own(ActiveChatViewModel("saved", FakeChats(), settings, MutableStateFlow(ConnectivityStatus.CONNECTED), handle, fakeStorage)) // Builds ViewModel.
+        advanceUntilIdle() // Waits for initial Room load.
+
+        val target1 = model.prepareCameraCaptureTarget() // Prepares first camera target.
+        assertNotNull(target1) // Confirms relative target created.
+        finalizedResults["images/cam_1.jpg"] = "images/cam_1.jpg" // Scripts non-empty photo success.
+        model.completeCameraCapture("images/cam_1.jpg", succeeded = true) // Commits captured photo.
+        advanceUntilIdle() // Finishes IO finalization.
+        assertEquals("images/cam_1.jpg", model.state.value.pendingImagePath) // Confirms attachment attached.
+
+        val target2 = model.prepareCameraCaptureTarget() ?: error("Expected second target") // Prepares replacement target.
+        model.completeCameraCapture(target2, succeeded = false) // User cancels camera app.
+        advanceUntilIdle() // Completes cancellation cleanup.
+        assertEquals("images/cam_1.jpg", model.state.value.pendingImagePath) // Confirms existing attachment survived user cancellation.
+        assertTrue(deletedPaths.contains("images/cam_2.jpg")) // Confirms cancelled file target was cleaned up.
+    } // Ends camera ViewModel capture test.
 
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 

@@ -44,6 +44,13 @@
     <string name="notice_storage_error">Changes could not be saved. Try again later.</string>
     <string name="notice_image_import_failed">Could not load the selected image.</string>
     <string name="chat_attach_gallery">Attach image</string>
+    <string name="chat_capture_camera">Take photo</string>
+    <string name="camera_rationale_title">Camera access needed</string>
+    <string name="camera_rationale_body">DroidMentor needs camera permission to take a photo and attach it to your question.</string>
+    <string name="camera_rationale_continue">Allow camera</string>
+    <string name="camera_denied_permanently_title">Camera permission disabled</string>
+    <string name="camera_denied_permanently_body">Camera access was permanently denied. Enable the Camera permission in App Settings to take photos.</string>
+    <string name="camera_open_app_settings">App Settings</string>
     <string name="chat_image_attached">Image attached</string>
     <string name="chat_remove_attachment">Remove</string>
     <string name="history_new_title">New conversation</string>

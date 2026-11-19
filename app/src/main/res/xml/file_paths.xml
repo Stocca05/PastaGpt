@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Exposes only the app-private conversation images folder via FileProvider. -->
+    <files-path
+        name="chat_images"
+        path="images/" />
+</paths>

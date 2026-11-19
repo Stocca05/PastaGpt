@@ -1,5 +1,6 @@
 package pt.isel.pdm.droidmentor.ui.screens.activechat // Owns a selected conversation's local state and explicit commands.
 
+import androidx.lifecycle.SavedStateHandle // Preserves unsent drafts and scroll position across process death (M3-07).
 import androidx.lifecycle.ViewModel // Scopes this conversation to its navigation entry.
 import androidx.lifecycle.viewModelScope // Cancels collectors and commands when the conversation is left.
 import kotlinx.coroutines.CancellationException // Preserves repository cancellation and its local cleanup.
@@ -16,7 +17,7 @@ import pt.isel.pdm.droidmentor.data.repository.ChatReadResult // Handles typed l
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Supplies offline-first observation, send and retry operations.
 import pt.isel.pdm.droidmentor.data.repository.SettingsReadResult // Reads key presence without placing the key in screen state.
 import pt.isel.pdm.droidmentor.data.repository.SettingsRepository // Supplies the configured-key status stream.
-import pt.isel.pdm.droidmentor.di.dependencyViewModelFactory // Builds the manual factory with the selected local ID.
+import pt.isel.pdm.droidmentor.di.dependencyViewModelFactoryWithSavedState // Builds the manual factory with SavedStateHandle support.
 import pt.isel.pdm.droidmentor.domain.Chat // Holds Room-derived conversation metadata.
 import pt.isel.pdm.droidmentor.domain.ConnectivityStatus // Describes validated connectivity without Android imports in the domain.
 import pt.isel.pdm.droidmentor.domain.Message // Holds Room-derived message content and error categories.
@@ -30,7 +31,9 @@ import pt.isel.pdm.droidmentor.ui.components.toUiNotice // Maps typed acknowledg
 data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from saved history.
     val chat: Chat? = null, // Holds the selected conversation or null after local deletion.
     val messages: List<Message> = emptyList(), // Holds the complete ordered Room message list.
-    val draft: String = "", // Holds unsent text in memory only.
+    val draft: String = "", // Holds unsent text in memory and SavedStateHandle.
+    val savedScrollIndex: Int = 0, // Restores the first visible message index after process death.
+    val savedScrollOffset: Int = 0, // Restores the pixel scroll offset after process death.
     val loading: Boolean = true, // Waits for both initial Room queries.
     val working: Boolean = false, // Tracks this ViewModel's explicit send or retry command.
     val storageError: Boolean = false, // Distinguishes unreadable history from an empty conversation.
@@ -77,8 +80,18 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
     private val repository: ChatRepository, // Owns all local history and networking coordination.
     settingsRepository: SettingsRepository, // Supplies typed key-presence updates without exposing preferences storage.
     connectivity: Flow<ConnectivityStatus>, // Supplies the container's validated status stream.
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(), // Preserves draft and scroll position across process death.
 ) : ViewModel() { // Gives commands and collectors the destination's coroutine lifetime.
-    private val mutableState = MutableStateFlow(ActiveChatUiState()) // Starts without inventing any API or Room content.
+    private val draftKey = "draft_$chatId" // Scopes saved draft text to this local chat ID.
+    private val scrollIndexKey = "scroll_index_$chatId" // Scopes saved list index to this local chat ID.
+    private val scrollOffsetKey = "scroll_offset_$chatId" // Scopes saved scroll offset to this local chat ID.
+    private val mutableState = MutableStateFlow( // Starts with any draft/scroll position restored from SavedStateHandle.
+        ActiveChatUiState(
+            draft = savedStateHandle[draftKey] ?: "", // Restores unsent draft text after process death.
+            savedScrollIndex = savedStateHandle[scrollIndexKey] ?: 0, // Restores previous scroll index.
+            savedScrollOffset = savedStateHandle[scrollOffsetKey] ?: 0, // Restores previous scroll offset.
+        ) // Ends initial state setup.
+    ) // Starts without inventing any API or Room content.
     private val eventChannel = Channel<UiEvent>(Channel.BUFFERED) // Buffers only safe local feedback.
 
     /** Read-only selected-conversation state. */
@@ -115,10 +128,22 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         } // Ends the settings collector.
     } // Ends initial local observations.
 
-    /** Edits the in-memory draft unless a send currently owns its value. */
+    /** Edits the in-memory and SavedStateHandle draft unless a send currently owns its value. */
     fun updateDraft(value: String) { // Allows editing while offline or while a failed saved row awaits retry.
-        if (!state.value.working && !state.value.pending) mutableState.update { it.copy(draft = value) } // Prevents command completion from discarding newer input.
+        if (!state.value.working && !state.value.pending) { // Prevents command completion from discarding newer input.
+            savedStateHandle[draftKey] = value // Persists the unsent draft across process death.
+            mutableState.update { it.copy(draft = value) } // Updates UI state immediately.
+        } // Ends draft edit guard.
     } // Ends draft editing.
+
+    /** Persists the current message list scroll position in SavedStateHandle for process-death survival. */
+    fun updateScrollPosition(index: Int, offset: Int) { // Avoids losing scroll position when the OS kills backgrounded activities.
+        val safeIndex = index.coerceAtLeast(0) // Normalizes invalid negative indices.
+        val safeOffset = offset.coerceAtLeast(0) // Normalizes invalid negative offsets.
+        savedStateHandle[scrollIndexKey] = safeIndex // Stores list item index in SavedStateHandle.
+        savedStateHandle[scrollOffsetKey] = safeOffset // Stores pixel offset in SavedStateHandle.
+        mutableState.update { it.copy(savedScrollIndex = safeIndex, savedScrollOffset = safeOffset) } // Mirrors restored scroll metadata cleanly.
+    } // Ends scroll position persistence.
 
     /** Sends one nonblank draft through the repository, leaving rejected drafts intact. */
     fun send() { // Relies on repository prerequisite checks before every network operation.
@@ -165,7 +190,10 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         viewModelScope.launch { // Performs suspend repository coordination without IO in the Composable.
             try { // Preserves cancellation and avoids exposing unexpected local exception text.
                 val result = command() // Receives only a local acknowledgement, never the model answer.
-                if (clearDraft && result == ChatCommandResult.Stored) mutableState.update { it.copy(draft = "") } // Clears the sent draft after success or failure was saved in Room.
+                if (clearDraft && result == ChatCommandResult.Stored) { // Clears the sent draft after success or failure was saved in Room.
+                    savedStateHandle[draftKey] = "" // Clears saved process-death draft once sent.
+                    mutableState.update { it.copy(draft = "") } // Clears visible input field.
+                } // Ends sent draft cleanup.
                 result.toUiNotice()?.let { eventChannel.send(UiEvent.Notice(it)) } // Reports rejected commands while saved API errors remain in the Room message list.
             } catch (cancelled: CancellationException) { // Lets the repository finish its cancellation cleanup when the destination is left.
                 throw cancelled // Preserves the original structured cancellation.
@@ -180,8 +208,8 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
     /** Manual constructor binding for a specific local conversation ID. */
     companion object { // Keeps the navigation argument outside the process-wide dependency graph.
         /** Builds a factory whose ViewModel belongs to the selected conversation's navigation entry. */
-        fun factory(chatId: String) = dependencyViewModelFactory { container -> // Captures only the local ID, never a credential or history snapshot.
-            ActiveChatViewModel(chatId, container.chatRepository, container.settingsRepository, container.connectivityStatus) // Supplies the existing manually wired contracts explicitly.
+        fun factory(chatId: String) = dependencyViewModelFactoryWithSavedState { container, savedState -> // Captures only the local ID and SavedStateHandle.
+            ActiveChatViewModel(chatId, container.chatRepository, container.settingsRepository, container.connectivityStatus, savedState) // Supplies the existing manually wired contracts explicitly.
         } // Ends selected-conversation factory construction.
     } // Ends manual active-chat construction.
 } // Ends the active conversation ViewModel.

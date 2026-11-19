@@ -1,5 +1,6 @@
 package pt.isel.pdm.droidmentor.ui // Tests screen behaviour with simple in-memory repository contracts.
 
+import androidx.lifecycle.SavedStateHandle // Verifies process-death draft and scroll persistence in ActiveChatViewModel.
 import androidx.lifecycle.ViewModel // Types the ViewModels stored by the test owner.
 import androidx.lifecycle.ViewModelStore // Clears ViewModel jobs after each isolated case.
 import kotlinx.coroutines.CompletableDeferred // Pauses a fake command to test repeated events and cancellation.
@@ -442,6 +443,31 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         advanceUntilIdle() // Runs local delete.
         assertEquals("msg-1", fake.deletedMessageId) // Confirms delete reached repository.
     } // Ends rewrite/delete ViewModel verification.
+
+    /** Checks unsent draft and scroll position survive ViewModel recreation through SavedStateHandle. */
+    @Test // Verifies M3-07 process-death survival state contract.
+    fun draftAndScrollPositionSurviveThroughSavedStateHandle() = runTest { // Simulates recreation with the same SavedStateHandle.
+        val fake = FakeChats() // Provides empty chat metadata.
+        val settings = FakeSettings() // Provides configured key.
+        settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Marks key configured.
+        val handle = SavedStateHandle() // Simulates AndroidX SavedStateHandle owned by the back-stack entry.
+        val first = own(ActiveChatViewModel("saved", fake, settings, MutableStateFlow(ConnectivityStatus.CONNECTED), handle)) // Creates initial owner.
+        advanceUntilIdle() // Finishes initial reads.
+        first.updateDraft("Surviving draft") // Types unsent draft before process death.
+        first.updateScrollPosition(index = 7, offset = 120) // Records scroll position before process death.
+
+        val recreated = ActiveChatViewModel("saved", fake, settings, MutableStateFlow(ConnectivityStatus.CONNECTED), handle) // Recreates ViewModel with the same SavedStateHandle.
+        store.put("recreated", recreated) // Tracks lifecycle cleanup.
+        advanceUntilIdle() // Finishes initial Room reads on the recreated model.
+        assertEquals("Surviving draft", recreated.state.value.draft) // Confirms draft survived process death.
+        assertEquals(7, recreated.state.value.savedScrollIndex) // Confirms scroll index survived.
+        assertEquals(120, recreated.state.value.savedScrollOffset) // Confirms scroll offset survived.
+
+        recreated.send() // Sends the restored draft.
+        advanceUntilIdle() // Waits for send settlement.
+        assertEquals("", recreated.state.value.draft) // Confirms visible draft cleared.
+        assertEquals("", handle["draft_saved"]) // Confirms SavedStateHandle draft also cleared after send.
+    } // Ends SavedStateHandle process-death verification.
 
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 

@@ -1,5 +1,6 @@
 package pt.isel.pdm.droidmentor.ui.screens // Checks real Compose interactions using isolated collaborators.
 
+import androidx.lifecycle.SavedStateHandle // Verifies process-death survival state in ActiveChatScreen.
 import androidx.lifecycle.ViewModel // Types test-owned models without a DI framework.
 import androidx.lifecycle.ViewModelStore // Owns model lifetimes independently of the app's production graph.
 import androidx.lifecycle.viewModelScope // Waits for cancelled collectors before closing test storage.
@@ -321,6 +322,25 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Original Q2").assertDoesNotExist() // Checks later turns were deleted.
         runBlocking { assertEquals(2, database.messageDao().getMessages(id).size) } // Confirms Room holds only the rewritten exchange.
     } // Ends rewrite UI device verification.
+
+    /** Checks draft and scroll coordinates survive recreation through SavedStateHandle. */
+    @Test // Exercises M3-07 process-death restoration in ActiveChatScreen.
+    fun activeChatRestoresDraftAndScrollFromSavedStateHandle() { // Simulates recreation with a persisted SavedStateHandle.
+        val id = runBlocking { (repository.createChat("Scroll test") as ChatCommandResult.Created).chatId } // Creates an isolated chat.
+        runBlocking { // Seeds enough messages so the list is scrollable.
+            repeat(10) { assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Question $it")) } // Adds 20 messages.
+        } // Ends history seeding.
+        val handle = SavedStateHandle() // Simulates AndroidX SavedStateHandle preserved across process death.
+        val first = own("$id-first", ActiveChatViewModel(id, repository, preferences, network, handle)) // First ViewModel instance.
+        first.updateDraft("Restored unsent draft") // Saves unsent draft in SavedStateHandle.
+        first.updateScrollPosition(index = 4, offset = 0) // Saves scroll position in SavedStateHandle.
+
+        val recreated = own("$id-recreated", ActiveChatViewModel(id, repository, preferences, network, handle)) // Recreated ViewModel after process death.
+        compose.setContent { DroidMentorTheme { ActiveChatScreen(id, {}, recreated) } } // Mounts screen with recreated ViewModel.
+        compose.waitUntil(5_000) { !recreated.state.value.loading && recreated.state.value.messages.size == 20 } // Waits for Room messages to load.
+        compose.onNodeWithText("Restored unsent draft").assertExists() // Confirms draft survived recreation.
+        compose.onNodeWithText("Question 2").assertExists() // Confirms scroll stayed near the restored item instead of jumping to bottom.
+    } // Ends process-death UI verification.
 
     private fun showChat(): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

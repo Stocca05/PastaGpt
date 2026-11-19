@@ -1,7 +1,9 @@
 package pt.isel.pdm.droidmentor.di // Keeps manual ViewModel construction beside the dependency contract.
 
+import androidx.lifecycle.SavedStateHandle // Supplies process-death survival state to ViewModels that opt in.
 import androidx.lifecycle.ViewModel // Limits the factory to AndroidX ViewModel types.
 import androidx.lifecycle.ViewModelProvider // Supplies the factory contract and the Application extras key.
+import androidx.lifecycle.createSavedStateHandle // Resolves AndroidX SavedStateHandle from creation extras.
 import androidx.lifecycle.viewmodel.initializer // Registers the constructor for the requested ViewModel type.
 import androidx.lifecycle.viewmodel.viewModelFactory // Builds the required AndroidX factory without a DI framework.
 
@@ -25,3 +27,19 @@ inline fun <reified VM : ViewModel> dependencyViewModelFactory( // Registers the
         create(container) // Calls the screen's explicit constructor with the selected container.
     } // Ends this ViewModel type's initializer.
 } // Ends manual factory construction.
+
+/**
+ * Builds a manual factory that passes both [DependencyContainer] and AndroidX [SavedStateHandle].
+ * Used by screens that survive process death for drafts and scroll positions (M3-07).
+ */
+inline fun <reified VM : ViewModel> dependencyViewModelFactoryWithSavedState( // Shares the same manual DI pattern with SavedStateHandle support.
+    dependencies: DependencyContainer? = null, // Allows tests to inject a fake container alongside real SavedStateHandle extras.
+    crossinline create: (DependencyContainer, SavedStateHandle) -> VM, // Supplies container and SavedStateHandle to the ViewModel constructor.
+): ViewModelProvider.Factory = viewModelFactory { // Uses AndroidX factory wiring without any DI framework.
+    initializer { // Runs with creation extras owned by the navigation back-stack entry or Activity.
+        val container = dependencies // Prefers supplied test container when present.
+            ?: (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as? DependencyContainer) // Resolves Application service locator.
+            ?: error("ViewModel creation requires a DependencyContainer or Application creation extras") // Reports setup mistakes clearly.
+        create(container, createSavedStateHandle()) // Obtains the owner-backed SavedStateHandle cleanly.
+    } // Ends initializer.
+} // Ends SavedStateHandle-enabled factory construction.

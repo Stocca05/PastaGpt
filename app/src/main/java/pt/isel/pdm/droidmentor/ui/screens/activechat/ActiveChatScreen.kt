@@ -31,12 +31,14 @@ import androidx.compose.material3.Surface // Draws a role-specific message bubbl
 import androidx.compose.material3.Text // Displays saved text and resource-backed labels.
 import androidx.compose.material3.TextButton // Provides Cancel, Resend and Delete dialog buttons.
 import androidx.compose.runtime.Composable // Describes the conversation UI.
-import androidx.compose.runtime.LaunchedEffect // Scrolls when the saved message list changes.
+import androidx.compose.runtime.LaunchedEffect // Scrolls when the saved message list changes and tracks scroll position.
 import androidx.compose.runtime.getValue // Reads lifecycle-aware Compose state delegates.
+import androidx.compose.runtime.mutableIntStateOf // Tracks previous message count to distinguish initial restore from new turns.
 import androidx.compose.runtime.mutableStateOf // Tracks whether the manual rename dialog is open.
 import androidx.compose.runtime.remember // Owns the factory and feedback state for this selected ID.
 import androidx.compose.runtime.rememberCoroutineScope // Launches the clipboard-copied snackbar notice.
 import androidx.compose.runtime.setValue // Opens and closes the manual rename dialog.
+import androidx.compose.runtime.snapshotFlow // Observes LazyList scroll position cleanly for SavedStateHandle.
 import androidx.compose.ui.Alignment // Centres loading states and aligns draft controls.
 import androidx.compose.ui.Modifier // Describes layout size, padding and keyboard handling.
 import androidx.compose.ui.draw.clip // Clips long-press ripple to the message bubble shape.
@@ -48,6 +50,8 @@ import androidx.compose.ui.text.AnnotatedString // Wraps copied text for the Com
 import androidx.compose.ui.unit.dp // Sizes bubbles and the small waiting indicator.
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes immutable state only while this destination is active.
 import androidx.lifecycle.viewmodel.compose.viewModel // Uses the selected conversation's manual factory.
+import kotlinx.coroutines.flow.distinctUntilChanged // Avoids redundant SavedStateHandle writes while scroll is idle.
+import kotlinx.coroutines.flow.filterNotNull // Ignores pre-layout snapshots before Room items appear.
 import kotlinx.coroutines.launch // Shows confirmation snackbar when copying a message.
 import pt.isel.pdm.droidmentor.R // Supplies message, action and feedback resources.
 import pt.isel.pdm.droidmentor.domain.Message // Reads text and error labels only from persisted domain messages.
@@ -71,7 +75,11 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     val state by model.state.collectAsStateWithLifecycle() // Observes only immutable Room-derived message state.
     val snackbar = remember { SnackbarHostState() } // Owns local feedback for this conversation.
     val context = LocalContext.current // Resolves safe labels without putting Context in the ViewModel.
-    val listState = rememberLazyListState() // Preserves ordinary list scroll state.
+    val listState = rememberLazyListState( // Restores saved scroll position across process death.
+        initialFirstVisibleItemIndex = state.savedScrollIndex, // Uses SavedStateHandle index when recreating the screen.
+        initialFirstVisibleItemScrollOffset = state.savedScrollOffset, // Uses SavedStateHandle offset when recreating the screen.
+    ) // Ends scroll-state setup.
+    var previousMessageCount by remember(chatId) { mutableIntStateOf(-1) } // Distinguishes initial load from newly added turns.
     val clipboard = LocalClipboardManager.current // Copies message text on context-menu Copy.
     val scope = rememberCoroutineScope() // Displays a short snackbar notice after copying.
     var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
@@ -80,9 +88,33 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     EventEffect(model.events) { event -> // Handles prerequisite or persistence feedback outside the layout.
         if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays no direct API payload or raw exception text.
     } // Ends local event collection.
-    LaunchedEffect(state.messages.size) { // Reacts only when saved rows are added or removed.
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex) // Keeps the latest saved turn in view without inventing a model reply.
+    LaunchedEffect(state.loading, state.messages.size) { // Scrolls to the latest turn on new messages while preserving restored scroll on process-death recovery.
+        if (state.loading) return@LaunchedEffect // Waits until Room emits the initial message snapshot.
+        if (previousMessageCount == -1) { // Handles the first Room emission for this composition.
+            previousMessageCount = state.messages.size // Records baseline message count.
+            if (state.messages.isNotEmpty()) { // Only scrolls when messages exist.
+                if (state.savedScrollIndex > 0 || state.savedScrollOffset > 0) { // Restores saved position after process death or rotation.
+                    listState.scrollToItem(state.savedScrollIndex.coerceAtMost(state.messages.lastIndex), state.savedScrollOffset) // Jumps back to the saved position.
+                } else { // Opens a fresh conversation at the latest turn.
+                    listState.animateScrollToItem(state.messages.lastIndex) // Keeps the latest saved turn in view.
+                } // Ends initial scroll choice.
+            } // Ends non-empty initial scroll.
+        } else if (state.messages.size > previousMessageCount) { // Scrolls smoothly only when new turns arrive.
+            previousMessageCount = state.messages.size // Updates baseline message count.
+            listState.animateScrollToItem(state.messages.lastIndex) // Brings the newly added turn into view.
+        } else { // Tracks deletions or rewrites without forcing a jump.
+            previousMessageCount = state.messages.size // Keeps baseline count accurate.
+        } // Ends initial-versus-update scroll handling.
     } // Ends saved-message scroll handling.
+    LaunchedEffect(listState) { // Persists scroll position into SavedStateHandle once items are laid out.
+        snapshotFlow { // Reads visible scroll coordinates safely during Compose snapshots.
+            if (listState.layoutInfo.totalItemsCount > 0) { // Ignores empty/loading states so restored coordinates are never overwritten by zero.
+                listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset // Captures current scroll position.
+            } else null // Waits for items to appear.
+        }.filterNotNull().distinctUntilChanged().collect { (index, offset) -> // Persists only changed non-empty positions.
+            model.updateScrollPosition(index, offset) // Saves scroll position for process-death survival.
+        } // Ends scroll-position collection.
+    } // Ends scroll-position persistence effect.
     val currentChat = state.chat // Captures the current conversation so the rename dialog uses a consistent snapshot.
     if (renaming && currentChat != null) { // Displays manual title editing when requested from the TopAppBar.
         RenameChatDialog( // Reuses the shared rename dialog.

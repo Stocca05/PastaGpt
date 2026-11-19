@@ -26,6 +26,7 @@ enum class UiNotice { // Keeps ViewModels free of Context and resource lookups.
     INVALID_HISTORY, // Reports a conversation that cannot form a valid stateless request.
     INVALID_RETRY, // Reports an invalid retry target.
     STORAGE_ERROR, // Reports a local persistence failure without raw exception details.
+    IMAGE_IMPORT_FAILED, // Reports gallery or camera image copy failure cleanly.
 } // Ends typed feedback labels.
 
 /** Maps only command failures; successful sends are displayed through Room observation. */

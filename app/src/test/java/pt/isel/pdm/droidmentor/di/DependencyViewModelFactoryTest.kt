@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotSame // Checks separate owners do not share the
 import org.junit.Assert.assertSame // Checks exact fake dependency and same-owner instance reuse.
 import org.junit.Assert.assertThrows // Checks missing configuration and unsupported types fail clearly.
 import org.junit.Test // Marks each factory behaviour test.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Implements the fake container's image storage contract.
 import pt.isel.pdm.droidmentor.data.repository.ChatCommandResult // Supplies harmless local acknowledgements in the fake.
 import pt.isel.pdm.droidmentor.data.repository.ChatReadResult // Supplies typed empty history snapshots.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Implements the replaceable chat contract for tests.
@@ -162,5 +163,10 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
             override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult = ChatCommandResult.NotFound // Has no message to rewrite.
             override suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult = ChatCommandResult.NotFound // Has no message to delete.
         } // Ends the in-memory chat fake.
+        override val imageStorage = object : ImageStorage { // Performs no filesystem work in factory tests.
+            override suspend fun importFromUri(uriString: String): String? = null // Rejects imports in fake container.
+            override fun resolveFile(relativePath: String) = null // Never resolves local files in factory tests.
+            override fun deleteRelativePath(relativePath: String): Boolean = false // Performs no disk deletion.
+        } // Ends the in-memory image storage fake.
     } // Ends the complete fake dependency graph.
 } // Ends manual ViewModel factory tests.

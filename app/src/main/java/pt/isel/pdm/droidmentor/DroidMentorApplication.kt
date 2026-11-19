@@ -8,6 +8,8 @@ import io.ktor.client.HttpClient // Shares the configured Ktor client across API
 import kotlinx.coroutines.flow.Flow // Exposes connectivity observation through the replaceable container contract.
 import pt.isel.pdm.droidmentor.data.connectivity.ConnectivityObserver // Supplies the real Android network observation and fresh send checks.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Owns the persistent Room history database.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Exposes app-private conversation image storage contract.
+import pt.isel.pdm.droidmentor.data.local.LocalImageStorage // Copies picked/captured images into filesDir/images.
 import pt.isel.pdm.droidmentor.data.preferences.ActiveSessionDataStore // Reuses the dedicated Preferences DataStore for session restoration.
 import pt.isel.pdm.droidmentor.data.preferences.ApiKeyDataStore // Reuses the single dedicated Preferences DataStore provider.
 import pt.isel.pdm.droidmentor.data.remote.GeminiRemoteDataSource // Sends stateless requests using the shared client and network check.
@@ -72,6 +74,11 @@ class DroidMentorApplication : Application(), DependencyContainer { // Android c
     override val chatRepository: ChatRepository by lazy { // Implements the replaceable contract and shares its per-chat locks across every screen.
         RoomChatRepository(database, settingsRepository, geminiRemoteDataSource, connectivityObserver::isConnected) // Supplies each dependency explicitly without any injection framework.
     } // Ends chat repository construction.
+
+    /** Shared app-private image storage rooted in filesDir/images. */
+    override val imageStorage: ImageStorage by lazy { // Implements manual DI for gallery/camera attachment management.
+        LocalImageStorage(this) // Keeps copied images private inside application storage.
+    } // Ends image storage construction.
 } // Ends the application service locator.
 
 /** Finds the manifest-registered locator through the application context without retaining an activity. */

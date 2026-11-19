@@ -17,4 +17,5 @@ fun UiNotice.messageResource(): Int = when (this) { // Handles every existing fe
     UiNotice.INVALID_HISTORY -> R.string.notice_invalid_history // Reports an invalid saved conversation.
     UiNotice.INVALID_RETRY -> R.string.notice_invalid_retry // Reports an invalid saved retry target.
     UiNotice.STORAGE_ERROR -> R.string.notice_storage_error // Reports a local persistence problem.
+    UiNotice.IMAGE_IMPORT_FAILED -> R.string.notice_image_import_failed // Explains an image could not be imported safely.
 } // Ends typed feedback translation.

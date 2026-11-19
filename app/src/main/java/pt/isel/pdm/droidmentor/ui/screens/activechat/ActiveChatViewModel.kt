@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine // Waits for both Room queries before pub
 import kotlinx.coroutines.flow.receiveAsFlow // Exposes one-shot notices without replay.
 import kotlinx.coroutines.flow.update // Keeps independent collector updates safe.
 import kotlinx.coroutines.launch // Collects data and performs suspend commands outside Composables.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Copies picked gallery/camera images into app-private storage.
 import pt.isel.pdm.droidmentor.data.repository.ChatCommandResult // Reads only local command acknowledgements.
 import pt.isel.pdm.droidmentor.data.repository.ChatReadResult // Handles typed local storage read failures.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Supplies offline-first observation, send and retry operations.
@@ -33,6 +34,7 @@ data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from 
     val chat: Chat? = null, // Holds the selected conversation or null after local deletion.
     val messages: List<Message> = emptyList(), // Holds the complete ordered Room message list.
     val draft: String = "", // Holds unsent text in memory and SavedStateHandle.
+    val pendingImagePath: String? = null, // Holds an attached app-private relative image path until sent or cleared.
     val savedScrollIndex: Int = 0, // Restores the first visible message index after process death.
     val savedScrollOffset: Int = 0, // Restores the pixel scroll offset after process death.
     val loading: Boolean = true, // Waits for both initial Room queries.
@@ -85,13 +87,16 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
     settingsRepository: SettingsRepository, // Supplies typed key-presence updates without exposing preferences storage.
     connectivity: Flow<ConnectivityStatus>, // Supplies the container's validated status stream.
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(), // Preserves draft and scroll position across process death.
+    private val imageStorage: ImageStorage? = null, // Imports gallery/camera attachments into app-private storage cleanly.
 ) : ViewModel() { // Gives commands and collectors the destination's coroutine lifetime.
     private val draftKey = "draft_$chatId" // Scopes saved draft text to this local chat ID.
+    private val pendingImageKey = "pending_image_$chatId" // Scopes uncommitted relative image path across process death.
     private val scrollIndexKey = "scroll_index_$chatId" // Scopes saved list index to this local chat ID.
     private val scrollOffsetKey = "scroll_offset_$chatId" // Scopes saved scroll offset to this local chat ID.
     private val mutableState = MutableStateFlow( // Starts with any draft/scroll position restored from SavedStateHandle.
         ActiveChatUiState(
             draft = savedStateHandle[draftKey] ?: "", // Restores unsent draft text after process death.
+            pendingImagePath = savedStateHandle[pendingImageKey], // Restores uncommitted image attachment path after process death.
             savedScrollIndex = savedStateHandle[scrollIndexKey] ?: 0, // Restores previous scroll index.
             savedScrollOffset = savedStateHandle[scrollOffsetKey] ?: 0, // Restores previous scroll offset.
         ) // Ends initial state setup.
@@ -148,6 +153,31 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         savedStateHandle[scrollOffsetKey] = safeOffset // Stores pixel offset in SavedStateHandle.
         mutableState.update { it.copy(savedScrollIndex = safeIndex, savedScrollOffset = safeOffset) } // Mirrors restored scroll metadata cleanly.
     } // Ends scroll position persistence.
+
+    /** Imports one picked gallery image URI into app-private filesDir/images/ and sets it as the pending attachment. */
+    fun attachGalleryImage(uriString: String) { // Never writes a raw content:// URI or Base64 string into Room.
+        val storage = imageStorage ?: return // Ignores gallery events cleanly when no storage adapter was wired.
+        if (state.value.working || state.value.pending) return // Keeps active sends undisturbed.
+        viewModelScope.launch { // Performs stream copy off the main dispatcher inside LocalImageStorage.
+            val imported = storage.importFromUri(uriString) // Copies picked media to filesDir/images/<uuid>.jpg.
+            if (imported == null) { // Notifies UI safely if the chosen URI could not be opened or copied.
+                eventChannel.send(UiEvent.Notice(UiNotice.IMAGE_IMPORT_FAILED)) // Emits safe feedback without leaking URIs.
+                return@launch // Leaves existing draft/attachment intact.
+            } // Ends import failure branch.
+            val previous = state.value.pendingImagePath // Captures any replaced uncommitted attachment.
+            if (previous != null && previous != imported) storage.deleteRelativePath(previous) // Avoids leaving orphaned draft files on disk.
+            savedStateHandle[pendingImageKey] = imported // Preserves attachment path across process death.
+            mutableState.update { it.copy(pendingImagePath = imported) } // Publishes relative path to the composer UI.
+        } // Ends background image import.
+    } // Ends gallery image attachment.
+
+    /** Removes the pending attachment from UI state and deletes the uncommitted local file copy. */
+    fun clearPendingImage() { // Allows the user to discard a picked image before sending.
+        val previous = state.value.pendingImagePath ?: return // Does nothing if no image is currently attached.
+        savedStateHandle[pendingImageKey] = null // Clears saved attachment reference.
+        mutableState.update { it.copy(pendingImagePath = null) } // Updates composer UI immediately.
+        imageStorage?.deleteRelativePath(previous) // Deletes the uncommitted file copy inside filesDir/images/.
+    } // Ends attachment removal.
 
     /** Sends one nonblank draft through the repository, leaving rejected drafts intact. */
     fun send() { // Relies on repository prerequisite checks before every network operation.
@@ -213,7 +243,7 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
     companion object { // Keeps the navigation argument outside the process-wide dependency graph.
         /** Builds a factory whose ViewModel belongs to the selected conversation's navigation entry. */
         fun factory(chatId: String) = dependencyViewModelFactoryWithSavedState { container, savedState -> // Captures only the local ID and SavedStateHandle.
-            ActiveChatViewModel(chatId, container.chatRepository, container.settingsRepository, container.connectivityStatus, savedState) // Supplies the existing manually wired contracts explicitly.
+            ActiveChatViewModel(chatId, container.chatRepository, container.settingsRepository, container.connectivityStatus, savedState, container.imageStorage) // Supplies the existing manually wired contracts explicitly.
         } // Ends selected-conversation factory construction.
     } // Ends manual active-chat construction.
 } // Ends the active conversation ViewModel.

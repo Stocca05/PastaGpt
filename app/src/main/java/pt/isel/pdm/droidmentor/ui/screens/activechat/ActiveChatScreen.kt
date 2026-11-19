@@ -1,5 +1,8 @@
 package pt.isel.pdm.droidmentor.ui.screens.activechat // Groups the selected conversation's Room-backed UI.
 
+import androidx.activity.compose.rememberLauncherForActivityResult // Launches Android Photo Picker without runtime storage permissions (M3-11).
+import androidx.activity.result.PickVisualMediaRequest // Requests image-only media from the system Photo Picker.
+import androidx.activity.result.contract.ActivityResultContracts // Uses PickVisualMedia for Android-compliant gallery picking.
 import androidx.compose.foundation.ExperimentalFoundationApi // Enables long-press combinedClickable on message bubbles.
 import androidx.compose.foundation.combinedClickable // Opens the bubble context menu on long-press.
 import androidx.compose.foundation.layout.Arrangement // Separates messages and input controls.
@@ -86,6 +89,9 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
     var editingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message currently being rewritten.
     var deletingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message awaiting delete confirmation.
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> // Opens the Photo Picker without requesting storage permissions.
+        if (uri != null) model.attachGalleryImage(uri.toString()) // Copies picked image into app-private filesDir/images/.
+    } // Ends Photo Picker launcher.
     EventEffect(model.events) { event -> // Handles prerequisite or persistence feedback outside the layout.
         if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays no direct API payload or raw exception text.
     } // Ends local event collection.
@@ -231,17 +237,36 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     Text(stringResource(R.string.chat_waiting)) // Explains that the saved attempt is still pending.
                 } // Ends the waiting indicator.
             } // Ends in-flight feedback.
-            Row( // Places an editable draft beside the explicit send action.
+            state.pendingImagePath?.let { _ -> // Displays uncommitted gallery/camera image bar above composer with a remove control.
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium)) { // Highlights the attached image before sending.
+                    Row( // Groups attached indicator and explicit removal action.
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies balanced spacing.
+                        horizontalArrangement = Arrangement.SpaceBetween, // Separates label and Remove button.
+                        verticalAlignment = Alignment.CenterVertically, // Aligns label and button cleanly.
+                    ) { // Starts pending attachment row.
+                        Text(stringResource(R.string.chat_image_attached), style = MaterialTheme.typography.bodySmall) // Confirms image attachment cleanly without leaking file paths.
+                        TextButton(onClick = model::clearPendingImage) { Text(stringResource(R.string.chat_remove_attachment)) } // Deletes uncommitted copy on disk and clears state.
+                    } // Ends pending attachment row.
+                } // Ends attachment bar container.
+            } // Ends pending attachment check.
+            Row( // Places gallery button, editable draft and explicit send action together.
                 modifier = Modifier.fillMaxWidth().padding(DroidMentorSpacing.medium), // Keeps the input and tap target clear of the screen edges.
                 horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates input and sending.
-                verticalAlignment = Alignment.Bottom, // Aligns Send with the bottom of a multiline draft.
+                verticalAlignment = Alignment.Bottom, // Aligns controls with the bottom of a multiline draft.
             ) { // Uses ViewModel commands rather than direct network calls.
+                val inputEnabled = !state.loading && !state.storageError && state.chat != null && !state.working && !state.pending // Enables composer controls cleanly.
+                IconButton( // Launches Photo Picker without runtime permissions (M3-11).
+                    onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // Selects images only from system Photo Picker.
+                    enabled = inputEnabled, // Disables picking while loading or actively sending.
+                ) { // Ends gallery IconButton setup.
+                    Icon(painterResource(R.drawable.ic_photo_library), contentDescription = stringResource(R.string.chat_attach_gallery)) // Labels icon for accessibility.
+                } // Ends gallery attach button.
                 OutlinedTextField( // Keeps unsent user text only in memory.
                     value = state.draft, // Displays the controlled draft without replacing it after a rejected command.
                     onValueChange = model::updateDraft, // Routes editing through the ViewModel's command guard.
                     modifier = Modifier.weight(1f), // Leaves space for the Send action.
                     label = { Text(stringResource(R.string.chat_draft_label)) }, // Labels message input.
-                    enabled = !state.loading && !state.storageError && state.chat != null && !state.working && !state.pending, // Keeps the draft editable after a failed attempt or while offline.
+                    enabled = inputEnabled, // Keeps the draft editable after a failed attempt or while offline.
                     maxLines = 5, // Allows small Kotlin examples and multiline questions without hiding the whole message list.
                 ) // Ends in-memory draft input.
                 Button(onClick = model::send, enabled = state.canSend) { // Blocks blank, pending and unresolved-failure sends through the shared state guard.

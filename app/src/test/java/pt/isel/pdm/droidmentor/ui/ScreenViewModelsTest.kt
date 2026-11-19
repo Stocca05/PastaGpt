@@ -19,9 +19,11 @@ import kotlinx.coroutines.test.setMain // Supplies the test dispatcher used by v
 import org.junit.After // Releases the test owner's ViewModels and dispatcher.
 import org.junit.Assert.assertEquals // Compares safe IDs, counts and typed labels.
 import org.junit.Assert.assertFalse // Checks guards and privacy without printing key values.
+import org.junit.Assert.assertNull // Checks removed or cleared attachment state cleanly.
 import org.junit.Assert.assertTrue // Checks loading, read errors and fake dependency behaviour.
 import org.junit.Before // Creates an isolated owner and scheduler.
 import org.junit.Test // Marks screen behaviour cases.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Supplies fake relative image storage in ViewModel tests.
 import pt.isel.pdm.droidmentor.data.repository.ChatCommandResult // Supplies typed local fake command acknowledgements.
 import pt.isel.pdm.droidmentor.data.repository.ChatReadResult // Supplies typed fake Room snapshots.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Implements the replaceable chat contract.
@@ -468,6 +470,47 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertEquals("", recreated.state.value.draft) // Confirms visible draft cleared.
         assertEquals("", handle["draft_saved"]) // Confirms SavedStateHandle draft also cleared after send.
     } // Ends SavedStateHandle process-death verification.
+
+    /** Checks gallery image attachment, replacement cleanup, import failure notice and clear action. */
+    @Test // Protects M3-11 relative path attachment state without touching disk.
+    fun attachingAndRemovingGalleryImageUpdatesStateAndCleansFiles() = runTest { // Exercises replace, clear and failed-import flows.
+        val deletedPaths = mutableListOf<String>() // Tracks cleanup calls on uncommitted image copies.
+        val fakeStorage = object : ImageStorage { // Simulates LocalImageStorage entirely in memory.
+            var nextPath: String? = "images/first.jpg" // Controls simulated import result per call.
+            override suspend fun importFromUri(uriString: String): String? = nextPath // Returns scripted relative path or null.
+            override fun resolveFile(relativePath: String) = null // Unused by ViewModel state tests.
+            override fun deleteRelativePath(relativePath: String): Boolean { // Records cleaned-up uncommitted paths.
+                deletedPaths.add(relativePath) // Logs deleted relative path.
+                return true // Signals deletion ran.
+            } // Ends fake file deletion.
+        } // Ends fake storage setup.
+        val handle = SavedStateHandle() // Tracks SavedStateHandle persistence for pending image attachment.
+        val settings = FakeSettings().apply { read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") } // Configures key.
+        val model = own(ActiveChatViewModel("saved", FakeChats(), settings, MutableStateFlow(ConnectivityStatus.CONNECTED), handle, fakeStorage)) // Constructs ViewModel with fake ImageStorage.
+        advanceUntilIdle() // Waits for initial Room state.
+
+        model.attachGalleryImage("content://picker/1") // Imports first picked image.
+        advanceUntilIdle() // Completes background import coroutine.
+        assertEquals("images/first.jpg", model.state.value.pendingImagePath) // Confirms relative path attached.
+        assertEquals("images/first.jpg", handle["pending_image_saved"]) // Confirms SavedStateHandle stores relative path.
+
+        fakeStorage.nextPath = "images/second.jpg" // Scripts second picked image.
+        model.attachGalleryImage("content://picker/2") // Replaces existing attachment.
+        advanceUntilIdle() // Completes replacement import.
+        assertEquals("images/second.jpg", model.state.value.pendingImagePath) // Confirms updated path.
+        assertEquals(listOf("images/first.jpg"), deletedPaths) // Confirms replaced uncommitted copy was deleted cleanly.
+
+        fakeStorage.nextPath = null // Simulates unreadable picker stream.
+        model.attachGalleryImage("content://picker/bad") // Attempts broken import.
+        advanceUntilIdle() // Finishes import attempt.
+        assertEquals(UiEvent.Notice(UiNotice.IMAGE_IMPORT_FAILED), model.events.first()) // Confirms safe failure notice emitted.
+        assertEquals("images/second.jpg", model.state.value.pendingImagePath) // Confirms previous valid attachment stays intact.
+
+        model.clearPendingImage() // Removes pending attachment explicitly.
+        assertNull(model.state.value.pendingImagePath) // Confirms UI attachment cleared.
+        assertNull(handle["pending_image_saved"]) // Confirms SavedStateHandle cleared.
+        assertEquals(listOf("images/first.jpg", "images/second.jpg"), deletedPaths) // Confirms second uncommitted copy was deleted too.
+    } // Ends gallery attachment ViewModel test.
 
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 

@@ -1,6 +1,7 @@
 package pt.isel.pdm.droidmentor.di // Groups the contracts used for manual dependency injection.
 
 import kotlinx.coroutines.flow.Flow // Lets ViewModels observe connectivity without knowing the Android network API.
+import pt.isel.pdm.droidmentor.data.local.ImageStorage // Exposes app-private gallery/camera image storage safely.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Exposes chat operations through their replaceable interface.
 import pt.isel.pdm.droidmentor.data.repository.SessionRepository // Exposes active-session persistence separately from credentials.
 import pt.isel.pdm.droidmentor.data.repository.SettingsRepository // Exposes settings operations through their replaceable interface.
@@ -19,4 +20,7 @@ interface DependencyContainer { // A test can implement this contract without cr
 
     /** Validated connectivity updates, collected only while a caller needs them. */
     val connectivityStatus: Flow<ConnectivityStatus> // Avoids exposing the concrete Android connectivity observer to ViewModels.
+
+    /** App-private relative image file storage for M3-11..M3-15 conversation attachments. */
+    val imageStorage: ImageStorage // Copies picked/captured media to filesDir/images without exposing ContentResolver to ViewModels.
 } // Ends the manually replaceable dependency contract.

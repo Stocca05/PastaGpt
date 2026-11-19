@@ -612,7 +612,7 @@ Implementare i requisiti a più alta complessità logica — cancellazione delle
 | ID | Task | Descrizione operativa | Pri. | Diff. | Stima | Dip. | Stato |
 |---|---|---|---|---|---|---|---|
 | M3-16 | Accessibilità e rifinitura UI | `contentDescription` su tutti gli elementi non testuali, aree tattili ≥ 48 dp, contrasto verificato, tema scuro completo, comportamento corretto in rotazione. | S | 🟡 | 4 h | M2-21 | ☑ |
-| M3-17 | Estensione della suite di test | Test della riscrittura (troncamento corretto, payload risultante), dei ritentativi, delle migrazioni Room effettivamente introdotte dopo lo schema M2, test di UI Compose sui flussi principali. | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
+| M3-17 | Estensione della suite di test | Test della riscrittura (troncamento corretto, payload risultante), dei ritentativi, delle migrazioni Room effettivamente introdotte dopo lo schema M2, test di UI Compose sui flussi principali. | M | 🟡 | 5 h | M3-03, M3-08 | ☑ |
 | M3-18 | Video Milestone 3 | Registrazione **5–7 minuti**: dimostrazione delle funzionalità (con enfasi su riscrittura, cancellazione, ripristino sessione, immagini se presenti), discussione delle decisioni rilevanti, stato del progetto. | M | 🟡 | 4 h | tutti M3 | ☐ |
 | M3-19 | Tag `mentor_3` | Link al video nel `README.md`, commit, tag annotato, push. | M | 🟢 | 0,5 h | M3-18 | ☐ |
 

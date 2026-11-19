@@ -201,3 +201,21 @@ adb -s emulator-5554 shell am instrument -w -e class 'pt.isel.pdm.droidmentor.ui
 ```
 
 Real output: `Time: 5.392`, `OK (3 tests)`. The full Android suite was not rerun; the historical 80-test run above applies to the earlier code. Only the test package was uninstalled afterwards. The production app remained installed, with its saved key and conversations retained. Final cold launch returned `Status: ok`, `LaunchState: COLD`, 1421 ms. The actual Settings summary was inspected at 320×640: it recognised the existing configuration, displayed the explanation and Change/Clear actions, and contained zero editable fields. No saved key value was extracted or displayed. The direct test log and credential-free summary screenshot were preserved outside the temporary checkout.
+
+## Milestone 3 verification — 2026-11-19
+
+All Milestone 3 implementation tasks (`M3-01` through `M3-17`, including the optional image lifecycle tasks `M3-11`–`M3-15`) are implemented and locally verified; only the user recording `M3-18` and annotated `mentor_3` tag `M3-19` remain.
+
+Clean local verification command executed from an isolated copy outside the cloud-synced folder using JDK 17:
+
+```bash
+./gradlew clean :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug :app:assembleDebugAndroidTest --console=plain --no-daemon
+```
+
+Real output:
+- `BUILD SUCCESSFUL in 40s`, `140 actionable tasks: 140 executed`.
+- `testDebugUnitTest`: `11` suites, `142` tests, `0` failures, `0` errors, `0` skipped.
+- `testReleaseUnitTest`: `11` suites, `142` tests, `0` failures, `0` errors, `0` skipped.
+- `lintDebug`: `0` errors, `59` warnings (matching the pre-existing baseline), plus `lintVitalRelease` passed.
+- Debug APK, release APK, and debug instrumentation APK (`105` compiled `@Test` cases including `DatabaseMigrationTest` for Room v1→v2, rewrite/delete/V9 repository tests, session-restore navigation tests, and dark-theme/48dp/image UI tests) all built cleanly.
+- `connectedDebugAndroidTest` was **not** executed in this session because no Android device or emulator was attached (`adb devices -l` returned empty). Run `./gradlew :app:connectedDebugAndroidTest --console=plain --no-daemon` on the emulator before recording the M3 demo video, along with a manual live Gemini BYOK + camera/gallery check.

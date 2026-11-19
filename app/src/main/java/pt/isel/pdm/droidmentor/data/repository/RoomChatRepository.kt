@@ -133,6 +133,32 @@ class RoomChatRepository( // Receives every dependency manually without a framew
         return attempt(chatId, newText, targetId = messageId, rewrite = true) // Truncates only after prerequisites pass and inside a transaction.
     } // Ends conversation rewrite.
 
+    /** Deletes a user message and all subsequent turns in one transaction, keeping history alternating. */
+    override suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult { // Performs local tail deletion offline or online.
+        currentCoroutineContext().ensureActive() // Preserves cancellation before acquiring the chat lock.
+        if (chatId.isBlank() || messageId.isBlank()) return ChatCommandResult.InvalidInput // Requires valid local IDs.
+        val lock = lock(chatId) // Shares the per-chat operation gate with active sends.
+        if (!lock.tryLock()) return ChatCommandResult.Busy // Refuses deleting while a request owns this chat.
+        return try { // Contains ordinary database exceptions.
+            database.withTransaction { // Keeps target checks, deletion and recency update atomic.
+                if (chats.getById(chatId) == null) return@withTransaction ChatCommandResult.NotFound // Requires an existing parent conversation.
+                val saved = messages.getMessages(chatId) // Reads current history to check pending operations.
+                if (saved.any { it.status == MessageStatus.SENDING }) return@withTransaction ChatCommandResult.UnresolvedMessage // Refuses deleting while another row is sending.
+                val target = messages.getById(messageId) ?: return@withTransaction ChatCommandResult.NotFound // Requires an existing message row.
+                if (target.chatId != chatId || target.role != Role.USER) return@withTransaction ChatCommandResult.InvalidRetry // Allows deleting only user turns in this chat.
+                messages.deleteFromSeq(chatId, target.seq) // Removes the user message and all subsequent turns together.
+                messages.touchChat(chatId, clock()) // Updates conversation recency.
+                ChatCommandResult.Stored // Reports local deletion completed.
+            } // Ends atomic message deletion transaction.
+        } catch (error: CancellationException) { // Preserves structured coroutine cancellation.
+            throw error // Leaves coroutine cancellation intact.
+        } catch (_: Exception) { // Converts unexpected storage errors into a safe acknowledgement.
+            ChatCommandResult.StorageError // Keeps exception text out of UI feedback.
+        } finally { // Always releases the chat lock.
+            lock.unlock() // Allows subsequent operations on this conversation.
+        } // Ends guarded message deletion.
+    } // Ends single-turn and tail deletion.
+
     private suspend fun attempt(chatId: String, text: String?, targetId: String?, rewrite: Boolean): ChatCommandResult { // Centralises send, retry and rewrite without starting a background coroutine.
         currentCoroutineContext().ensureActive() // Preserves cancellation before validation or locking.
         val missingText = (targetId == null || rewrite) && text.isNullOrBlank() // Requires nonblank text for new sends and rewrites.

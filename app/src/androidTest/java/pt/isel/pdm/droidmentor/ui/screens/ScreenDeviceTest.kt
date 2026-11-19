@@ -12,11 +12,14 @@ import androidx.compose.ui.test.assertIsNotEnabled // Checks blocked sends and r
 import androidx.compose.ui.test.hasSetTextAction // Finds the single input field without querying its value.
 import androidx.compose.ui.test.hasText // Disambiguates dialog input fields from the chat draft box.
 import androidx.compose.ui.test.junit4.createComposeRule // Hosts real screen content on the emulator.
+import androidx.compose.ui.test.longClick // Exercises long-press context menu on user message bubbles.
 import androidx.compose.ui.test.onNodeWithContentDescription // Finds icon buttons by their accessible description.
 import androidx.compose.ui.test.onNodeWithText // Finds safe resource labels and harmless test messages.
 import androidx.compose.ui.test.performClick // Invokes the actual screen event bindings.
 import androidx.compose.ui.test.performScrollTo // Keeps form actions reachable when the keyboard reduces space.
 import androidx.compose.ui.test.performTextInput // Types generated fake input or harmless questions.
+import androidx.compose.ui.test.performTextReplacement // Replaces text in the pre-filled rewrite dialog.
+import androidx.compose.ui.test.performTouchInput // Dispatches long-press gestures on bubbles.
 import androidx.test.ext.junit.runners.AndroidJUnit4 // Runs against real Android UI and Room behaviour.
 import androidx.test.platform.app.InstrumentationRegistry // Supplies target context and main-thread cleanup.
 import io.ktor.client.HttpClient // Owns the test's client using the real app configuration.
@@ -293,6 +296,31 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.waitUntil(5_000) { model.state.value.chat?.title == "UI test conversation Renamed" } // Waits for Room observation to update the TopAppBar title.
         runBlocking { assertEquals("UI test conversation Renamed", database.chatDao().getById(id)?.title) } // Confirms Room persisted the renamed title.
     } // Ends manual rename device verification.
+
+    /** Checks long-pressing a user bubble opens Edit/Copy/Delete and editing truncates later turns. */
+    @Test // Exercises M3-04 long-press context menu, warning dialog and rewrite end-to-end.
+    fun longPressUserBubbleSupportsEditWithTruncationWarning() { // Uses isolated Room and MockEngine.
+        val (id, model) = showChat() // Creates an empty conversation.
+        compose.onNode(hasSetTextAction()).performTextInput("Original Q1") // Sends first question.
+        compose.onNodeWithText("Send").performClick() // Completes first exchange.
+        compose.waitUntil(5_000) { model.state.value.messages.size == 2 && !model.state.value.working } // Waits for first reply.
+        compose.onNode(hasSetTextAction()).performTextInput("Original Q2") // Sends second question.
+        compose.onNodeWithText("Send").performClick() // Completes second exchange.
+        compose.waitUntil(5_000) { model.state.value.messages.size == 4 && !model.state.value.working } // Waits for second reply.
+
+        compose.onNodeWithText("Original Q1").performTouchInput { longClick() } // Long-presses the first user bubble.
+        compose.onNodeWithText("Edit").assertExists() // Checks Edit action appears.
+        compose.onNodeWithText("Copy").assertExists() // Checks Copy action appears.
+        compose.onNodeWithText("Delete").assertExists() // Checks Delete action appears.
+        compose.onNodeWithText("Edit").performClick() // Opens the rewrite dialog.
+        compose.onNodeWithText("All messages after this turn will be permanently deleted and a new reply will be requested.").assertExists() // Checks explicit truncation warning.
+        compose.onNode(hasSetTextAction() and hasText("Edited message")).performTextReplacement("Edited Q1") // Replaces text in the dialog.
+        compose.onNodeWithText("Resend").performClick() // Confirms rewrite.
+        compose.waitUntil(5_000) { model.state.value.messages.size == 2 && !model.state.value.working } // Waits for truncated resend to complete.
+        compose.onNodeWithText("Edited Q1").assertExists() // Checks edited turn is shown.
+        compose.onNodeWithText("Original Q2").assertDoesNotExist() // Checks later turns were deleted.
+        runBlocking { assertEquals(2, database.messageDao().getMessages(id).size) } // Confirms Room holds only the rewritten exchange.
+    } // Ends rewrite UI device verification.
 
     private fun showChat(): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

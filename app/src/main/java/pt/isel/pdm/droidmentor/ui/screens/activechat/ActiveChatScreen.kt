@@ -1,5 +1,7 @@
 package pt.isel.pdm.droidmentor.ui.screens.activechat // Groups the selected conversation's Room-backed UI.
 
+import androidx.compose.foundation.ExperimentalFoundationApi // Enables long-press combinedClickable on message bubbles.
+import androidx.compose.foundation.combinedClickable // Opens the bubble context menu on long-press.
 import androidx.compose.foundation.layout.Arrangement // Separates messages and input controls.
 import androidx.compose.foundation.layout.Box // Displays loading, empty, error or message content in the same body area.
 import androidx.compose.foundation.layout.Column // Places message content above the draft controls.
@@ -15,8 +17,11 @@ import androidx.compose.foundation.layout.widthIn // Keeps message bubbles reada
 import androidx.compose.foundation.lazy.LazyColumn // Displays the complete saved message list efficiently.
 import androidx.compose.foundation.lazy.items // Uses persisted message IDs as stable item keys.
 import androidx.compose.foundation.lazy.rememberLazyListState // Keeps scroll position across ordinary recomposition.
+import androidx.compose.material3.AlertDialog // Confirms message rewrite and message deletion.
 import androidx.compose.material3.Button // Provides explicit send and same-row retry actions.
 import androidx.compose.material3.CircularProgressIndicator // Displays loading and in-flight progress.
+import androidx.compose.material3.DropdownMenu // Hosts the Edit, Copy and Delete actions on long-press.
+import androidx.compose.material3.DropdownMenuItem // Renders one context-menu action.
 import androidx.compose.material3.Icon // Displays the TopAppBar rename icon.
 import androidx.compose.material3.IconButton // Provides one-tap manual rename in the app bar.
 import androidx.compose.material3.MaterialTheme // Supplies bubble colours, shapes and text styles.
@@ -24,20 +29,26 @@ import androidx.compose.material3.OutlinedTextField // Displays the controlled i
 import androidx.compose.material3.SnackbarHostState // Displays safe local command feedback.
 import androidx.compose.material3.Surface // Draws a role-specific message bubble.
 import androidx.compose.material3.Text // Displays saved text and resource-backed labels.
+import androidx.compose.material3.TextButton // Provides Cancel, Resend and Delete dialog buttons.
 import androidx.compose.runtime.Composable // Describes the conversation UI.
 import androidx.compose.runtime.LaunchedEffect // Scrolls when the saved message list changes.
 import androidx.compose.runtime.getValue // Reads lifecycle-aware Compose state delegates.
 import androidx.compose.runtime.mutableStateOf // Tracks whether the manual rename dialog is open.
 import androidx.compose.runtime.remember // Owns the factory and feedback state for this selected ID.
+import androidx.compose.runtime.rememberCoroutineScope // Launches the clipboard-copied snackbar notice.
 import androidx.compose.runtime.setValue // Opens and closes the manual rename dialog.
 import androidx.compose.ui.Alignment // Centres loading states and aligns draft controls.
 import androidx.compose.ui.Modifier // Describes layout size, padding and keyboard handling.
+import androidx.compose.ui.draw.clip // Clips long-press ripple to the message bubble shape.
+import androidx.compose.ui.platform.LocalClipboardManager // Copies message text cleanly to the system clipboard.
 import androidx.compose.ui.platform.LocalContext // Resolves safe notice strings in suspend event handlers.
 import androidx.compose.ui.res.painterResource // Loads the shared local edit vector icon.
 import androidx.compose.ui.res.stringResource // Reads all visible action and error labels.
+import androidx.compose.ui.text.AnnotatedString // Wraps copied text for the Compose clipboard API.
 import androidx.compose.ui.unit.dp // Sizes bubbles and the small waiting indicator.
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes immutable state only while this destination is active.
 import androidx.lifecycle.viewmodel.compose.viewModel // Uses the selected conversation's manual factory.
+import kotlinx.coroutines.launch // Shows confirmation snackbar when copying a message.
 import pt.isel.pdm.droidmentor.R // Supplies message, action and feedback resources.
 import pt.isel.pdm.droidmentor.domain.Message // Reads text and error labels only from persisted domain messages.
 import pt.isel.pdm.droidmentor.domain.MessageErrorCategory // Supplies a safe fallback for inconsistent legacy error metadata.
@@ -61,7 +72,11 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     val snackbar = remember { SnackbarHostState() } // Owns local feedback for this conversation.
     val context = LocalContext.current // Resolves safe labels without putting Context in the ViewModel.
     val listState = rememberLazyListState() // Preserves ordinary list scroll state.
+    val clipboard = LocalClipboardManager.current // Copies message text on context-menu Copy.
+    val scope = rememberCoroutineScope() // Displays a short snackbar notice after copying.
     var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
+    var editingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message currently being rewritten.
+    var deletingMessage by remember { mutableStateOf<Message?>(null) } // Tracks the user message awaiting delete confirmation.
     EventEffect(model.events) { event -> // Handles prerequisite or persistence feedback outside the layout.
         if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays no direct API payload or raw exception text.
     } // Ends local event collection.
@@ -79,6 +94,32 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
             onDismiss = { renaming = false }, // Closes without changing Room.
         ) // Ends rename dialog.
     } // Ends rename dialog check.
+    editingMessage?.let { target -> // Displays the rewrite dialog with explicit truncation warning.
+        RewriteMessageDialog( // Lets the user review and confirm truncating subsequent turns.
+            initialText = target.text, // Pre-fills the original user prompt.
+            onConfirm = { newText -> // Truncates and resends through RoomChatRepository.
+                editingMessage = null // Dismisses the dialog first.
+                model.rewriteMessage(target.id, newText) // Updates the turn and deletes later turns atomically.
+            }, // Ends confirm handler.
+            onDismiss = { editingMessage = null }, // Closes without modifying history.
+        ) // Ends rewrite dialog.
+    } // Ends rewrite dialog check.
+    deletingMessage?.let { target -> // Confirms deleting a user message and all later turns.
+        AlertDialog( // Prevents accidental deletion of subsequent conversation exchanges.
+            onDismissRequest = { deletingMessage = null }, // Closes without modifying Room.
+            title = { Text(stringResource(R.string.message_delete_dialog_title)) }, // Summarises deletion.
+            text = { Text(stringResource(R.string.message_delete_warning)) }, // Warns that later replies will also be removed.
+            confirmButton = { // Deletes from target.seq onward.
+                TextButton(onClick = { // Confirms tail deletion.
+                    deletingMessage = null // Dismisses the dialog first.
+                    model.deleteMessage(target.id) // Removes this turn and later turns in Room.
+                }) { Text(stringResource(R.string.message_action_delete)) } // Labels confirm button.
+            }, // Ends confirm slot.
+            dismissButton = { // Cancels without deleting.
+                TextButton(onClick = { deletingMessage = null }) { Text(stringResource(R.string.history_delete_cancel)) } // Reuses Cancel label.
+            }, // Ends dismiss slot.
+        ) // Ends delete message confirmation dialog.
+    } // Ends delete message dialog check.
     ScreenScaffold( // Displays saved conversation metadata and manual rename action.
         title = state.chat?.title ?: stringResource(R.string.navigation_active_chat), // Uses the live Room-backed chat title.
         onBack = onBack, // Returns to the previous history destination.
@@ -123,7 +164,15 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                                 message = message, // Supplies saved text, role, status and error category.
                                 showRetry = message.id == state.messages.lastOrNull()?.id, // Displays the action only beside the final saved row.
                                 retryEnabled = state.canRetry, // Shares the ViewModel's current key, connection and ownership guard.
+                                canEdit = state.canRewrite, // Enables rewrite only when online, configured and idle.
+                                canDelete = state.canModifyMessages, // Enables local deletion whenever no request is active.
                                 onRetry = model::retry, // Delegates same-row retry validation to the ViewModel and repository.
+                                onEdit = { editingMessage = message }, // Opens the prefilled rewrite dialog with truncation warning.
+                                onCopy = { // Copies bubble text to clipboard and confirms via snackbar.
+                                    clipboard.setText(AnnotatedString(message.text)) // Copies full saved text.
+                                    scope.launch { snackbar.showSnackbar(context.getString(R.string.message_copied)) } // Shows brief feedback.
+                                }, // Ends copy handler.
+                                onDelete = { deletingMessage = message }, // Opens delete confirmation dialog.
                             ) // Ends this saved message bubble.
                         } // Ends the Room-derived message items.
                     } // Ends the saved message list.
@@ -156,23 +205,95 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     } // Ends the selected conversation frame.
 } // Ends the active chat screen.
 
+@OptIn(ExperimentalFoundationApi::class) // Uses combinedClickable to open the bubble context menu on long-press.
 @Composable // Renders one saved row without owning networking or persistence.
-private fun MessageBubble(message: Message, showRetry: Boolean, retryEnabled: Boolean, onRetry: () -> Unit) { // Receives the same-row retry callback from the screen.
+private fun MessageBubble( // Receives callbacks from the screen for retry and long-press context actions.
+    message: Message, // Supplies role, text, status and error category.
+    showRetry: Boolean, // Shows Retry only on the final failed user message.
+    retryEnabled: Boolean, // Mirrors current send/retry prerequisite guards.
+    canEdit: Boolean, // Enables Edit on user bubbles when online, configured and idle.
+    canDelete: Boolean, // Enables Delete on user bubbles when idle.
+    onRetry: () -> Unit, // Retries the final failed user row.
+    onEdit: () -> Unit, // Opens the rewrite dialog for this user bubble.
+    onCopy: () -> Unit, // Copies this bubble's text to the clipboard.
+    onDelete: () -> Unit, // Opens confirmation before deleting this turn and later turns.
+) { // Starts the role-specific bubble layout.
     val user = message.role == Role.USER // Chooses author alignment and theme colours.
+    var menuOpen by remember(message.id) { mutableStateOf(false) } // Controls the long-press context menu for this bubble.
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (user) Arrangement.End else Arrangement.Start) { // Separates user and mentor sides.
-        Surface( // Draws one role-specific saved text bubble.
-            modifier = Modifier.widthIn(max = 480.dp), // Limits long lines on larger devices while allowing narrow screens to shrink.
-            shape = MaterialTheme.shapes.medium, // Uses the app's existing rounded shape.
-            color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer, // Uses theme-provided contrast for each participant.
-        ) { // Displays saved content and any persisted failure.
-            Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, text and error feedback.
-                Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
-                Text(message.text) // Displays full saved message text without altering history.
-                if (user && message.status == MessageStatus.FAILED) { // Reads failures from Room rather than a network event.
-                    Text(stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource())) // Translates the saved category into safe readable feedback.
-                    if (showRetry) Button(onClick = onRetry, enabled = retryEnabled) { Text(stringResource(R.string.chat_retry)) } // Retries the same final failed row through the repository.
-                } // Ends persisted error content.
-            } // Ends bubble content.
-        } // Ends the role-specific bubble surface.
+        Box { // Anchors the DropdownMenu directly to this bubble.
+            Surface( // Draws one role-specific saved text bubble.
+                modifier = Modifier
+                    .widthIn(max = 480.dp) // Limits long lines on larger devices while allowing narrow screens to shrink.
+                    .clip(MaterialTheme.shapes.medium) // Clips long-press feedback to the bubble corners.
+                    .combinedClickable( // Opens the context menu on long-press without interfering with scrolling.
+                        onClick = {}, // Leaves ordinary taps harmless.
+                        onLongClick = { menuOpen = true }, // Reveals Edit/Copy/Delete on user turns or Copy on model turns.
+                    ), // Ends long-press handler.
+                shape = MaterialTheme.shapes.medium, // Uses the app's existing rounded shape.
+                color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer, // Uses theme-provided contrast for each participant.
+            ) { // Displays saved content and any persisted failure.
+                Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, text and error feedback.
+                    Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
+                    Text(message.text) // Displays full saved message text without altering history.
+                    if (user && message.status == MessageStatus.FAILED) { // Reads failures from Room rather than a network event.
+                        Text(stringResource((message.errorCategory ?: MessageErrorCategory.UNKNOWN).messageResource())) // Translates the saved category into safe readable feedback.
+                        if (showRetry) Button(onClick = onRetry, enabled = retryEnabled) { Text(stringResource(R.string.chat_retry)) } // Retries the same final failed row through the repository.
+                    } // Ends persisted error content.
+                } // Ends bubble content.
+            } // Ends the role-specific bubble surface.
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) { // Lists context actions for this message.
+                if (user) { // Exposes Edit and Delete only on user-authored messages.
+                    DropdownMenuItem( // Starts conversation rewrite from this user turn.
+                        text = { Text(stringResource(R.string.message_action_edit)) }, // Labels Edit action.
+                        enabled = canEdit, // Blocks editing when offline, unconfigured or sending.
+                        onClick = { menuOpen = false; onEdit() }, // Closes menu and opens rewrite dialog.
+                    ) // Ends Edit menu item.
+                } // Ends user-only Edit check.
+                DropdownMenuItem( // Copies message text on both user and model bubbles.
+                    text = { Text(stringResource(R.string.message_action_copy)) }, // Labels Copy action.
+                    onClick = { menuOpen = false; onCopy() }, // Closes menu and copies to clipboard.
+                ) // Ends Copy menu item.
+                if (user) { // Exposes tail-safe Delete on user-authored messages.
+                    DropdownMenuItem( // Removes this user message and later exchanges.
+                        text = { Text(stringResource(R.string.message_action_delete)) }, // Labels Delete action.
+                        enabled = canDelete, // Blocks deleting while a send owns the chat.
+                        onClick = { menuOpen = false; onDelete() }, // Closes menu and asks for confirmation.
+                    ) // Ends Delete menu item.
+                } // Ends user-only Delete check.
+            } // Ends bubble context menu.
+        } // Ends anchored menu container.
     } // Ends saved-row alignment.
 } // Ends the message bubble.
+
+@Composable // Displays the pre-filled rewrite dialog with an explicit truncation warning.
+private fun RewriteMessageDialog( // Requires confirmation before truncating later messages.
+    initialText: String, // Pre-fills the original user message text.
+    onConfirm: (String) -> Unit, // Delivers edited nonblank text to ActiveChatViewModel.
+    onDismiss: () -> Unit, // Cancels rewriting without modifying history.
+) { // Starts rewrite dialog.
+    var draft by remember(initialText) { mutableStateOf(initialText) } // Holds edited text locally in memory.
+    val valid = draft.isNotBlank() // Prevents submitting blank replacement text.
+    AlertDialog( // Presents the warning and editable prompt clearly.
+        onDismissRequest = onDismiss, // Cancels on outside tap or Back.
+        title = { Text(stringResource(R.string.message_edit_dialog_title)) }, // Summarises edit and resend.
+        text = { // Groups explicit warning above the prefilled message field.
+            Column(verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium)) { // Separates warning from input.
+                Text(stringResource(R.string.message_edit_warning), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) // Warns clearly that later turns will be deleted.
+                OutlinedTextField( // Pre-fills the editable message prompt.
+                    value = draft, // Shows current edited draft.
+                    onValueChange = { draft = it }, // Updates local draft on keystroke.
+                    modifier = Modifier.fillMaxWidth(), // Uses dialog width.
+                    label = { Text(stringResource(R.string.message_edit_label)) }, // Uses a distinct label from the bottom draft field.
+                    maxLines = 6, // Keeps longer questions readable inside the dialog.
+                ) // Ends edited message field.
+            } // Ends dialog body.
+        }, // Ends dialog text slot.
+        confirmButton = { // Confirms truncation and resend.
+            TextButton(onClick = { onConfirm(draft) }, enabled = valid) { Text(stringResource(R.string.message_edit_confirm)) } // Labels Resend action.
+        }, // Ends confirm slot.
+        dismissButton = { // Cancels without changing Room.
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.history_delete_cancel)) } // Reuses Cancel label.
+        }, // Ends dismiss slot.
+    ) // Ends AlertDialog.
+} // Ends rewrite message dialog.

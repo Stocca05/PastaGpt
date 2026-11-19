@@ -33,4 +33,7 @@ interface ChatRepository { // Can be supplied manually to ViewModels and replace
 
     /** Edits any user message, deletes all subsequent messages, and resends the truncated history. */
     suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult // Keeps Room consistent if the network resend fails.
+
+    /** Deletes a user message and any subsequent messages so remaining history stays alternating. */
+    suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult // Refuses deleting while a send owns this chat.
 } // Ends the chat repository contract.

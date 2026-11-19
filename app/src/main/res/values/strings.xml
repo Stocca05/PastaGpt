@@ -57,6 +57,16 @@
     <string name="chat_rename_dialog_title">Rename conversation</string>
     <string name="chat_rename_label">Title</string>
     <string name="chat_rename_save">Save</string>
+    <string name="message_action_edit">Edit</string>
+    <string name="message_action_copy">Copy</string>
+    <string name="message_action_delete">Delete</string>
+    <string name="message_copied">Message copied.</string>
+    <string name="message_edit_dialog_title">Edit &amp; resend message</string>
+    <string name="message_edit_warning">All messages after this turn will be permanently deleted and a new reply will be requested.</string>
+    <string name="message_edit_label">Edited message</string>
+    <string name="message_edit_confirm">Resend</string>
+    <string name="message_delete_dialog_title">Delete message?</string>
+    <string name="message_delete_warning">This removes this message and all later replies in the conversation.</string>
     <string name="chat_read_error">Saved messages could not be read.</string>
     <string name="chat_empty">Ask your Android mentor a question.</string>
     <string name="chat_waiting">Waiting for a reply…</string>

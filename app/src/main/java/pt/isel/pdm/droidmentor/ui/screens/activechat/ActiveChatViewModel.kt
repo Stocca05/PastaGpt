@@ -59,6 +59,14 @@ data class ActiveChatUiState( // Keeps the unsent in-memory draft separate from 
             && messages.lastOrNull()?.role == Role.USER // Selects only the final user turn.
             && messages.lastOrNull()?.status == MessageStatus.FAILED // Selects only an unresolved failed row.
 
+    /** Whether local message deletion is currently allowed. */
+    val canModifyMessages: Boolean // Allows deleting messages even when offline.
+        get() = !loading && !storageError && chat != null && !working && !pending // Guards against active network work.
+
+    /** Whether editing and resending an earlier user message is allowed. */
+    val canRewrite: Boolean // Requires connectivity and a key because rewriting resends to Gemini.
+        get() = canModifyMessages && connected && hasKey && !settingsError // Shares prerequisites with sending.
+
     /** Hides drafts and message content in accidental diagnostic output. */
     override fun toString(): String = "ActiveChatUiState(content=<hidden>)" // Avoids printing an unsent draft that could contain sensitive input.
 } // Ends the selected conversation state.
@@ -126,6 +134,18 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         val message = snapshot.messages.lastOrNull() ?: return // Reads the final saved target without an unsafe assertion.
         perform(clearDraft = false) { repository.retryMessage(chatId, message.id) } // Sends the same saved row through the repository's guarded retry command.
     } // Ends explicit retry.
+
+    /** Edits a saved user message, removes later turns and resends the truncated history without touching the draft. */
+    fun rewriteMessage(messageId: String, newText: String) { // Uses repository preflight and atomic truncation.
+        if (!state.value.canRewrite || newText.isBlank()) return // Enforces connectivity, key and nonblank text guards.
+        perform(clearDraft = false) { repository.rewriteMessage(chatId, messageId, newText) } // Leaves bottom draft intact.
+    } // Ends conversation rewrite command.
+
+    /** Deletes a saved user message and all subsequent turns locally without changing the draft. */
+    fun deleteMessage(messageId: String) { // Works offline when no send is currently running.
+        if (!state.value.canModifyMessages) return // Prevents deleting while a request owns the chat.
+        perform(clearDraft = false) { repository.deleteMessage(chatId, messageId) } // Keeps bottom draft intact.
+    } // Ends single-turn deletion command.
 
     /** Renames the current conversation manually; Room observation updates the displayed title. */
     fun renameChat(title: String) { // Does not require network access or an API key.

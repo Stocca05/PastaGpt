@@ -558,6 +558,22 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertEquals(saved, messages(repository, id)) // Confirms Room stayed unchanged.
     } // Ends rewrite validation verification.
 
+    /** Checks deleting a user turn removes it and all later turns while preserving earlier exchanges. */
+    @Test // Tests M3-04 single-turn deletion semantics in RoomChatRepository.
+    fun deletingUserMessageRemovesFromItsSequenceOnward() = runBlocking { // Uses isolated Room.
+        val repository = repository() // Creates the production repository.
+        val id = createChat(repository) // Creates one conversation.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q1")) // seq 0-1.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q2")) // seq 2-3.
+        val saved = messages(repository, id) // Reads all 4 messages.
+        assertEquals(ChatCommandResult.InvalidRetry, repository.deleteMessage(id, saved[1].id)) // Refuses deleting a model message directly.
+        assertEquals(ChatCommandResult.Stored, repository.deleteMessage(id, saved[2].id)) // Deletes Q2 and its reply.
+        val remaining = messages(repository, id) // Reads remaining history.
+        assertEquals(listOf("Q1", "Mentor test reply"), remaining.map { it.text }) // Confirms Q1 exchange survived cleanly.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q3")) // Confirms new sends still succeed with valid alternation.
+        assertEquals(listOf(0L, 1L, 2L, 3L), messages(repository, id).map { it.seq }) // Confirms clean sequence progression.
+    } // Ends user-message deletion verification.
+
     private fun repository(preferences: SettingsRepository = settings, newId: () -> String = { UUID.randomUUID().toString() }): RoomChatRepository { // Builds production collaborators around a test-owned engine and selected preference implementation.
         val connected: suspend () -> Boolean = { onCheck(checks.incrementAndGet()); online } // Shares fresh prerequisite checks with repository and source.
         val engine = MockEngine.config { // Keeps actual request construction and decoding inside the test process.

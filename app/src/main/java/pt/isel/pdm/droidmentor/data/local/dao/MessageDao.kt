@@ -141,5 +141,5 @@ abstract class MessageDao { // Allows both generated queries and small transacti
     ): Int // Returns the number of matching rows.
 
     @Query("UPDATE chats SET updatedAt = MAX(updatedAt, :updatedAt) WHERE id = :chatId") // Keeps timestamps from moving backwards.
-    protected abstract suspend fun touchChat(chatId: String, updatedAt: Long): Int // Updates the owning chat's recency.
+    abstract suspend fun touchChat(chatId: String, updatedAt: Long): Int // Updates the owning chat's recency.
 } // Ends the message DAO.

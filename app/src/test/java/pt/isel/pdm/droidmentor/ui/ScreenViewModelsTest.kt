@@ -417,6 +417,32 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertEquals(UiEvent.Notice(UiNotice.INVALID_INPUT), active.events.first()) // Confirms typed notice is emitted.
     } // Ends manual rename verification.
 
+    /** Checks rewrite and single-turn delete respect prerequisites and preserve the unsent draft. */
+    @Test // Tests M3-04 ViewModel commands before UI and ViewModel implementation.
+    fun rewriteAndDeleteMessageKeepDraftAndCheckPrerequisites() = runTest { // Uses fake chat and network streams.
+        val fake = FakeChats() // Tracks rewrite and delete calls.
+        val settings = FakeSettings() // Supplies a configured key.
+        settings.read.value = SettingsReadResult.Success("fixture-${UUID.randomUUID()}") // Marks key configured.
+        val network = MutableStateFlow(ConnectivityStatus.CONNECTED) // Starts online.
+        val model = own(ActiveChatViewModel("saved", fake, settings, network)) // Creates active chat ViewModel.
+        advanceUntilIdle() // Loads prerequisites.
+        model.updateDraft("Keep unsent draft") // Types an unsent draft in the input bar.
+
+        model.rewriteMessage("msg-1", "Edited text") // Rewrites an existing user message.
+        advanceUntilIdle() // Completes command.
+        assertEquals("msg-1" to "Edited text", fake.rewritten) // Confirms target ID and new text reached repository.
+        assertEquals("Keep unsent draft", model.state.value.draft) // Confirms rewrite did not clear the bottom draft box.
+
+        network.value = ConnectivityStatus.DISCONNECTED // Simulates going offline.
+        advanceUntilIdle() // Updates connected flag.
+        model.rewriteMessage("msg-1", "Blocked offline") // Attempts rewrite while offline.
+        assertEquals("msg-1" to "Edited text", fake.rewritten) // Confirms offline blocked the second rewrite.
+
+        model.deleteMessage("msg-1") // Deletes a message while offline (local operation).
+        advanceUntilIdle() // Runs local delete.
+        assertEquals("msg-1", fake.deletedMessageId) // Confirms delete reached repository.
+    } // Ends rewrite/delete ViewModel verification.
+
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 
     private fun active(fake: FakeChats): ActiveChatViewModel { // Supplies simple fake dependencies for active-chat cases.
@@ -460,6 +486,8 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         var sends = 0 // Counts requested send commands.
         var retriedId: String? = null // Records only the harmless local retry ID.
         var renamed: Pair<String, String>? = null // Records the latest manual rename target and title.
+        var rewritten: Pair<String, String>? = null // Records the latest rewrite target ID and text.
+        var deletedMessageId: String? = null // Records the latest deleted message ID.
         val deletedIds = mutableListOf<String>() // Records deleted chat IDs in order for M3-01 tests.
         override fun observeChats(): Flow<ChatReadResult<List<ChatSummary>>> = summaries // Supplies saved summary snapshots.
         override fun observeChat(chatId: String): Flow<ChatReadResult<Chat?>> = chat // Supplies saved conversation metadata.
@@ -485,6 +513,13 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
             retriedId = messageId // Captures only the local ID needed by the retry assertion.
             return commandResult // Returns the controlled local retry acknowledgement.
         } // Ends the fake retry operation.
-        override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult = commandResult // Returns the controlled acknowledgement for fake rewrite calls.
+        override suspend fun rewriteMessage(chatId: String, messageId: String, newText: String): ChatCommandResult { // Records rewrite call arguments.
+            rewritten = messageId to newText // Stores edited message ID and replacement text.
+            return commandResult // Returns the controlled acknowledgement.
+        } // Ends fake rewrite.
+        override suspend fun deleteMessage(chatId: String, messageId: String): ChatCommandResult { // Records deleted message ID.
+            deletedMessageId = messageId // Stores target message ID.
+            return commandResult // Returns controlled local acknowledgement.
+        } // Ends fake message delete.
     } // Ends the Room-like repository fake.
 } // Ends screen ViewModel unit verification.

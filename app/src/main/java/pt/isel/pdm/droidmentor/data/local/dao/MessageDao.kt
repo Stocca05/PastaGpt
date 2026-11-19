@@ -90,6 +90,13 @@ abstract class MessageDao { // Allows both generated queries and small transacti
         return true // Reports a fully saved exchange.
     } // Ends the exchange transaction.
 
+    /**
+     * Deletes every message in [chatId] starting from [fromSeq] onward.
+     * Callers use this inside a transaction when rewriting or trimming the tail of a chat.
+     */
+    @Query("DELETE FROM messages WHERE chatId = :chatId AND seq >= :fromSeq") // Keeps earlier turns intact in sequence order.
+    abstract suspend fun deleteFromSeq(chatId: String, fromSeq: Long): Int // Returns how many tail rows were removed.
+
     @Insert // Keeps raw inserts inside the DAO transaction methods.
     protected abstract suspend fun insertRow(message: MessageEntity) // Inserts the row without replacing existing history.
 

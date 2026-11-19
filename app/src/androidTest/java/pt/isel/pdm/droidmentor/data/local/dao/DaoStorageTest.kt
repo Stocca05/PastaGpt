@@ -248,6 +248,28 @@ class DaoStorageTest { // Groups the DAO behaviour checks.
         assertEquals(0, chats.deleteById("chat-1")) // Reports no deletion for the now-missing parent.
     } // Ends the deletion test.
 
+    /** Checks deterministic sequence order even with backwards timestamps and tail truncation. */
+    @Test // Verifies M3-05 monotonic sequence invariants across inserts and rewrite truncation.
+    fun sequenceOrderIgnoresTimestampsAndSurvivesTailTruncation() = runBlocking { // Runs DAO queries inside a test coroutine.
+        chats.insert(chat("chat-1")) // Creates one conversation to test ordering.
+        val m0 = messages.insert(message("u0", "chat-1", role = Role.USER, status = MessageStatus.SENT, createdAt = 9000L)) // Uses a high timestamp on seq 0.
+        val m1 = messages.insert(message("m1", "chat-1", role = Role.MODEL, status = MessageStatus.SENT, createdAt = 5000L)) // Uses a lower timestamp on seq 1.
+        val m2 = messages.insert(message("u2", "chat-1", role = Role.USER, status = MessageStatus.SENT, createdAt = 5000L)) // Ties timestamp on seq 2.
+        messages.insert(message("m3", "chat-1", role = Role.MODEL, status = MessageStatus.SENT, createdAt = 1000L)) // Uses the lowest timestamp on seq 3.
+
+        val beforeTruncate = messages.getMessages("chat-1") // Reads the full history from Room.
+        assertEquals(listOf("u0", "m1", "u2", "m3"), beforeTruncate.map { it.id }) // Confirms seq order beats backwards/tied timestamps.
+        assertEquals(listOf(0L, 1L, 2L, 3L), beforeTruncate.map { it.seq }) // Confirms zero-based monotonic sequences.
+
+        assertEquals(2, messages.deleteFromSeq("chat-1", m1.seq + 1L)) // Removes m2 and m3 as a rewrite truncation would.
+        val afterTruncate = messages.getMessages("chat-1") // Reads the remaining prefix.
+        assertEquals(listOf(m0, m1), afterTruncate) // Confirms only earlier turns stay intact.
+
+        val replacement = messages.insert(message("u2-new", "chat-1", role = Role.USER, status = MessageStatus.SENDING, createdAt = 500L)) // Inserts a replacement turn with an even older timestamp.
+        assertEquals(2L, replacement.seq) // Confirms nextSeq continues monotonically from the remaining prefix.
+        assertEquals(listOf("u0", "m1", "u2-new"), messages.getMessages("chat-1").map { it.id }) // Confirms deterministic ordering after truncation.
+    } // Ends the deterministic ordering test.
+
     private suspend fun expectConstraintViolation(action: suspend () -> Unit) { // Checks a real failed database write.
         var rejected = false // Records whether SQLite rejected the operation.
         try { // Runs the caller's insert or transaction.

@@ -583,7 +583,7 @@ Implement the requirements with the highest logical complexity — conversation 
 | M3-02 | Conversation titling | Title generated automatically from the first characters of the first user message, with manual rename available. | S | 🟢 | 2 h | M3-01 | ☐ |
 | M3-03 | **Conversation rewrite** | The user edits one of their own messages at **any position**. Atomic Room transaction: update the text, `deleteFromSeq(chatId, seq + 1)` which invalidates and removes all subsequent exchanges, rebuild the payload over the truncated history and resend it to the API. If the network call fails, the state prior to the resend must remain consistent. | M | 🔴 | 8 h | M2-15, M3-05 | ☐ |
 | M3-04 | Rewrite UI | Long-press on a user bubble → context menu (*Edit*, *Copy*, *Delete*). In edit mode: dialog or pre-filled input bar with an explicit warning that subsequent messages will be deleted; confirmation required. | M | 🔴 | 5 h | M3-03 | ☐ |
-| M3-05 | Deterministic ordering | Verify deterministic ordering already introduced in M2 schema version 1: monotonic per-chat sequences and consistent transactions during rewrite. **Do not rely on timestamps.** No migration to add `seq`, which already exists. | M | 🟡 | 3 h | M2-13 | ☐ |
+| M3-05 | Deterministic ordering | Verify deterministic ordering already introduced in M2 schema version 1: monotonic per-chat sequences and consistent transactions during rewrite. **Do not rely on timestamps.** No migration to add `seq`, which already exists. | M | 🟡 | 3 h | M2-13 | ☑ |
 
 ### 10.3 WBS — State management and life cycle
 

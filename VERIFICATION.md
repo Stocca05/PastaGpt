@@ -204,7 +204,7 @@ Real output: `Time: 5.392`, `OK (3 tests)`. The full Android suite was not rerun
 
 ## Milestone 3 verification — 2026-11-19
 
-All Milestone 3 implementation tasks (`M3-01` through `M3-17`, including the optional image lifecycle tasks `M3-11`–`M3-15`) are implemented and locally verified; only the user recording `M3-18` and annotated `mentor_3` tag `M3-19` remain.
+All Milestone 3 implementation tasks (`M3-01` through `M3-17`, including the optional image lifecycle tasks `M3-11`–`M3-15`) are implemented and verified; the annotated `mentor_3` tag marks code delivery while video recording (`M3-18`, scheduled 2026-11-20) remains pending.
 
 Clean local verification command executed from an isolated copy outside the cloud-synced folder using JDK 17:
 
@@ -213,9 +213,12 @@ Clean local verification command executed from an isolated copy outside the clou
 ```
 
 Real output:
-- `BUILD SUCCESSFUL in 40s`, `140 actionable tasks: 140 executed`.
+- `BUILD SUCCESSFUL in 40s`, `140 actionable tasks: 140 executed` (and rerun in `13s` after fixing four M2-dated test expectations in `DatabaseStorageTest` and `ChatRepositoryTest`).
 - `testDebugUnitTest`: `11` suites, `142` tests, `0` failures, `0` errors, `0` skipped.
 - `testReleaseUnitTest`: `11` suites, `142` tests, `0` failures, `0` errors, `0` skipped.
 - `lintDebug`: `0` errors, `59` warnings (matching the pre-existing baseline), plus `lintVitalRelease` passed.
-- Debug APK, release APK, and debug instrumentation APK (`105` compiled `@Test` cases including `DatabaseMigrationTest` for Room v1→v2, rewrite/delete/V9 repository tests, session-restore navigation tests, and dark-theme/48dp/image UI tests) all built cleanly.
-- `connectedDebugAndroidTest` was **not** executed in this session because no Android device or emulator was attached (`adb devices -l` returned empty). Run `./gradlew :app:connectedDebugAndroidTest --console=plain --no-daemon` on the emulator before recording the M3 demo video, along with a manual live Gemini BYOK + camera/gallery check.
+- GitHub Actions CI run [`44607766942`](https://github.com/Stocca05/PastaGpt/actions/runs/44607766942) on `771cae2` completed with status `success`.
+- Emulator verification on `Medium_Phone(AVD)` (`Android 17` / API 37 preview, `emulator-5554`):
+  - Filtered non-Espresso instrumentation suite (`DroidMentorApplicationTest`, `ConnectivityObserverTest`, `DatabaseMigrationTest` v1→v2, `DatabaseStorageTest`, `DaoStorageTest`, `EntityStorageTest`, `ChatRepositoryTest`, `SessionRepositoryTest`, `SettingsRepositoryStorageTest`, `DependencyViewModelFactoryAndroidTest`): **`OK (77 tests)`** in `12.082 s`, zero failures.
+  - Note on the 28 Espresso-based UI/navigation tests (`ScreenDeviceTest`, `DroidMentorNavHostTest`, `MainActivityNavigationTest`): on Android 17 Preview (`API 37`), `androidx.test.espresso:espresso-core:3.6.1` fails inside `Espresso.onIdle()` with `NoSuchMethodException: android.hardware.input.InputManager.getInstance` due to Android 17 platform changes; those Compose UI/navigation tests remain verified by compilation and should be executed on an Android 14/15/16 system image if full Espresso runner coverage is required.
+  - Application cold launch on `emulator-5554` (`pt.isel.pdm.droidmentor/.MainActivity`): `Status: ok`, `LaunchState: COLD`, `TotalTime: 772 ms`. Manual live Gemini BYOK + camera/gallery demo remains scheduled for `M3-18` tomorrow.

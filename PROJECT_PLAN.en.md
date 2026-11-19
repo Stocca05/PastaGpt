@@ -613,14 +613,14 @@ Implement the requirements with the highest logical complexity — conversation 
 |---|---|---|---|---|---|---|---|
 | M3-16 | Accessibility and UI polish | `contentDescription` on every non-textual element, touch targets ≥ 48 dp, verified contrast, complete dark theme, correct behaviour on rotation. | S | 🟡 | 4 h | M2-21 | ☑ |
 | M3-17 | Test suite extension | Tests for the rewrite (correct truncation, resulting payload), for retries, for Room migrations actually introduced after the M2 schema, Compose UI tests over the main flows. | M | 🟡 | 5 h | M3-03, M3-08 | ☑ |
-| M3-18 | Milestone 3 video | **5–7 minute** recording: demonstration of the functionalities (with emphasis on rewrite, deletion, session restore, images if present), discussion of the relevant decisions, project status. | M | 🟡 | 4 h | all M3 | ☐ |
-| M3-19 | `mentor_3` tag | Video link in the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M3-18 | ☐ |
+| M3-18 | Milestone 3 video | **5–7 minute** recording: demonstration of the functionalities (with emphasis on rewrite, deletion, session restore, images if present), discussion of the relevant decisions, project status. | M | 🟡 | 4 h | all M3 | ☐ *(scheduled 2026-11-20)* |
+| M3-19 | `mentor_3` tag | Video link in the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M3-18 | ☐ *(code tag `mentor_3` published 2026-11-19; video link pending)* |
 
 **Estimated Milestone 3 total:** ~83 ideal hours, all solo — about 17 ideal hours a week over the 5 weeks (≈23 calendar hours a week at the 1.4× factor).
 
 ### 10.6 Acceptance checklist (Milestone 3)
 
-- ☐ The repository is correctly tagged **`mentor_3`** and the tag has been pushed.
+- ☑ The repository is correctly tagged **`mentor_3`** and the tag has been pushed (code delivery 2026-11-19; will be updated after M3-18 video link is added).
 - ☐ The `README.md` contains the **video link**, reachable from outside.
 - ☐ The video is **between 5 and 7 minutes** long.
 - ☐ The video **demonstrates the implemented functionalities**.

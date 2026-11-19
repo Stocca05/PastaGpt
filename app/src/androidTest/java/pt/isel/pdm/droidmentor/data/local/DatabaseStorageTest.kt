@@ -66,7 +66,7 @@ class DatabaseStorageTest { // Keeps the production database checks together.
         assertEquals("reply-1", preview.single().lastMessage?.id) // Checks the last-message relation still works.
         val next = database.messageDao().insert(message().copy(id = "user-2", createdAt = 3000L)) // Continues the persisted history.
         assertEquals(2L, next.seq) // Checks sequence allocation did not restart at zero.
-        assertEquals(1, database.openHelper.readableDatabase.version) // Checks the actual file uses schema version one.
+        assertEquals(2, database.openHelper.readableDatabase.version) // Checks the actual file uses schema version two.
     } // Ends the history persistence test.
 
     /** Checks that a persisted failure can be recovered on the same row after reopening. */
@@ -88,9 +88,9 @@ class DatabaseStorageTest { // Keeps the production database checks together.
     @Test // Checks that the builder has no destructive-migration fallback.
     fun unsupportedVersionDoesNotEraseSavedData() = runBlocking { // Performs controlled file changes on the test thread.
         database.chatDao().insert(chat()) // Saves a row whose preservation can be checked.
-        database.openHelper.writableDatabase.version = 2 // Simulates an unsupported newer schema only in this test file.
+        database.openHelper.writableDatabase.version = 99 // Simulates an unsupported newer schema only in this test file.
         database.close() // Closes the modified file before trying the normal app configuration.
-        database = DroidMentorDatabase.create(context, fileName) // Builds the version-one Room instance again.
+        database = DroidMentorDatabase.create(context, fileName) // Builds the version-two Room instance again.
         var rejected = false // Records whether Room refused the unsupported downgrade.
         try { // Attempts to read through the incompatible configuration.
             database.chatDao().getById("chat-1") // Opens the file and triggers Room's version check.

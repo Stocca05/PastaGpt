@@ -613,14 +613,14 @@ Implementare i requisiti a più alta complessità logica — cancellazione delle
 |---|---|---|---|---|---|---|---|
 | M3-16 | Accessibilità e rifinitura UI | `contentDescription` su tutti gli elementi non testuali, aree tattili ≥ 48 dp, contrasto verificato, tema scuro completo, comportamento corretto in rotazione. | S | 🟡 | 4 h | M2-21 | ☑ |
 | M3-17 | Estensione della suite di test | Test della riscrittura (troncamento corretto, payload risultante), dei ritentativi, delle migrazioni Room effettivamente introdotte dopo lo schema M2, test di UI Compose sui flussi principali. | M | 🟡 | 5 h | M3-03, M3-08 | ☑ |
-| M3-18 | Video Milestone 3 | Registrazione **5–7 minuti**: dimostrazione delle funzionalità (con enfasi su riscrittura, cancellazione, ripristino sessione, immagini se presenti), discussione delle decisioni rilevanti, stato del progetto. | M | 🟡 | 4 h | tutti M3 | ☐ |
-| M3-19 | Tag `mentor_3` | Link al video nel `README.md`, commit, tag annotato, push. | M | 🟢 | 0,5 h | M3-18 | ☐ |
+| M3-18 | Video Milestone 3 | Registrazione **5–7 minuti**: dimostrazione delle funzionalità (con enfasi su riscrittura, cancellazione, ripristino sessione, immagini se presenti), discussione delle decisioni rilevanti, stato del progetto. | M | 🟡 | 4 h | tutti M3 | ☐ *(programmato 2026-11-20)* |
+| M3-19 | Tag `mentor_3` | Link al video nel `README.md`, commit, tag annotato, push. | M | 🟢 | 0,5 h | M3-18 | ☐ *(tag codice `mentor_3` pubblicato il 2026-11-19; link video in attesa)* |
 
 **Totale stimato Milestone 3:** ~83 ore ideali, tutte da solo — circa 17 ore ideali a settimana sulle 5 settimane (≈23 ore di calendario a settimana con il fattore 1,4×).
 
 ### 10.6 Checklist di accettazione (Milestone 3)
 
-- ☐ Il repository è correttamente taggato **`mentor_3`** e il tag è stato pushato.
+- ☑ Il repository è correttamente taggato **`mentor_3`** e il tag è stato pushato (consegna codice 2026-11-19; verrà aggiornato con il link video al completamento di M3-18).
 - ☐ Il `README.md` contiene il **link al video**, accessibile dall'esterno.
 - ☐ Il video dura **tra 5 e 7 minuti**.
 - ☐ Il video **dimostra le funzionalità implementate**.

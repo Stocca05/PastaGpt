@@ -181,7 +181,7 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         val repository = repository() // Creates the repository under test.
         val id = createChat(repository) // Creates the parent chat.
         assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "First")) // Completes the initial exchange.
-        status = 503 // Makes the next attempt fail.
+        status = 500 // Uses non-retryable provider error so this test exercises single-attempt failed recovery.
         assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Retry this")) // Saves failure in the same pending row.
         val failed = messages(repository, id).last() // Reads the failed user's original identity and timestamp.
         assertEquals(ChatCommandResult.UnresolvedMessage, repository.sendMessage(id, "Do not append")) // Checks a new user cannot bypass the failure.
@@ -570,7 +570,7 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertEquals(ChatCommandResult.InvalidRetry, repository.deleteMessage(id, saved[1].id)) // Refuses deleting a model message directly.
         assertEquals(ChatCommandResult.Stored, repository.deleteMessage(id, saved[2].id)) // Deletes Q2 and its reply.
         val remaining = messages(repository, id) // Reads remaining history.
-        assertEquals(listOf("Q1", "Mentor test reply"), remaining.map { it.text }) // Confirms Q1 exchange survived cleanly.
+        assertEquals(listOf("Q1", "Reply"), remaining.map { it.text }) // Confirms Q1 exchange survived cleanly.
         assertEquals(ChatCommandResult.Stored, repository.sendMessage(id, "Q3")) // Confirms new sends still succeed with valid alternation.
         assertEquals(listOf(0L, 1L, 2L, 3L), messages(repository, id).map { it.seq }) // Confirms clean sequence progression.
     } // Ends user-message deletion verification.

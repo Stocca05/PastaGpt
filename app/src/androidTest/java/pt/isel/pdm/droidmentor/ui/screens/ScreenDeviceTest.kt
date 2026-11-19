@@ -8,8 +8,11 @@ import androidx.room.Room // Creates an isolated in-memory database with the pro
 import androidx.compose.ui.semantics.SemanticsProperties // Checks password masking without asserting printable credential text.
 import androidx.compose.ui.test.SemanticsMatcher // Matches safe password semantics.
 import androidx.compose.ui.test.assert // Checks field semantics rather than its raw contents.
+import androidx.compose.ui.test.assertHeightIsAtLeast // Verifies >= 48dp accessible touch targets (M3-16).
 import androidx.compose.ui.test.assertIsEnabled // Checks available user actions.
 import androidx.compose.ui.test.assertIsNotEnabled // Checks blocked sends and retries.
+import androidx.compose.ui.test.assertWidthIsAtLeast // Verifies >= 48dp accessible touch targets (M3-16).
+import androidx.compose.ui.unit.dp // Specifies 48dp touch-target accessibility floor.
 import androidx.compose.ui.test.hasSetTextAction // Finds the single input field without querying its value.
 import androidx.compose.ui.test.hasText // Disambiguates dialog input fields from the chat draft box.
 import androidx.compose.ui.test.junit4.createComposeRule // Hosts real screen content on the emulator.
@@ -391,6 +394,19 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
             realFile.delete() // Deletes temporary PNG file cleanly.
         } // Ends cleanup.
     } // Ends M3-14 Coil preview & missing-file UI test.
+
+    /** Checks dark theme rendering, accessible non-text descriptions and >= 48dp touch targets. */
+    @Test // Exercises M3-16 accessibility and dark theme polish on ActiveChatScreen.
+    fun darkThemeActiveChatExposesAccessibleControlsAnd48DpTouchTargets() { // Mounts ActiveChatScreen with darkTheme = true.
+        val id = runBlocking { (repository.createChat("Dark theme chat") as ChatCommandResult.Created).chatId } // Creates local chat.
+        val model = own("$id-dark", ActiveChatViewModel(id, repository, preferences, network)) // Builds ViewModel.
+        compose.setContent { DroidMentorTheme(darkTheme = true) { ActiveChatScreen(id, {}, model) } } // Renders under dark theme.
+        compose.waitUntil(5_000) { !model.state.value.loading } // Waits for Room load.
+        compose.onNodeWithContentDescription("Rename conversation").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // TopAppBar button >= 48dp.
+        compose.onNodeWithContentDescription("Attach image").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // Gallery button >= 48dp.
+        compose.onNodeWithContentDescription("Take photo").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // Camera button >= 48dp.
+        compose.onNodeWithText("Back").assertHeightIsAtLeast(48.dp) // Back control accessible size.
+    } // Ends dark theme and accessibility device verification.
 
     private fun showChat(onOpenSettings: () -> Unit = {}): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

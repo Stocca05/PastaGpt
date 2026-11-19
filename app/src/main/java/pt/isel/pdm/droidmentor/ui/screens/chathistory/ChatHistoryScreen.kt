@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding // Applies app bar and card sp
 import androidx.compose.foundation.layout.size // Sizes the decorative empty-history mark.
 import androidx.compose.foundation.lazy.LazyColumn // Displays saved history without laying out all rows at once.
 import androidx.compose.foundation.lazy.items // Uses stable local IDs as list keys.
+import androidx.compose.foundation.rememberScrollState // Preserves empty-state scroll across rotation.
+import androidx.compose.foundation.verticalScroll // Keeps empty history reachable in landscape orientation.
 import androidx.compose.material3.AlertDialog // Confirms before deleting a conversation.
 import androidx.compose.material3.Card // Makes each saved conversation a clear selectable item.
 import androidx.compose.material3.CircularProgressIndicator // Shows the initial local query.
@@ -128,7 +130,7 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
             state.loading -> Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { CircularProgressIndicator() } // Shows progress until the first local snapshot.
             state.storageError -> Text(stringResource(R.string.history_read_error), modifier = Modifier.padding(padding).padding(DroidMentorSpacing.large)) // Never disguises unreadable storage as empty history.
             state.visibleChats.isEmpty() -> Column( // Displays a small illustrated empty state without fake sample rows.
-                modifier = Modifier.fillMaxSize().padding(padding).padding(DroidMentorSpacing.large), // Respects the app bar and outer screen padding.
+                modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(DroidMentorSpacing.large), // Respects bars and stays scrollable in landscape.
                 horizontalAlignment = Alignment.CenterHorizontally, // Centres the empty-history message.
                 verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium, Alignment.CenterVertically), // Separates the decorative mark and readable text.
             ) { // Displays the simple empty-history content.
@@ -188,7 +190,14 @@ private fun ChatSummaryItem( // Keeps card layout and swipe gesture readable and
             ) { // Starts card content row.
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups this chat's saved metadata.
                     Text(summary.chat.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) // Displays the saved title without altering storage.
-                    Text(summary.lastMessage?.text ?: stringResource(R.string.history_no_messages), maxLines = 2, overflow = TextOverflow.Ellipsis) // Shows a short preview while keeping full saved text untouched.
+                    val last = summary.lastMessage // Inspects optional last message for text or image preview fallback.
+                    val previewText = when { // Avoids blank lines when the latest turn was an image-only question.
+                        last == null -> stringResource(R.string.history_no_messages) // Empty conversation fallback.
+                        last.text.isNotBlank() -> last.text // Usual text preview.
+                        last.imagePath != null -> stringResource(R.string.chat_image_attachment_cd) // Photo-only message label.
+                        else -> stringResource(R.string.history_no_messages) // Safe fallback.
+                    } // Ends preview text selection.
+                    Text(previewText, maxLines = 2, overflow = TextOverflow.Ellipsis) // Shows a short preview while keeping full saved text untouched.
                     Text(DateUtils.getRelativeTimeSpanString(summary.chat.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), style = MaterialTheme.typography.bodySmall) // Formats only the persisted recency timestamp.
                 } // Ends the saved metadata layout.
                 IconButton(onClick = onRename) { // Provides a 48dp accessible tap target for manual renaming.

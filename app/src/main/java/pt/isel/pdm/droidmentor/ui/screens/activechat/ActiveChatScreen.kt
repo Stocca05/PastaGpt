@@ -284,7 +284,7 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                 .imePadding(), // Moves input above the keyboard without doubling navigation-bar padding.
         ) { // Displays local loading, error or message state before the draft controls.
             if (!state.connected) { // Keeps the offline notice visible independently of saved history.
-                Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) { // Uses readable theme-provided contrast for the persistent banner.
+                Surface(color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.fillMaxWidth()) { // Uses explicit contrast pair for light and dark themes.
                     Text(stringResource(R.string.notice_offline), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Explains that new interactions are unavailable while history stays visible.
                 } // Ends the offline banner.
             } // Ends connectivity feedback.
@@ -294,7 +294,7 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     !state.hasKey -> R.string.notice_missing_key // Explains no API key is configured yet.
                     else -> R.string.notice_rejected_key // Explains a 401/403 authentication failure happened.
                 } // Ends contextual key message choice.
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth()) { // Frames the guidance and direct Settings button clearly.
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.fillMaxWidth()) { // Ensures light/dark WCAG contrast on the banner.
                     Row( // Places explanation text beside the direct Open Settings shortcut.
                         modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies comfortable banner padding.
                         horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates copy and action button.
@@ -346,7 +346,7 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
             } // Ends in-flight feedback.
             state.pendingImagePath?.let { path -> // Displays uncommitted gallery/camera thumbnail bar above composer with a remove control.
                 val previewFile = remember(path) { model.resolveAttachmentFile(path) } // Resolves app-private image file for composer preview.
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium)) { // Highlights the attached image before sending.
+                Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium)) { // Explicit light/dark contrast.
                     Row( // Groups thumbnail, attached indicator and explicit removal action.
                         modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies balanced spacing.
                         horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates preview elements cleanly.

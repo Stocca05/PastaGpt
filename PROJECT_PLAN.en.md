@@ -611,7 +611,7 @@ Implement the requirements with the highest logical complexity — conversation 
 
 | ID | Task | Operational description | Pri. | Diff. | Est. | Dep. | Status |
 |---|---|---|---|---|---|---|---|
-| M3-16 | Accessibility and UI polish | `contentDescription` on every non-textual element, touch targets ≥ 48 dp, verified contrast, complete dark theme, correct behaviour on rotation. | S | 🟡 | 4 h | M2-21 | ☐ |
+| M3-16 | Accessibility and UI polish | `contentDescription` on every non-textual element, touch targets ≥ 48 dp, verified contrast, complete dark theme, correct behaviour on rotation. | S | 🟡 | 4 h | M2-21 | ☑ |
 | M3-17 | Test suite extension | Tests for the rewrite (correct truncation, resulting payload), for retries, for Room migrations actually introduced after the M2 schema, Compose UI tests over the main flows. | M | 🟡 | 5 h | M3-03, M3-08 | ☐ |
 | M3-18 | Milestone 3 video | **5–7 minute** recording: demonstration of the functionalities (with emphasis on rewrite, deletion, session restore, images if present), discussion of the relevant decisions, project status. | M | 🟡 | 4 h | all M3 | ☐ |
 | M3-19 | `mentor_3` tag | Video link in the `README.md`, commit, annotated tag, push. | M | 🟢 | 0.5 h | M3-18 | ☐ |

@@ -164,6 +164,71 @@ class DroidMentorNavHostTest { // Test content contains controls only, never fak
         } // Ends invalid route cases.
     } // Ends route precondition verification.
 
+    /** Checks restoring an initial active chat opens Active Chat directly and explicit exit clears the session. */
+    @Test // Verifies M3-06 conditional startup routing and explicit-exit semantics.
+    fun restoredActiveChatOpensDirectlyAndExplicitExitReturnsThroughHistory() { // Tests restoration and both Return and system Back exits.
+        var enteredId: String? = null // Records session save callback.
+        var exitedCount = 0 // Counts explicit exit callbacks.
+        compose.setContent { // Installs graph with a restored active conversation ID.
+            controller = rememberNavController() // Creates controller for stack assertions.
+            DroidMentorTheme { // Applies app theme.
+                DroidMentorNavHost( // Uses the M3-06 session restoration parameters.
+                    navController = controller, // Inspects back stack directly.
+                    initialActiveChatId = "restored-42", // Simulates activeChatId loaded from DataStore at launch.
+                    onActiveChatEntered = { enteredId = it }, // Captures entry callback.
+                    onActiveChatExited = { exitedCount += 1 }, // Captures explicit exit callback.
+                    titleContent = { _, _, _ -> Text("Title screen") }, // Minimal Title placeholder.
+                    chatHistoryContent = { _, onBack -> // Minimal History placeholder.
+                        Column { // Separates label and Return button.
+                            Text("History screen") // Marks History destination.
+                            Button(onClick = onBack) { Text("Return") } // Returns from History to Title.
+                        } // Ends History layout.
+                    }, // Ends History slot.
+                    activeChatContent = { id, onBack -> // Minimal Active Chat placeholder.
+                        Column { // Separates ID and Return button.
+                            Text("Active screen") // Marks Active Chat destination.
+                            Text("Local ID: $id") // Exposes restored chat ID.
+                            Button(onClick = onBack) { Text("Return") } // Triggers explicit Back from Active Chat.
+                        } // Ends Active Chat layout.
+                    }, // Ends Active Chat slot.
+                ) // Ends restored NavHost setup.
+            } // Ends theme wrapper.
+        } // Ends composition.
+        assertScreen("Active screen", DroidMentorRoutes.ACTIVE_CHAT) // Confirms launch bypassed Title straight to Active Chat.
+        compose.onNodeWithText("Local ID: restored-42").assertExists() // Confirms exact restored chat ID.
+        assertEquals("restored-42", enteredId) // Confirms entry callback fired for restored session.
+        assertEquals(0, exitedCount) // Confirms session was not cleared during restoration.
+        compose.onNodeWithText("Return").performClick() // Explicitly exits Active Chat.
+        assertEquals(1, exitedCount) // Confirms explicit exit cleared the active session.
+        assertScreen("History screen", DroidMentorRoutes.CHAT_HISTORY) // Confirms Back leads cleanly to History.
+        compose.onNodeWithText("Return").performClick() // Exits History.
+        assertScreen("Title screen", DroidMentorRoutes.TITLE) // Confirms Title remains root of the stack.
+    } // Ends session-restoration graph verification.
+
+    /** Checks system Back inside Active Chat also triggers explicit session clearing. */
+    @Test // Verifies hardware/gesture Back clears the persisted active session.
+    fun systemBackFromActiveChatClearsSession() { // Navigates normally to Active Chat then presses system Back.
+        var exitedCount = 0 // Tracks explicit session-clear calls.
+        compose.setContent { // Builds graph with normal Title start.
+            controller = rememberNavController() // Creates controller.
+            DroidMentorTheme { // Applies theme.
+                DroidMentorNavHost( // Tests normal entry + system Back exit.
+                    navController = controller, // Allows route assertions.
+                    onActiveChatExited = { exitedCount += 1 }, // Counts explicit exit clears.
+                    titleContent = { onHistory, _, _ -> Button(onClick = onHistory) { Text("Open history") } }, // Minimal Title.
+                    chatHistoryContent = { onSelect, _ -> Button(onClick = { onSelect("chat-1") }) { Text("Select chat") } }, // Minimal History.
+                    activeChatContent = { _, _ -> Text("Active screen") }, // Minimal Active Chat.
+                ) // Ends NavHost setup.
+            } // Ends theme.
+        } // Ends composition.
+        compose.onNodeWithText("Open history").performClick() // Navigates to History.
+        compose.onNodeWithText("Select chat").performClick() // Navigates to Active Chat.
+        assertScreen("Active screen", DroidMentorRoutes.ACTIVE_CHAT) // Confirms Active Chat is visible.
+        Espresso.pressBack() // Triggers Android system Back inside Active Chat.
+        assertEquals(1, exitedCount) // Confirms system Back cleared the active session.
+        assertScreen("History screen", DroidMentorRoutes.CHAT_HISTORY) // Confirms return to History.
+    } // Ends system-Back session clear verification.
+
     private fun showGraph() { // Installs the same graph for ordinary tests.
         compose.setContent { GraphContent() } // Keeps graph and controller ownership inside the Compose activity.
     } // Ends ordinary test content setup.

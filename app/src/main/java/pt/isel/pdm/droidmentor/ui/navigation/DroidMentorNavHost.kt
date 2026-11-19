@@ -1,9 +1,15 @@
 package pt.isel.pdm.droidmentor.ui.navigation // Owns route registration and navigation callbacks for the five M2 screens.
 
+import androidx.activity.compose.BackHandler // Clears active-session persistence on explicit system Back from Active Chat.
 import androidx.compose.foundation.layout.fillMaxSize // Lets each destination use the full host area.
 import androidx.compose.material3.MaterialTheme // Reuses the app's existing colours and typography.
 import androidx.compose.material3.Surface // Gives the navigation host the app's themed background.
 import androidx.compose.runtime.Composable // Marks the host and screen content as Compose UI.
+import androidx.compose.runtime.LaunchedEffect // Persists activeChatId on entry and restores the active session once at launch.
+import androidx.compose.runtime.getValue // Reads saveable restoration state delegate.
+import androidx.compose.runtime.mutableStateOf // Tracks whether initial active-session restoration already ran.
+import androidx.compose.runtime.saveable.rememberSaveable // Prevents configuration changes from re-pushing the restored route.
+import androidx.compose.runtime.setValue // Updates restoration flag once.
 import androidx.compose.ui.Modifier // Describes the host and content layout.
 import androidx.navigation.NavHostController // Receives the controller owned by this host instead of passing it into screens.
 import androidx.navigation.NavType // Declares that the active conversation argument is a required string.
@@ -32,6 +38,9 @@ import pt.isel.pdm.droidmentor.ui.screens.title.TitleScreen // Supplies the stat
 @Composable // Displays the graph inside the app's existing theme.
 fun DroidMentorNavHost( // Allows screen tasks and tests to supply content without duplicating graph logic.
     navController: NavHostController = rememberNavController(), // Uses Compose's saved controller instead of a process-wide navigation singleton.
+    initialActiveChatId: String? = null, // Optional persisted active chat ID restored on app launch.
+    onActiveChatEntered: (String) -> Unit = {}, // Saves activeChatId when Active Chat is entered.
+    onActiveChatExited: () -> Unit = {}, // Clears activeChatId only on explicit TopAppBar or system Back exit.
     titleContent: @Composable (() -> Unit, () -> Unit, () -> Unit) -> Unit = { onHistory, onSettings, onAbout -> // Supplies the main menu with the graph's three navigation events.
         TitleScreen(onHistory, onSettings, onAbout) // Keeps navigation ownership in the graph and menu layout in its screen package.
     }, // Ends the real Title content.
@@ -53,9 +62,17 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
         color = MaterialTheme.colorScheme.background, // Uses the selected light or dark background.
         contentColor = MaterialTheme.colorScheme.onBackground, // Uses matching readable content colours.
     ) { // Hosts the graph inside the themed background.
+        var restored by rememberSaveable { mutableStateOf(false) } // Ensures launch-time restoration runs once per host lifetime.
+        LaunchedEffect(initialActiveChatId) { // Restores the active conversation above Title and History when present.
+            if (!restored && !initialActiveChatId.isNullOrBlank()) { // Runs only when a valid active chat ID was saved.
+                restored = true // Prevents re-navigating after later recompositions or rotations.
+                navController.openDestination(DroidMentorRoutes.CHAT_HISTORY) // Preserves Figure 1 return path under Active Chat.
+                navController.openDestination(DroidMentorRoutes.activeChat(initialActiveChatId)) // Reopens the saved conversation directly.
+            } // Ends one-time launch restoration.
+        } // Ends startup session restoration effect.
         NavHost( // Lets AndroidX manage screen lifetime, saved state and the system Back callback.
             navController = navController, // Associates these destinations with exactly one controller.
-            startDestination = DroidMentorRoutes.TITLE, // Starts M2 on Title without implementing M3 active-session persistence.
+            startDestination = DroidMentorRoutes.TITLE, // Keeps Title as the root entry beneath restored or navigated destinations.
         ) { // Registers all five destinations.
             composable(DroidMentorRoutes.TITLE) { // Keeps Title as the root entry for every normal forward path.
                 titleContent( // Supplies only the three forward actions shown in Figure 1.
@@ -79,7 +96,14 @@ fun DroidMentorNavHost( // Allows screen tasks and tests to supply content witho
                 arguments = listOf(navArgument(DroidMentorRoutes.CHAT_ID) { type = NavType.StringType }), // Requires the local ID and lets Navigation decode its route segment.
             ) { entry -> // Receives this conversation's saved back-stack arguments.
                 val chatId = requireNotNull(entry.arguments?.getString(DroidMentorRoutes.CHAT_ID)) // Reads the required decoded ID without asserting with double exclamation marks.
-                activeChatContent(chatId) { navController.popBackStack() } // Returns to the existing history entry when the conversation is explicitly left.
+                LaunchedEffect(chatId) { onActiveChatEntered(chatId) } // Records this conversation as the active session while open.
+                val leaveExplicitly = { // Shares the same explicit-exit cleanup for TopAppBar Back and system Back.
+                    onActiveChatExited() // Clears activeChatId because the user explicitly left the conversation.
+                    navController.popBackStack() // Returns to the existing history entry.
+                    Unit // Satisfies the Unit callback type cleanly.
+                } // Ends explicit-exit handler.
+                BackHandler { leaveExplicitly() } // Intercepts hardware/gesture Back so explicit exit clears activeChatId.
+                activeChatContent(chatId, leaveExplicitly) // Passes the explicit-exit callback to Active Chat.
             } // Ends the active conversation destination.
             composable(DroidMentorRoutes.ABOUT) { // Registers application information separately from Title.
                 aboutContent { navController.popBackStack() } // Returns to the existing Title entry.

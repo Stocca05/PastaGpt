@@ -15,6 +15,7 @@ import org.junit.Test // Marks each factory behaviour test.
 import pt.isel.pdm.droidmentor.data.repository.ChatCommandResult // Supplies harmless local acknowledgements in the fake.
 import pt.isel.pdm.droidmentor.data.repository.ChatReadResult // Supplies typed empty history snapshots.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Implements the replaceable chat contract for tests.
+import pt.isel.pdm.droidmentor.data.repository.SessionRepository // Implements the replaceable session contract for tests.
 import pt.isel.pdm.droidmentor.data.repository.SettingsReadResult // Supplies an unconfigured preferences snapshot.
 import pt.isel.pdm.droidmentor.data.repository.SettingsRepository // Implements the replaceable settings contract for tests.
 import pt.isel.pdm.droidmentor.data.repository.SettingsWriteResult // Supplies unused fake settings command outcomes.
@@ -143,6 +144,12 @@ class DependencyViewModelFactoryTest { // Uses no application, database, prefere
             override suspend fun saveApiKey(value: String) = SettingsWriteResult.STORAGE_ERROR // Performs no credential write in these construction tests.
             override suspend fun clearApiKey() = SettingsWriteResult.SUCCESS // Removes nothing because this fake holds no preference data.
         } // Ends the in-memory settings fake.
+        override val sessionRepository = object : SessionRepository { // Holds no persisted session in factory tests.
+            override val activeChatId: Flow<String?> = flowOf(null) // Emits no active conversation.
+            override suspend fun readActiveChatId(): String? = null // Starts at Title by default.
+            override suspend fun setActiveChatId(chatId: String) = Unit // Ignores writes in factory tests.
+            override suspend fun clearActiveChatId() = Unit // Ignores clears in factory tests.
+        } // Ends the in-memory session fake.
         override val chatRepository = object : ChatRepository { // Supplies empty local snapshots without creating Room.
             override fun observeChats(): Flow<ChatReadResult<List<ChatSummary>>> = flowOf(ChatReadResult.Success(emptyList())) // Represents an empty saved conversation list.
             override fun observeChat(chatId: String): Flow<ChatReadResult<Chat?>> = flowOf(ChatReadResult.Success(null)) // Represents an absent conversation.

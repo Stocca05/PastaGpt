@@ -8,12 +8,15 @@ import io.ktor.client.HttpClient // Shares the configured Ktor client across API
 import kotlinx.coroutines.flow.Flow // Exposes connectivity observation through the replaceable container contract.
 import pt.isel.pdm.droidmentor.data.connectivity.ConnectivityObserver // Supplies the real Android network observation and fresh send checks.
 import pt.isel.pdm.droidmentor.data.local.DroidMentorDatabase // Owns the persistent Room history database.
+import pt.isel.pdm.droidmentor.data.preferences.ActiveSessionDataStore // Reuses the dedicated Preferences DataStore for session restoration.
 import pt.isel.pdm.droidmentor.data.preferences.ApiKeyDataStore // Reuses the single dedicated Preferences DataStore provider.
 import pt.isel.pdm.droidmentor.data.remote.GeminiRemoteDataSource // Sends stateless requests using the shared client and network check.
 import pt.isel.pdm.droidmentor.data.remote.HttpClientFactory // Applies the already verified client configuration.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Exposes the chat repository contract to callers.
+import pt.isel.pdm.droidmentor.data.repository.DataStoreSessionRepository // Persists activeChatId separately from credentials.
 import pt.isel.pdm.droidmentor.data.repository.DataStoreSettingsRepository // Connects preferences to the settings contract by hand.
 import pt.isel.pdm.droidmentor.data.repository.RoomChatRepository // Connects all existing chat components by hand.
+import pt.isel.pdm.droidmentor.data.repository.SessionRepository // Exposes active-session persistence without leaking DataStore.
 import pt.isel.pdm.droidmentor.data.repository.SettingsRepository // Exposes settings without leaking the storage implementation.
 import pt.isel.pdm.droidmentor.di.DependencyContainer // Supplies the contract used by manual ViewModel factories and their tests.
 import pt.isel.pdm.droidmentor.domain.ConnectivityStatus // Uses the existing domain values for network status.
@@ -30,6 +33,11 @@ class DroidMentorApplication : Application(), DependencyContainer { // Android c
     val apiKeyDataStore: DataStore<Preferences> by lazy { // Creates no separate store or credential field in the application.
         ApiKeyDataStore.get(this) // Reuses the provider's application-context instance.
     } // Ends key-store lookup on first access.
+
+    /** Separate Preferences DataStore dedicated to M3-06 active conversation restoration. */
+    val activeSessionDataStore: DataStore<Preferences> by lazy { // Never mixes UI session state with credentials.
+        ActiveSessionDataStore.get(this) // Reuses the single process-owned session store.
+    } // Ends session-store lookup on first access.
 
     /** Shared client owned for this application process rather than recreated per request. */
     val httpClient: HttpClient by lazy { // Defers creating the Ktor engine until a caller needs networking dependencies.
@@ -49,6 +57,11 @@ class DroidMentorApplication : Application(), DependencyContainer { // Android c
     override val settingsRepository: SettingsRepository by lazy { // Implements the replaceable contract while manually selecting the concrete implementation.
         DataStoreSettingsRepository(apiKeyDataStore) // Reads and changes the one app-owned key store.
     } // Ends settings repository construction.
+
+    /** Active-session restoration backed by its own dedicated Preferences DataStore. */
+    override val sessionRepository: SessionRepository by lazy { // Implements M3-06 persistence cleanly via manual DI.
+        DataStoreSessionRepository(activeSessionDataStore) // Uses the separate session store.
+    } // Ends session repository construction.
 
     /** Shared Gemini source using the shared client and actual validated Android connection check. */
     val geminiRemoteDataSource: GeminiRemoteDataSource by lazy { // Keeps credentials and histories per operation rather than in this locator.

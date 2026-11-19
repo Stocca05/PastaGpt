@@ -48,7 +48,7 @@ class DroidMentorApplicationTest { // Makes no API call and never reads or chang
         val copies = withTimeout(10_000) { // Gives every worker a bounded time to initialise or reuse dependencies.
             (1..24).map { // Exercises more than one simultaneous first-access caller.
                 async(Dispatchers.Default) { // Reads the lazy fields from a worker coroutine.
-                    listOf(application.database, application.apiKeyDataStore, application.httpClient, application.connectivityObserver, application.settingsRepository, application.geminiRemoteDataSource, application.chatRepository) // Captures object identities only, never key or message values.
+                    listOf(application.database, application.apiKeyDataStore, application.activeSessionDataStore, application.httpClient, application.connectivityObserver, application.settingsRepository, application.sessionRepository, application.geminiRemoteDataSource, application.chatRepository) // Captures object identities only, never key or message values.
                 } // Ends one concurrent graph lookup.
             }.awaitAll() // Waits until all graph lookups finished.
         } // Ends concurrent construction.

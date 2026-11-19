@@ -2,6 +2,7 @@ package pt.isel.pdm.droidmentor.di // Groups the contracts used for manual depen
 
 import kotlinx.coroutines.flow.Flow // Lets ViewModels observe connectivity without knowing the Android network API.
 import pt.isel.pdm.droidmentor.data.repository.ChatRepository // Exposes chat operations through their replaceable interface.
+import pt.isel.pdm.droidmentor.data.repository.SessionRepository // Exposes active-session persistence separately from credentials.
 import pt.isel.pdm.droidmentor.data.repository.SettingsRepository // Exposes settings operations through their replaceable interface.
 import pt.isel.pdm.droidmentor.domain.ConnectivityStatus // Describes connectivity with the existing domain enum.
 
@@ -12,6 +13,9 @@ interface DependencyContainer { // A test can implement this contract without cr
 
     /** Shared settings operations backed by Preferences DataStore in the app. */
     val settingsRepository: SettingsRepository // Allows settings tests to supply an in-memory fake.
+
+    /** Active conversation ID persistence backed by its own dedicated DataStore. */
+    val sessionRepository: SessionRepository // Keeps active-session restoration separate from key storage.
 
     /** Validated connectivity updates, collected only while a caller needs them. */
     val connectivityStatus: Flow<ConnectivityStatus> // Avoids exposing the concrete Android connectivity observer to ViewModels.

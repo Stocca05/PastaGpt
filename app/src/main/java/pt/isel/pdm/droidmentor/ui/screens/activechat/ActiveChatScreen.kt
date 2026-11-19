@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts // Uses PickVis
 import androidx.core.app.ActivityCompat // Inspects whether Android recommends showing a camera permission rationale.
 import androidx.core.content.ContextCompat // Checks current CAMERA runtime permission status safely.
 import androidx.core.content.FileProvider // Exposes app-private filesDir/images/ target cleanly to the Camera app.
+import androidx.compose.foundation.BorderStroke // Frames mentor bubbles and images with subtle outlines.
 import androidx.compose.foundation.ExperimentalFoundationApi // Enables long-press combinedClickable on message bubbles.
 import androidx.compose.foundation.clickable // Opens full-screen viewer when tapping a message image thumbnail.
 import androidx.compose.foundation.combinedClickable // Opens the bubble context menu on long-press.
@@ -22,22 +23,28 @@ import androidx.compose.foundation.layout.Box // Displays loading, empty, error 
 import androidx.compose.foundation.layout.Column // Places message content above the draft controls.
 import androidx.compose.foundation.layout.PaddingValues // Gives the message list consistent spacing.
 import androidx.compose.foundation.layout.Row // Aligns role-specific bubbles and draft controls.
+import androidx.compose.foundation.layout.Spacer // Separates composer/empty-state elements neatly.
 import androidx.compose.foundation.layout.consumeWindowInsets // Avoids applying already reserved system insets twice.
 import androidx.compose.foundation.layout.fillMaxSize // Uses the available body area.
 import androidx.compose.foundation.layout.fillMaxWidth // Gives rows the full conversation width.
-import androidx.compose.foundation.layout.heightIn // Bounds image thumbnail height cleanly inside message bubbles.
+import androidx.compose.foundation.layout.heightIn // Bounds image thumbnail and button height cleanly.
 import androidx.compose.foundation.layout.imePadding // Keeps the draft above the visible keyboard.
 import androidx.compose.foundation.layout.padding // Applies the existing screen and bubble spacing.
-import androidx.compose.foundation.layout.size // Sizes the compact waiting indicator.
+import androidx.compose.foundation.layout.size // Sizes icons, avatars and waiting indicators.
+import androidx.compose.foundation.layout.width // Separates Send icon and label cleanly.
 import androidx.compose.foundation.layout.widthIn // Keeps message bubbles readable on wider screens.
 import androidx.compose.foundation.lazy.LazyColumn // Displays the complete saved message list efficiently.
 import androidx.compose.foundation.lazy.items // Uses persisted message IDs as stable item keys.
 import androidx.compose.foundation.lazy.rememberLazyListState // Keeps scroll position across ordinary recomposition.
-import androidx.compose.material3.AlertDialog // Confirms message rewrite and message deletion.
+import androidx.compose.foundation.shape.CircleShape // Rounds empty-state mentor emblem cleanly.
+import androidx.compose.foundation.shape.RoundedCornerShape // Shapes modern asymmetric chat bubbles and composer pill.
+import androidx.compose.material3.AlertDialog // Confirms message rewrite, delete and camera permission dialogs.
 import androidx.compose.material3.Button // Provides explicit send and same-row retry actions.
 import androidx.compose.material3.CircularProgressIndicator // Displays loading and in-flight progress.
 import androidx.compose.material3.DropdownMenu // Hosts the Edit, Copy and Delete actions on long-press.
 import androidx.compose.material3.DropdownMenuItem // Renders one context-menu action.
+import androidx.compose.material3.FilledTonalButton // Styles contextual Open Settings CTA calmly inside banner.
+import androidx.compose.material3.HorizontalDivider // Separates composer bar cleanly from the message feed.
 import androidx.compose.material3.Icon // Displays the TopAppBar rename icon.
 import androidx.compose.material3.IconButton // Provides one-tap manual rename in the app bar.
 import androidx.compose.material3.MaterialTheme // Supplies bubble colours, shapes and text styles.
@@ -65,6 +72,8 @@ import androidx.compose.ui.platform.LocalContext // Resolves safe labels in susp
 import androidx.compose.ui.res.painterResource // Loads shared local vector icons.
 import androidx.compose.ui.res.stringResource // Reads all visible action and error labels.
 import androidx.compose.ui.text.AnnotatedString // Wraps copied text for the Compose clipboard API.
+import androidx.compose.ui.text.font.FontWeight // Emphasises participant badge and empty prompt cleanly.
+import androidx.compose.ui.text.style.TextAlign // Centres empty conversation welcome text cleanly.
 import androidx.compose.ui.unit.dp // Sizes bubbles and small status indicators.
 import androidx.compose.ui.window.Dialog // Displays full-screen image previews cleanly.
 import androidx.compose.ui.window.DialogProperties // Enables full-bleed full-screen image preview dialog.
@@ -283,9 +292,17 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                 .consumeWindowInsets(padding) // Marks the reserved insets as already handled.
                 .imePadding(), // Moves input above the keyboard without doubling navigation-bar padding.
         ) { // Displays local loading, error or message state before the draft controls.
-            if (!state.connected) { // Keeps the offline notice visible independently of saved history.
-                Surface(color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.fillMaxWidth()) { // Uses explicit contrast pair for light and dark themes.
-                    Text(stringResource(R.string.notice_offline), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Explains that new interactions are unavailable while history stays visible.
+            if (!state.connected) { // Keeps the offline notice visible inside a soft rounded pill banner.
+                Surface( // Uses explicit light/dark contrast container.
+                    color = MaterialTheme.colorScheme.errorContainer, // Error container background.
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer, // High-contrast text colour.
+                    shape = RoundedCornerShape(14.dp), // Soft rounded banner card.
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = 4.dp), // Gives breathing room around edges.
+                ) { // Places warning icon beside offline banner message.
+                    Row(Modifier.padding(DroidMentorSpacing.medium), horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), verticalAlignment = Alignment.CenterVertically) { // Aligns icon and notice text.
+                        Icon(painterResource(R.drawable.ic_error), contentDescription = null, modifier = Modifier.size(18.dp)) // Visual warning cue.
+                        Text(stringResource(R.string.notice_offline), style = MaterialTheme.typography.bodyMedium) // Explains new interactions are unavailable while history stays visible.
+                    } // Ends offline banner row.
                 } // Ends the offline banner.
             } // Ends connectivity feedback.
             if (!state.loading && (state.settingsError || !state.hasKey || state.hasInvalidKeyFailure)) { // Explains missing, unreadable or rejected key with a direct Settings action.
@@ -294,14 +311,19 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     !state.hasKey -> R.string.notice_missing_key // Explains no API key is configured yet.
                     else -> R.string.notice_rejected_key // Explains a 401/403 authentication failure happened.
                 } // Ends contextual key message choice.
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.fillMaxWidth()) { // Ensures light/dark WCAG contrast on the banner.
+                Surface( // Frames the guidance and direct Settings button cleanly.
+                    color = MaterialTheme.colorScheme.secondaryContainer, // Soft tonal background.
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer, // Explicit light/dark contrast.
+                    shape = RoundedCornerShape(14.dp), // Rounded modern banner card.
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = 4.dp), // Inset cleanly from edges.
+                ) { // Starts contextual banner row.
                     Row( // Places explanation text beside the direct Open Settings shortcut.
                         modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies comfortable banner padding.
                         horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates copy and action button.
                         verticalAlignment = Alignment.CenterVertically, // Centres the action beside wrapping text.
                     ) { // Starts contextual banner row.
-                        Text(stringResource(keyNotice), modifier = Modifier.weight(1f)) // Keeps configuration feedback visible while the draft stays editable.
-                        TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.action_open_settings)) } // Leads straight to Settings with zero dead ends.
+                        Text(stringResource(keyNotice), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium) // Keeps configuration feedback visible while the draft stays editable.
+                        FilledTonalButton(onClick = onOpenSettings, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.action_open_settings)) } // Leads straight to Settings cleanly.
                     } // Ends contextual banner row.
                 } // Ends key-status banner container.
             } // Ends key-status feedback.
@@ -310,7 +332,18 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     state.loading -> CircularProgressIndicator() // Waits for the initial Room snapshots.
                     state.storageError -> Text(stringResource(R.string.chat_read_error)) // Reports a local history query failure.
                     state.chat == null -> Text(stringResource(R.string.notice_not_found)) // Reports a conversation removed from local storage.
-                    state.messages.isEmpty() -> Text(stringResource(R.string.chat_empty)) // Displays a new locally saved conversation without fake sample messages.
+                    state.messages.isEmpty() -> Column( // Displays welcoming empty mentor badge and prompt.
+                        modifier = Modifier.padding(DroidMentorSpacing.large), // Comfortable padding around prompt.
+                        horizontalAlignment = Alignment.CenterHorizontally, // Centres emblem and prompt.
+                        verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium), // Separates emblem and label.
+                    ) { // Starts empty conversation hero.
+                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(64.dp)) { // Soft mentor avatar circle.
+                            Box(contentAlignment = Alignment.Center) { // Centres vector mark.
+                                Icon(painterResource(R.drawable.ic_mentor), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(32.dp)) // Decorative mentor mark.
+                            } // Ends Box.
+                        } // Ends circular badge.
+                        Text(stringResource(R.string.chat_empty), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant) // Displays welcome prompt cleanly.
+                    } // Ends welcoming empty conversation layout.
                     else -> LazyColumn( // Displays all saved messages in the repository's sequence order.
                         modifier = Modifier.fillMaxSize(), // Uses the body area above the input.
                         state = listState, // Shares the list state with automatic scrolling.
@@ -344,63 +377,86 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
                     Text(stringResource(R.string.chat_waiting)) // Explains that the saved attempt is still pending.
                 } // Ends the waiting indicator.
             } // Ends in-flight feedback.
-            state.pendingImagePath?.let { path -> // Displays uncommitted gallery/camera thumbnail bar above composer with a remove control.
-                val previewFile = remember(path) { model.resolveAttachmentFile(path) } // Resolves app-private image file for composer preview.
-                Surface(color = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium)) { // Explicit light/dark contrast.
-                    Row( // Groups thumbnail, attached indicator and explicit removal action.
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small), // Applies balanced spacing.
-                        horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates preview elements cleanly.
-                        verticalAlignment = Alignment.CenterVertically, // Aligns thumbnail, label and button cleanly.
-                    ) { // Starts pending attachment row.
-                        if (previewFile != null && previewFile.exists()) { // Shows compact Coil thumbnail when file exists on disk.
-                            AsyncImage( // Renders small composer preview thumbnail.
-                                model = previewFile, // Loads app-private preview file.
-                                contentDescription = stringResource(R.string.chat_image_attachment_cd), // Accessibility label.
-                                contentScale = ContentScale.Crop, // Fills square preview cleanly.
-                                modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small), // Keeps composer bar compact.
-                            ) // Ends composer thumbnail.
-                        } // Ends optional thumbnail check.
-                        Text(stringResource(R.string.chat_image_attached), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)) // Confirms image attachment cleanly without leaking file paths.
-                        TextButton(onClick = model::clearPendingImage) { Text(stringResource(R.string.chat_remove_attachment)) } // Deletes uncommitted copy on disk and clears state.
-                    } // Ends pending attachment row.
-                } // Ends attachment bar container.
-            } // Ends pending attachment check.
-            Row( // Places gallery button, editable draft and explicit send action together.
-                modifier = Modifier.fillMaxWidth().padding(DroidMentorSpacing.medium), // Keeps the input and tap target clear of the screen edges.
-                horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), // Separates input and sending.
-                verticalAlignment = Alignment.Bottom, // Aligns controls with the bottom of a multiline draft.
-            ) { // Uses ViewModel commands rather than direct network calls.
-                val inputEnabled = !state.loading && !state.storageError && state.chat != null && !state.working && !state.pending // Enables composer controls cleanly.
-                IconButton( // Launches Photo Picker without runtime permissions (M3-11).
-                    onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, // Selects images only from system Photo Picker.
-                    enabled = inputEnabled, // Disables picking while loading or actively sending.
-                ) { // Ends gallery IconButton setup.
-                    Icon(painterResource(R.drawable.ic_photo_library), contentDescription = stringResource(R.string.chat_attach_gallery)) // Labels icon for accessibility.
-                } // Ends gallery attach button.
-                IconButton( // Checks CAMERA permission, shows rationale when appropriate, or launches TakePicture via FileProvider (M3-12).
-                    onClick = { // Evaluates permission state before calling TakePicture.
-                        when { // Branches on granted vs rationale vs initial prompt.
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> launchCamera() // Launches camera immediately when already permitted.
-                            shouldShowCameraRationale(context) -> showCameraRationale = true // Shows rationale first if previously denied.
-                            else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA) // Requests runtime permission from Android.
-                        } // Ends permission check.
-                    }, // Ends camera tap handler.
-                    enabled = inputEnabled, // Disables capture while loading or actively sending.
-                ) { // Ends camera IconButton setup.
-                    Icon(painterResource(R.drawable.ic_camera), contentDescription = stringResource(R.string.chat_capture_camera)) // Labels camera icon for accessibility.
-                } // Ends camera capture button.
-                OutlinedTextField( // Keeps unsent user text only in memory.
-                    value = state.draft, // Displays the controlled draft without replacing it after a rejected command.
-                    onValueChange = model::updateDraft, // Routes editing through the ViewModel's command guard.
-                    modifier = Modifier.weight(1f), // Leaves space for the Send action.
-                    label = { Text(stringResource(R.string.chat_draft_label)) }, // Labels message input.
-                    enabled = inputEnabled, // Keeps the draft editable after a failed attempt or while offline.
-                    maxLines = 5, // Allows small Kotlin examples and multiline questions without hiding the whole message list.
-                ) // Ends in-memory draft input.
-                Button(onClick = model::send, enabled = state.canSend) { // Blocks blank, pending and unresolved-failure sends through the shared state guard.
-                    Text(stringResource(R.string.chat_send)) // Names the explicit interaction action.
-                } // Ends explicit sending.
-            } // Ends draft controls.
+            Surface( // Wraps composer bar in a calm tonal container separated from messages cleanly.
+                color = MaterialTheme.colorScheme.surfaceContainerLow, // Distinct subtle bottom surface.
+                tonalElevation = 2.dp, // Gentle Material 3 lift for input controls.
+                modifier = Modifier.fillMaxWidth(), // Spans full screen width.
+            ) { // Stacks divider, optional pending attachment bar and composer row.
+                Column(Modifier.fillMaxWidth()) { // Organizes divider, preview chip and composer controls.
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) // Crisp divider above composer.
+                    state.pendingImagePath?.let { path -> // Displays uncommitted gallery/camera thumbnail bar cleanly.
+                        val previewFile = remember(path) { model.resolveAttachmentFile(path) } // Resolves app-private image file.
+                        Surface( // Highlights attached image inside rounded secondaryContainer card.
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth().padding(start = DroidMentorSpacing.medium, end = DroidMentorSpacing.medium, top = DroidMentorSpacing.small),
+                        ) { // Groups thumbnail, attached indicator and explicit removal action.
+                            Row( // Aligns thumbnail, label and remove CTA cleanly.
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.medium, vertical = DroidMentorSpacing.small),
+                                horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) { // Starts pending attachment row.
+                                if (previewFile != null && previewFile.exists()) { // Shows compact Coil thumbnail when file exists.
+                                    AsyncImage(
+                                        model = previewFile,
+                                        contentDescription = stringResource(R.string.chat_image_attachment_cd),
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)),
+                                    ) // Ends composer thumbnail.
+                                } // Ends optional thumbnail check.
+                                Text(stringResource(R.string.chat_image_attached), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f)) // Confirms attachment cleanly.
+                                TextButton(onClick = model::clearPendingImage) { Text(stringResource(R.string.chat_remove_attachment)) } // Deletes uncommitted disk copy and clears state.
+                            } // Ends pending attachment row.
+                        } // Ends attachment bar container.
+                    } // Ends pending attachment check.
+                    Row( // Places gallery/camera icons, rounded pill text input and explicit Send CTA together.
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DroidMentorSpacing.small, vertical = DroidMentorSpacing.small),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.Bottom,
+                    ) { // Uses ViewModel commands rather than direct network calls.
+                        val inputEnabled = !state.loading && !state.storageError && state.chat != null && !state.working && !state.pending // Enables composer controls cleanly.
+                        IconButton( // Launches Photo Picker without runtime permissions (M3-11).
+                            onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            enabled = inputEnabled,
+                        ) { // Ends gallery IconButton setup.
+                            Icon(painterResource(R.drawable.ic_photo_library), contentDescription = stringResource(R.string.chat_attach_gallery), tint = MaterialTheme.colorScheme.onSurfaceVariant) // Labels icon for accessibility.
+                        } // Ends gallery attach button.
+                        IconButton( // Checks CAMERA permission, shows rationale when appropriate, or launches TakePicture via FileProvider (M3-12).
+                            onClick = { // Evaluates permission state before calling TakePicture.
+                                when { // Branches on granted vs rationale vs initial prompt.
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED -> launchCamera() // Launches camera immediately when already permitted.
+                                    shouldShowCameraRationale(context) -> showCameraRationale = true // Shows rationale first if previously denied.
+                                    else -> cameraPermissionLauncher.launch(Manifest.permission.CAMERA) // Requests runtime permission from Android.
+                                } // Ends permission check.
+                            }, // Ends camera tap handler.
+                            enabled = inputEnabled,
+                        ) { // Ends camera IconButton setup.
+                            Icon(painterResource(R.drawable.ic_camera), contentDescription = stringResource(R.string.chat_capture_camera), tint = MaterialTheme.colorScheme.onSurfaceVariant) // Labels camera icon for accessibility.
+                        } // Ends camera capture button.
+                        OutlinedTextField( // Modern rounded pill input kept only in memory and SavedStateHandle.
+                            value = state.draft,
+                            onValueChange = model::updateDraft,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(24.dp),
+                            label = { Text(stringResource(R.string.chat_draft_label)) },
+                            enabled = inputEnabled,
+                            maxLines = 5,
+                        ) // Ends in-memory draft input.
+                        Button( // Rounded pill Send button with paper-plane icon and >=48dp height.
+                            onClick = model::send,
+                            enabled = state.canSend,
+                            shape = RoundedCornerShape(24.dp),
+                            contentPadding = PaddingValues(horizontal = DroidMentorSpacing.medium, vertical = 12.dp),
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) { // Places paper-plane icon beside Send label.
+                            Icon(painterResource(R.drawable.ic_send), contentDescription = null, modifier = Modifier.size(18.dp)) // Decorative send icon.
+                            Spacer(Modifier.width(6.dp)) // Small gap before Send text.
+                            Text(stringResource(R.string.chat_send)) // Preserves exact "Send" label.
+                        } // Ends explicit sending.
+                    } // Ends draft controls.
+                } // Ends composer Column.
+            } // Ends composer Surface container.
         } // Ends keyboard-aware conversation layout.
     } // Ends the selected conversation frame.
 } // Ends the active chat screen.
@@ -422,22 +478,42 @@ private fun MessageBubble( // Receives callbacks from the screen for retry, imag
 ) { // Starts the role-specific bubble layout.
     val user = message.role == Role.USER // Chooses author alignment and theme colours.
     var menuOpen by remember(message.id) { mutableStateOf(false) } // Controls the long-press context menu for this bubble.
+    val bubbleShape = RoundedCornerShape( // Asymmetric speech-bubble corners give clear visual turn direction.
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = if (user) 20.dp else 6.dp,
+        bottomEnd = if (user) 6.dp else 20.dp,
+    ) // Ends chat bubble shape.
+    val isFailedUser = user && message.status == MessageStatus.FAILED // Highlights unresolved user failure gently.
+    val bubbleColor = when { // Chooses high-contrast container colour by author and state.
+        isFailedUser -> MaterialTheme.colorScheme.errorContainer // Highlights failed send cleanly.
+        user -> MaterialTheme.colorScheme.primaryContainer // User message accent colour.
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh // Clean neutral surface for mentor replies.
+    } // Ends bubble colour choice.
+    val bubbleContentColor = when { // Pairs contrasting text/icon colour with bubbleColor.
+        isFailedUser -> MaterialTheme.colorScheme.onErrorContainer // Contrast on errorContainer.
+        user -> MaterialTheme.colorScheme.onPrimaryContainer // Contrast on primaryContainer.
+        else -> MaterialTheme.colorScheme.onSurface // Contrast on neutral reply container.
+    } // Ends content colour choice.
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (user) Arrangement.End else Arrangement.Start) { // Separates user and mentor sides.
         Box { // Anchors the DropdownMenu directly to this bubble.
-            Surface( // Draws one role-specific saved text bubble.
+            Surface( // Draws polished asymmetric message bubble with subtle outline on mentor replies.
                 modifier = Modifier
-                    .widthIn(max = 480.dp) // Limits long lines on larger devices while allowing narrow screens to shrink.
-                    .clip(MaterialTheme.shapes.medium) // Clips long-press feedback to the bubble corners.
-                    .combinedClickable( // Opens the context menu on long-press without interfering with scrolling.
-                        onClick = {}, // Leaves ordinary taps harmless.
+                    .widthIn(max = 460.dp) // Limits long lines on tablets while shrinking nicely on phones.
+                    .clip(bubbleShape) // Clips long-press ripple to asymmetric bubble corners.
+                    .combinedClickable( // Opens context menu on long-press without interfering with scrolling.
+                        onClick = {}, // Leaves ordinary bubble taps harmless.
                         onLongClick = { menuOpen = true }, // Reveals Edit/Copy/Delete on user turns or Copy on model turns.
                     ), // Ends long-press handler.
-                shape = MaterialTheme.shapes.medium, // Uses the app's existing rounded shape.
-                color = if (user) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer, // Uses theme-provided contrast for each participant.
+                shape = bubbleShape, // Uses asymmetric rounded bubble shape.
+                color = bubbleColor, // Applies role/status surface tint.
+                contentColor = bubbleContentColor, // Applies crisp matching foreground colour.
+                tonalElevation = if (user) 1.dp else 0.dp, // Lifts user bubbles gently.
+                border = if (!user) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null, // Crisp subtle outline on mentor replies.
             ) { // Displays saved content and any persisted failure.
                 Column(Modifier.padding(DroidMentorSpacing.medium), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups author, status, image, text and error feedback.
                     Row(horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), verticalAlignment = Alignment.CenterVertically) { // Displays participant alongside per-message status.
-                        Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium) // Identifies the stored participant.
+                        Text(stringResource(if (user) R.string.chat_you else R.string.chat_mentor), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) // Identifies participant strongly.
                         if (user) MessageStatusBadge(message.status) // Renders distinct SENDING, SENT or FAILED indicator for each user bubble.
                     } // Ends bubble header row.
                     message.imagePath?.let { path -> // Displays attached image thumbnail with loading placeholder and missing-file fallback (M3-14).
@@ -448,9 +524,9 @@ private fun MessageBubble( // Receives callbacks from the screen for retry, imag
                                 contentDescription = stringResource(R.string.chat_image_attachment_cd), // Accessibility label for image preview.
                                 contentScale = ContentScale.Crop, // Crops preview cleanly inside bubble bounds.
                                 modifier = Modifier
-                                    .fillMaxWidth() // Spans bubble width up to max 480dp.
+                                    .fillMaxWidth() // Spans bubble width cleanly.
                                     .heightIn(max = 220.dp) // Keeps long images compact in the feed.
-                                    .clip(MaterialTheme.shapes.small) // Rounds thumbnail corners neatly.
+                                    .clip(RoundedCornerShape(14.dp)) // Matches modern bubble curvature cleanly.
                                     .clickable { onOpenImage(resolvedFile) }, // Opens full-screen viewer on tap.
                                 loading = { // Shows compact loading placeholder while Coil decodes bitmap off main thread.
                                     Box(Modifier.fillMaxWidth().heightIn(min = 100.dp), contentAlignment = Alignment.Center) { // Centers placeholder spinner.

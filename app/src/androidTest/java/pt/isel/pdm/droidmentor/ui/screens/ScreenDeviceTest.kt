@@ -405,7 +405,7 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithContentDescription("Rename conversation").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // TopAppBar button >= 48dp.
         compose.onNodeWithContentDescription("Attach image").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // Gallery button >= 48dp.
         compose.onNodeWithContentDescription("Take photo").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // Camera button >= 48dp.
-        compose.onNodeWithText("Back").assertHeightIsAtLeast(48.dp) // Back control accessible size.
+        compose.onNodeWithContentDescription("Back").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp) // Back IconButton accessible size.
     } // Ends dark theme and accessibility device verification.
 
     private fun showChat(onOpenSettings: () -> Unit = {}): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.

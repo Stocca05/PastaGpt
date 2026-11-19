@@ -6,25 +6,30 @@ import androidx.compose.foundation.layout.Arrangement // Separates saved cards a
 import androidx.compose.foundation.layout.Box // Aligns the swipe background icon.
 import androidx.compose.foundation.layout.Column // Groups a chat's title, preview and date.
 import androidx.compose.foundation.layout.PaddingValues // Reserves list space around cards and above the floating action.
-import androidx.compose.foundation.layout.Row // Places card text beside the delete button.
+import androidx.compose.foundation.layout.Row // Places avatar, card text and action icons cleanly.
+import androidx.compose.foundation.layout.Spacer // Separates FAB icon and label cleanly.
 import androidx.compose.foundation.layout.fillMaxSize // Uses the screen's body area.
 import androidx.compose.foundation.layout.fillMaxWidth // Gives saved cards a usable tap area.
 import androidx.compose.foundation.layout.padding // Applies app bar and card spacing.
-import androidx.compose.foundation.layout.size // Sizes the decorative empty-history mark.
+import androidx.compose.foundation.layout.size // Sizes circular chat avatars and empty-history emblem.
+import androidx.compose.foundation.layout.width // Gaps FAB icon and label cleanly.
 import androidx.compose.foundation.lazy.LazyColumn // Displays saved history without laying out all rows at once.
 import androidx.compose.foundation.lazy.items // Uses stable local IDs as list keys.
 import androidx.compose.foundation.rememberScrollState // Preserves empty-state scroll across rotation.
+import androidx.compose.foundation.shape.CircleShape // Rounds chat list avatars and empty emblem.
+import androidx.compose.foundation.shape.RoundedCornerShape // Smooths elevated chat cards and FAB corners.
 import androidx.compose.foundation.verticalScroll // Keeps empty history reachable in landscape orientation.
 import androidx.compose.material3.AlertDialog // Confirms before deleting a conversation.
-import androidx.compose.material3.Card // Makes each saved conversation a clear selectable item.
 import androidx.compose.material3.CircularProgressIndicator // Shows the initial local query.
-import androidx.compose.material3.FloatingActionButton // Provides the required new-conversation action.
-import androidx.compose.material3.Icon // Reuses the local conversation mark and delete icon.
+import androidx.compose.material3.ElevatedCard // Gives each conversation card subtle depth.
+import androidx.compose.material3.ExtendedFloatingActionButton // Displays '+' icon beside New conversation CTA.
+import androidx.compose.material3.Icon // Reuses the local conversation mark and action icons.
 import androidx.compose.material3.IconButton // Provides an accessible one-tap delete action on each card.
 import androidx.compose.material3.MaterialTheme // Uses the shared typography and colours.
 import androidx.compose.material3.SnackbarDuration // Keeps the undo snackbar visible for the full undo window.
 import androidx.compose.material3.SnackbarHostState // Displays safe local command feedback.
 import androidx.compose.material3.SnackbarResult // Detects when the user taps Undo in the snackbar.
+import androidx.compose.material3.Surface // Frames chat avatars and empty state emblem cleanly.
 import androidx.compose.material3.SwipeToDismissBox // Supports swipe-to-delete on saved conversations.
 import androidx.compose.material3.SwipeToDismissBoxValue // Identifies the end-to-start delete swipe direction.
 import androidx.compose.material3.Text // Displays saved metadata and resource-backed labels.
@@ -42,6 +47,8 @@ import androidx.compose.ui.draw.clip // Rounds the swipe reveal background to ma
 import androidx.compose.ui.platform.LocalContext // Resolves snackbar resource text in event handlers.
 import androidx.compose.ui.res.painterResource // Loads the existing vector mark.
 import androidx.compose.ui.res.stringResource // Resolves visible navigation and list labels.
+import androidx.compose.ui.text.font.FontWeight // Highlights conversation titles clearly.
+import androidx.compose.ui.text.style.TextAlign // Centres empty state copy cleanly.
 import androidx.compose.ui.text.style.TextOverflow // Keeps previews short without altering saved message text.
 import androidx.compose.ui.unit.dp // Reserves space above the floating action and sizes the illustration.
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes saved summaries while the destination is active.
@@ -120,22 +127,32 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
             onBack() // Returns to the existing Title entry.
         }, // Keeps controller access outside the screen.
         snackbarHostState = snackbar, // Connects command feedback to this frame.
-        floatingActionButton = { // Supplies one explicit local creation action.
-            FloatingActionButton(onClick = { model.createChat(newTitle) }) { // The ViewModel rejects repeated taps while creation is pending.
-                Text(stringResource(if (state.creating) R.string.history_creating else R.string.history_new_chat), modifier = Modifier.padding(DroidMentorSpacing.medium)) // Displays clear action or progress text.
-            } // Ends the new-conversation action.
+        floatingActionButton = { // Supplies polished Extended FAB with '+' icon and clear label.
+            ExtendedFloatingActionButton( // Combines clear icon and visible CTA without clipping.
+                onClick = { model.createChat(newTitle) }, // ViewModel prevents duplicate overlapping creations.
+                shape = RoundedCornerShape(16.dp), // Material 3 rounded FAB silhouette.
+            ) { // Displays '+' icon beside creation label.
+                Icon(painterResource(R.drawable.ic_add), contentDescription = null, modifier = Modifier.size(20.dp)) // Leading '+' icon.
+                Spacer(Modifier.width(DroidMentorSpacing.small)) // Balanced spacing before text.
+                Text(stringResource(if (state.creating) R.string.history_creating else R.string.history_new_chat)) // Preserves exact creation text.
+            } // Ends ExtendedFloatingActionButton.
         }, // Ends the floating action slot.
     ) { padding -> // Receives space reserved for the app and system bars.
         when { // Distinguishes initial load, failed read, empty history and a saved list.
             state.loading -> Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { CircularProgressIndicator() } // Shows progress until the first local snapshot.
             state.storageError -> Text(stringResource(R.string.history_read_error), modifier = Modifier.padding(padding).padding(DroidMentorSpacing.large)) // Never disguises unreadable storage as empty history.
-            state.visibleChats.isEmpty() -> Column( // Displays a small illustrated empty state without fake sample rows.
+            state.visibleChats.isEmpty() -> Column( // Displays a calm empty state card without fake sample rows.
                 modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(DroidMentorSpacing.large), // Respects bars and stays scrollable in landscape.
-                horizontalAlignment = Alignment.CenterHorizontally, // Centres the empty-history message.
-                verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium, Alignment.CenterVertically), // Separates the decorative mark and readable text.
-            ) { // Displays the simple empty-history content.
-                Icon(painterResource(R.drawable.ic_mentor), contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary) // Reuses a decorative local vector rather than an external image.
-                Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.titleMedium) // Explains how to start using saved conversations.
+                horizontalAlignment = Alignment.CenterHorizontally, // Centres empty-history content.
+                verticalArrangement = Arrangement.Center, // Centres vertically cleanly.
+            ) { // Displays framed empty-history badge and prompt.
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(72.dp)) { // Soft emblem circle.
+                    Box(contentAlignment = Alignment.Center) { // Centres mentor icon.
+                        Icon(painterResource(R.drawable.ic_mentor), contentDescription = null, modifier = Modifier.size(38.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer) // Decorative local emblem.
+                    } // Ends icon Box.
+                } // Ends circular badge.
+                Spacer(Modifier.size(DroidMentorSpacing.medium)) // Clean spacing below emblem.
+                Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center) // Explains how to start using saved conversations.
             } // Ends the empty-history layout.
             else -> LazyColumn( // Displays locally saved summaries with stable selection IDs.
                 modifier = Modifier.fillMaxSize().padding(padding), // Uses only the body area supplied by the scaffold.
@@ -176,20 +193,26 @@ private fun ChatSummaryItem( // Keeps card layout and swipe gesture readable and
         enableDismissFromStartToEnd = false, // Restricts deletion to a deliberate swipe from the trailing edge.
         backgroundContent = { // Reveals an error-tinted delete icon behind the swiped card.
             Box( // Aligns the trash icon on the trailing edge of the swipe background.
-                modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = DroidMentorSpacing.large), // Matches the card's rounded corners.
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.errorContainer).padding(horizontal = DroidMentorSpacing.large), // Matches the card's rounded corners.
                 contentAlignment = Alignment.CenterEnd, // Places the icon where the swipe reveals it first.
             ) { // Renders the delete cue inside the reveal container.
                 Icon(painterResource(R.drawable.ic_delete), contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer) // Uses decorative icon because the visible card button provides the accessible label.
             } // Ends swipe background box.
         }, // Ends swipe reveal content.
-    ) { // Renders the foreground conversation card.
-        Card(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { // Passes only the selected Room ID to navigation.
-            Row( // Places saved metadata beside an accessible delete button.
-                modifier = Modifier.fillMaxWidth().padding(start = DroidMentorSpacing.medium, top = DroidMentorSpacing.medium, bottom = DroidMentorSpacing.medium, end = DroidMentorSpacing.small), // Keeps balanced padding around the trailing IconButton.
-                verticalAlignment = Alignment.CenterVertically, // Centres the trailing delete button vertically.
+    ) { // Renders the foreground elevated conversation card.
+        ElevatedCard(onClick = onOpen, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) { // Gives subtle elevation and clean rounded corners.
+            Row( // Places circular avatar, saved metadata and action icons cleanly.
+                modifier = Modifier.fillMaxWidth().padding(start = DroidMentorSpacing.medium, top = DroidMentorSpacing.medium, bottom = DroidMentorSpacing.medium, end = DroidMentorSpacing.small), // Keeps balanced padding around trailing buttons.
+                verticalAlignment = Alignment.CenterVertically, // Centres avatar and trailing buttons vertically.
             ) { // Starts card content row.
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small)) { // Groups this chat's saved metadata.
-                    Text(summary.chat.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) // Displays the saved title without altering storage.
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(42.dp)) { // Chat row avatar badge.
+                    Box(contentAlignment = Alignment.Center) { // Centres chat bubble icon.
+                        Icon(painterResource(R.drawable.ic_chat_bubble), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp)) // Decorative avatar mark.
+                    } // Ends icon Box.
+                } // Ends avatar circle.
+                Spacer(Modifier.width(DroidMentorSpacing.medium)) // Separates avatar from conversation text.
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) { // Groups title, preview and timestamp.
+                    Text(summary.chat.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis) // Displays saved title clearly.
                     val last = summary.lastMessage // Inspects optional last message for text or image preview fallback.
                     val previewText = when { // Avoids blank lines when the latest turn was an image-only question.
                         last == null -> stringResource(R.string.history_no_messages) // Empty conversation fallback.
@@ -197,14 +220,14 @@ private fun ChatSummaryItem( // Keeps card layout and swipe gesture readable and
                         last.imagePath != null -> stringResource(R.string.chat_image_attachment_cd) // Photo-only message label.
                         else -> stringResource(R.string.history_no_messages) // Safe fallback.
                     } // Ends preview text selection.
-                    Text(previewText, maxLines = 2, overflow = TextOverflow.Ellipsis) // Shows a short preview while keeping full saved text untouched.
-                    Text(DateUtils.getRelativeTimeSpanString(summary.chat.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), style = MaterialTheme.typography.bodySmall) // Formats only the persisted recency timestamp.
+                    Text(previewText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis) // Softer preview hierarchy.
+                    Text(DateUtils.getRelativeTimeSpanString(summary.chat.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) // Relative recency caption.
                 } // Ends the saved metadata layout.
                 IconButton(onClick = onRename) { // Provides a 48dp accessible tap target for manual renaming.
-                    Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.chat_rename_action)) // Labels the action for screen readers and UI tests.
+                    Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.chat_rename_action), tint = MaterialTheme.colorScheme.onSurfaceVariant) // Subtle edit action tint.
                 } // Ends rename button.
                 IconButton(onClick = onDelete) { // Provides a 48dp accessible tap target for deletion without requiring a swipe.
-                    Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.history_delete_action)) // Labels the action for screen readers and UI tests.
+                    Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.history_delete_action), tint = MaterialTheme.colorScheme.error) // Clear destructive delete tint.
                 } // Ends trailing delete button.
             } // Ends card content row.
         } // Ends the selected conversation card.

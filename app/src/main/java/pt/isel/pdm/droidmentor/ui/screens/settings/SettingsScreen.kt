@@ -1,105 +1,150 @@
 package pt.isel.pdm.droidmentor.ui.screens.settings // Groups the key configuration screen.
 
-import androidx.compose.foundation.layout.Arrangement // Separates status, input and actions.
-import androidx.compose.foundation.layout.Column // Uses a simple vertical form.
-import androidx.compose.foundation.layout.fillMaxSize // Uses the screen's content area.
-import androidx.compose.foundation.layout.fillMaxWidth // Gives the key field and actions a usable width.
-import androidx.compose.foundation.layout.padding // Applies reserved and shared screen spacing.
-import androidx.compose.foundation.rememberScrollState // Keeps the form's scroll position during recomposition.
-import androidx.compose.foundation.text.KeyboardOptions // Selects a password keyboard without autocomplete input suggestions.
-import androidx.compose.foundation.verticalScroll // Keeps all actions reachable with a larger font or smaller height.
-import androidx.compose.material3.Button // Provides the explicit save action.
-import androidx.compose.material3.CircularProgressIndicator // Indicates an initial read or write in progress.
-import androidx.compose.material3.OutlinedButton // Provides the explicit clear action.
-import androidx.compose.material3.OutlinedTextField // Displays the controlled in-memory key draft.
-import androidx.compose.material3.SnackbarHostState // Displays one-shot safe feedback.
-import androidx.compose.material3.Text // Displays resource-backed form labels.
-import androidx.compose.material3.TextButton // Toggles visibility for newly entered input.
-import androidx.compose.runtime.Composable // Describes the form's UI.
-import androidx.compose.runtime.getValue // Reads Compose state delegates.
-import androidx.compose.runtime.mutableStateOf // Holds the visibility toggle locally in memory.
-import androidx.compose.runtime.remember // Retains visibility and snackbar state without saving the key.
-import androidx.compose.runtime.setValue // Updates the local visibility toggle.
-import androidx.compose.ui.Modifier // Describes form layout.
-import androidx.compose.ui.platform.LocalContext // Resolves snackbar strings inside a suspend event handler.
-import androidx.compose.ui.res.stringResource // Resolves visible form text.
-import androidx.compose.ui.text.input.KeyboardType // Uses password input semantics for the keyboard.
-import androidx.compose.ui.text.input.PasswordVisualTransformation // Masks newly typed input by default.
-import androidx.compose.ui.text.input.VisualTransformation // Displays the draft only after an explicit visibility toggle.
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes state only while the destination is active.
-import androidx.lifecycle.viewmodel.compose.viewModel // Obtains the owner-scoped model using its manual factory.
-import pt.isel.pdm.droidmentor.R // Supplies form strings and safe notices.
-import pt.isel.pdm.droidmentor.ui.components.EventEffect // Collects notices with the screen lifecycle.
-import pt.isel.pdm.droidmentor.ui.components.ScreenScaffold // Supplies the title, Back action and snackbar host.
-import pt.isel.pdm.droidmentor.ui.components.UiEvent // Distinguishes safe feedback from unrelated event types.
-import pt.isel.pdm.droidmentor.ui.components.messageResource // Converts typed feedback into safe Android resources.
-import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Reuses the shared screen spacing.
+import androidx.compose.foundation.layout.Arrangement // Separates status card, input card and actions cleanly.
+import androidx.compose.foundation.layout.Column // Uses clear vertical form layout.
+import androidx.compose.foundation.layout.Row // Aligns status icon beside status headline cleanly.
+import androidx.compose.foundation.layout.fillMaxSize // Uses screen content area.
+import androidx.compose.foundation.layout.fillMaxWidth // Gives cards and actions full width.
+import androidx.compose.foundation.layout.height // Gives primary action buttons comfortable >=48dp touch height.
+import androidx.compose.foundation.layout.padding // Applies consistent outer and card padding.
+import androidx.compose.foundation.layout.size // Sizes status badge icon neatly.
+import androidx.compose.foundation.rememberScrollState // Keeps form scroll position across recomposition.
+import androidx.compose.foundation.shape.RoundedCornerShape // Rounds status card, field and buttons smoothly.
+import androidx.compose.foundation.text.KeyboardOptions // Uses password keyboard without autocomplete suggestions.
+import androidx.compose.foundation.verticalScroll // Keeps form reachable on landscape or large font sizes.
+import androidx.compose.material3.Button // Primary save action.
+import androidx.compose.material3.CircularProgressIndicator // Shows storage read/write progress.
+import androidx.compose.material3.ElevatedCard // Groups key configuration form cleanly.
+import androidx.compose.material3.Icon // Displays visual configured/warning status icon.
+import androidx.compose.material3.MaterialTheme // Uses shared colour scheme and typography.
+import androidx.compose.material3.OutlinedButton // Secondary clear-key action.
+import androidx.compose.material3.OutlinedTextField // Controlled in-memory draft input.
+import androidx.compose.material3.SnackbarHostState // Hosts safe typed notices.
+import androidx.compose.material3.Surface // Colours status card clearly based on configuration state.
+import androidx.compose.material3.Text // Displays resource-backed labels.
+import androidx.compose.material3.TextButton // Toggles draft visibility or cancels replacement.
+import androidx.compose.runtime.Composable // Describes UI declaratively.
+import androidx.compose.runtime.getValue // Reads lifecycle state cleanly.
+import androidx.compose.runtime.mutableStateOf // Holds transient visibility flag in memory.
+import androidx.compose.runtime.remember // Retains UI-only toggles without persisting credentials.
+import androidx.compose.runtime.setValue // Toggles draft visibility cleanly.
+import androidx.compose.ui.Alignment // Aligns status icon with heading.
+import androidx.compose.ui.Modifier // Configures layout and sizes.
+import androidx.compose.ui.platform.LocalContext // Resolves snackbar labels in suspend collector.
+import androidx.compose.ui.res.painterResource // Loads check/error icons cleanly.
+import androidx.compose.ui.res.stringResource // Reads visible labels from strings.xml.
+import androidx.compose.ui.text.font.FontWeight // Emphasises status headline clearly.
+import androidx.compose.ui.text.input.KeyboardType // Uses password input semantics.
+import androidx.compose.ui.text.input.PasswordVisualTransformation // Masks draft input by default.
+import androidx.compose.ui.text.input.VisualTransformation // Reveals newly typed input only when explicitly requested.
+import androidx.compose.ui.unit.dp // Specifies clean Material 3 sizes.
+import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes state while active.
+import androidx.lifecycle.viewmodel.compose.viewModel // Builds manual factory instance.
+import pt.isel.pdm.droidmentor.R // Supplies string and drawable resources.
+import pt.isel.pdm.droidmentor.ui.components.EventEffect // Collects one-shot notices cleanly.
+import pt.isel.pdm.droidmentor.ui.components.ScreenScaffold // Provides top bar, Back action and snackbar host.
+import pt.isel.pdm.droidmentor.ui.components.UiEvent // Distinguishes safe UI notices.
+import pt.isel.pdm.droidmentor.ui.components.messageResource // Maps notices to safe resources.
+import pt.isel.pdm.droidmentor.ui.theme.DroidMentorSpacing // Uses shared spacing constants.
 
-/** Displays explicit Preferences DataStore commands without pre-filling or retaining the stored key in UI state. */
-@Composable // Keeps layout and events separate from storage operations.
-fun SettingsScreen( // Receives navigation and an owner-scoped, manually constructed model.
-    onBack: () -> Unit, // Returns through the graph's existing entry.
-    model: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory), // Resolves the injected repository through Application extras.
+/** Displays polished Preferences DataStore controls without pre-filling or retaining the stored key in UI state. */
+@Composable // Keeps layout separate from storage operations.
+fun SettingsScreen( // Receives navigation and manually constructed SettingsViewModel.
+    onBack: () -> Unit, // Returns through the existing back stack entry.
+    model: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory), // Uses manual Application factory.
 ) { // Starts the settings UI.
-    val state by model.state.collectAsStateWithLifecycle() // Observes immutable state without directly reading preferences.
-    val snackbar = remember { SnackbarHostState() } // Owns feedback for this screen composition.
-    val context = LocalContext.current // Resolves safe feedback labels without storing an Activity in a ViewModel.
-    var visible by remember(state.showKeyInput) { mutableStateOf(false) } // Masks every newly opened form without persisting its toggle or key.
-    EventEffect(model.events) { event -> // Handles one-shot feedback outside the layout.
-        if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays only a typed safe notice.
-    } // Ends settings event collection.
-    ScreenScaffold(stringResource(R.string.navigation_settings), onBack, snackbar) { padding -> // Provides the form's frame and return path.
-        Column( // Arranges one small configuration form.
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(DroidMentorSpacing.large), // Keeps the complete form reachable inside the reserved screen area.
-            verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium), // Separates fields and tap targets.
-        ) { // Displays presence without displaying the stored credential.
-            val status = when { // Distinguishes an unknown status from a genuinely missing key.
-                state.loading -> R.string.settings_loading // Waits for the stored presence before asking for input.
-                state.storageError -> R.string.notice_settings_error // Does not claim the key is missing after a failed read.
-                state.configured -> R.string.settings_configured // Confirms the saved key can already be used.
-                else -> R.string.settings_not_configured // Requests initial setup only after confirming absence.
-            } // Ends the safe status selection.
-            Text(stringResource(status)) // Displays no saved credential value.
-            if (!state.loading && !state.storageError) { // Explains the action only after reading preferences successfully.
-                Text(stringResource(if (state.configured) R.string.settings_configured_hint else R.string.settings_setup_hint)) // Makes clear that a saved key does not need to be entered again.
-            } // Ends the settings explanation.
-            if (state.configured && !state.editing && !state.loading && !state.storageError) { // Keeps replacement optional for an existing configuration.
-                Button(onClick = model::beginEdit, enabled = state.canChangeKey, modifier = Modifier.fillMaxWidth()) { // Opens a new draft without changing the saved key.
-                    Text(stringResource(R.string.settings_change)) // Labels the explicit replacement action.
-                } // Ends the change-key button.
-            } // Ends the configured summary action.
-            if (state.showKeyInput) { // Shows an empty input only for initial setup or an explicit replacement.
-                OutlinedTextField( // Holds newly typed input only in the ViewModel's in-memory draft.
-                    value = state.draft, // Never reads or pre-fills the configured key.
-                    onValueChange = model::updateDraft, // Delegates draft changes to the guarded ViewModel event.
-                    modifier = Modifier.fillMaxWidth(), // Gives long credential input a usable form width.
-                    label = { Text(stringResource(if (state.configured) R.string.settings_new_key_label else R.string.settings_key_label)) }, // Distinguishes a replacement from the already saved key.
-                    enabled = !state.saving, // Prevents input races with completed writes.
-                    singleLine = true, // Keeps a key as one input line.
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // Uses password input semantics.
-                    visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), // Masks the draft unless the user explicitly reveals it.
-                    trailingIcon = { // Gives the user an explicit visibility action.
-                        TextButton(onClick = { visible = !visible }, enabled = !state.saving && state.draft.isNotEmpty()) { // Changes visibility only for newly entered input, never storage.
-                            Text(stringResource(if (visible) R.string.settings_hide else R.string.settings_show)) // Labels the next visibility action.
-                        } // Ends the visibility button.
-                    }, // Ends the password field's toggle.
-                ) // Ends new-key input.
-                if (state.configured) Text(stringResource(R.string.settings_replace_hint)) // Explains that the existing key stays active until replacement succeeds.
-                Button(onClick = model::save, enabled = state.canSave, modifier = Modifier.fillMaxWidth()) { // Uses the ViewModel's guarded save availability.
-                    Text(stringResource(if (state.configured) R.string.settings_replace else R.string.settings_save)) // Names the initial save or explicit replacement.
-                } // Ends key saving.
-                if (state.configured) { // Allows a replacement to be abandoned without losing the stored key.
-                    TextButton(onClick = model::cancelEdit, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) { // Discards only unsaved in-memory input.
-                        Text(stringResource(R.string.settings_cancel)) // Labels the safe return to the saved status.
-                    } // Ends the replacement cancel action.
-                } // Ends replacement-only controls.
-            } // Ends the optional new-key form.
-            if (state.configured && !state.loading && !state.storageError) { // Offers removal only for a known saved key.
-                OutlinedButton(onClick = model::clear, enabled = state.canChangeKey, modifier = Modifier.fillMaxWidth()) { // Removes only the configured credential through the repository.
-                    Text(stringResource(R.string.settings_clear)) // Names the explicit clear action.
-                } // Ends key clearing.
-            } // Ends the stored-key removal action.
-            if (state.loading || state.saving) CircularProgressIndicator() // Shows storage progress without printing input or exception details.
-        } // Ends the scrollable configuration form.
-    } // Ends the settings screen frame.
-} // Ends the key configuration screen.
+    val state by model.state.collectAsStateWithLifecycle() // Observes immutable presence state only.
+    val snackbar = remember { SnackbarHostState() } // Owns feedback snackbar state.
+    val context = LocalContext.current // Resolves notice resource text.
+    var visible by remember(state.showKeyInput) { mutableStateOf(false) } // Masks new key drafts initially.
+    EventEffect(model.events) { event -> // Shows one-shot safe feedback.
+        if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Never reveals credential text.
+    } // Ends notice collector.
+    ScreenScaffold(stringResource(R.string.navigation_settings), onBack, snackbar) { padding -> // Hosts form inside consistent app scaffold.
+        Column( // Stacks status card cleanly above optional key form card.
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(DroidMentorSpacing.large), // Scrollable outer body.
+            verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.large), // Separates status card and form card.
+        ) { // Displays key status banner card and actions.
+            val status = when { // Selects resource string for loading, error, configured or missing state.
+                state.loading -> R.string.settings_loading // Reading status.
+                state.storageError -> R.string.notice_settings_error // Storage failure.
+                state.configured -> R.string.settings_configured // Key already configured.
+                else -> R.string.settings_not_configured // No key saved yet.
+            } // Ends status selection.
+            val bannerBg = when { // Chooses subtle readable Material container colour for status card.
+                state.storageError -> MaterialTheme.colorScheme.errorContainer // Highlights storage problem clearly.
+                state.configured -> MaterialTheme.colorScheme.primaryContainer // Celebrates configured state calmly.
+                else -> MaterialTheme.colorScheme.secondaryContainer // Neutral setup prompt container.
+            } // Ends container background choice.
+            val bannerFg = when { // Pairs exact contrasting onContainer content colour cleanly.
+                state.storageError -> MaterialTheme.colorScheme.onErrorContainer // High contrast on errorContainer.
+                state.configured -> MaterialTheme.colorScheme.onPrimaryContainer // High contrast on primaryContainer.
+                else -> MaterialTheme.colorScheme.onSecondaryContainer // High contrast on secondaryContainer.
+            } // Ends container content colour choice.
+            Surface( // Frames credential status inside a clear rounded banner card.
+                shape = RoundedCornerShape(20.dp), // Smooth Material 3 corners.
+                color = bannerBg, // Uses semantic state container colour.
+                contentColor = bannerFg, // Guarantees light/dark readability.
+                modifier = Modifier.fillMaxWidth(), // Uses full form width.
+            ) { // Displays status icon, headline, explanation and Change button.
+                Column(modifier = Modifier.padding(DroidMentorSpacing.large), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium)) { // Stacks status header and hint cleanly.
+                    Row(horizontalArrangement = Arrangement.spacedBy(DroidMentorSpacing.small), verticalAlignment = Alignment.CenterVertically) { // Aligns icon and heading.
+                        if (!state.loading) { // Shows check or warning icon once loaded.
+                            Icon( // Displays state icon clearly.
+                                painter = painterResource(if (state.configured && !state.storageError) R.drawable.ic_check else R.drawable.ic_error), // Matches saved vs unconfigured/error state.
+                                contentDescription = null, // Decorative beside visible status text.
+                                modifier = Modifier.size(22.dp), // Crisp status icon size.
+                            ) // Ends status icon.
+                        } // Ends loaded icon guard.
+                        Text(stringResource(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) // Displays safe status headline.
+                    } // Ends status header row.
+                    if (!state.loading && !state.storageError) { // Explains behaviour once loaded cleanly.
+                        Text(stringResource(if (state.configured) R.string.settings_configured_hint else R.string.settings_setup_hint), style = MaterialTheme.typography.bodyMedium) // Concise explanation.
+                    } // Ends hint guard.
+                    if (state.configured && !state.editing && !state.loading && !state.storageError) { // Offers optional replacement trigger.
+                        Button(onClick = model::beginEdit, enabled = state.canChangeKey, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { // Opens empty replacement draft.
+                            Text(stringResource(R.string.settings_change)) // Labels replacement action.
+                        } // Ends Change key button.
+                    } // Ends configured summary action.
+                } // Ends status card content.
+            } // Ends status Surface card.
+            if (state.showKeyInput) { // Displays key input and save controls inside a lifted card.
+                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { // Groups new-key field and save/cancel actions cleanly.
+                    Column(modifier = Modifier.padding(DroidMentorSpacing.large), verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium)) { // Clean vertical form spacing.
+                        OutlinedTextField( // Holds newly typed draft only in memory.
+                            value = state.draft, // Never pre-fills saved key.
+                            onValueChange = model::updateDraft, // Routes edits through ViewModel guard.
+                            modifier = Modifier.fillMaxWidth(), // Full card width.
+                            shape = RoundedCornerShape(14.dp), // Modern rounded field corners.
+                            label = { Text(stringResource(if (state.configured) R.string.settings_new_key_label else R.string.settings_key_label)) }, // Labels input clearly.
+                            enabled = !state.saving, // Disables editing during active save.
+                            singleLine = true, // Keeps API key single-line.
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // Password keyboard semantics.
+                            visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), // Masks input by default.
+                            trailingIcon = { // Explicit Show/Hide toggle.
+                                TextButton(onClick = { visible = !visible }, enabled = !state.saving && state.draft.isNotEmpty()) { // Toggles masking only on typed draft.
+                                    Text(stringResource(if (visible) R.string.settings_hide else R.string.settings_show)) // Labels toggle action.
+                                } // Ends toggle button.
+                            }, // Ends trailing icon.
+                        ) // Ends API key field.
+                        if (state.configured) Text(stringResource(R.string.settings_replace_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) // Explains safe replacement rule.
+                        Button(onClick = model::save, enabled = state.canSave, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { // Explicit Save CTA.
+                            Text(stringResource(if (state.configured) R.string.settings_replace else R.string.settings_save)) // Labels Save or Save replacement.
+                        } // Ends save button.
+                        if (state.configured) { // Optional cancel action when replacing an existing key.
+                            TextButton(onClick = model::cancelEdit, enabled = !state.saving, modifier = Modifier.fillMaxWidth().height(48.dp)) { // Discards only draft.
+                                Text(stringResource(R.string.settings_cancel)) // Labels Cancel cleanly.
+                            } // Ends cancel button.
+                        } // Ends replacement cancel.
+                    } // Ends form Column.
+                } // Ends ElevatedCard.
+            } // Ends optional key form.
+            if (state.configured && !state.loading && !state.storageError) { // Explicit Clear action outside form card.
+                OutlinedButton(onClick = model::clear, enabled = state.canChangeKey, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(48.dp)) { // Removes stored credential safely.
+                    Text(stringResource(R.string.settings_clear)) // Labels Clear key cleanly.
+                } // Ends clear button.
+            } // Ends clear section.
+            if (state.loading || state.saving) CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally)) // Centres loading spinner cleanly.
+        } // Ends outer Column.
+    } // Ends ScreenScaffold.
+} // Ends Settings screen.

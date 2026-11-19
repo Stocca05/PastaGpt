@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">DroidMentor</string>
     <string name="title_subtitle">Your Android programming mentor</string>
+    <string name="title_footer">ISEL · Mobile Devices Programming (BYOK)</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_author">Author: Luca Raona — student 55603</string>
     <string name="about_course">Mobile Devices Programming (PDM)</string>

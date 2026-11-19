@@ -1,6 +1,7 @@
 package pt.isel.pdm.droidmentor.ui.components // Groups small shared UI components.
 
 import androidx.compose.foundation.layout.PaddingValues // Supplies the space reserved for the app bar and system insets.
+import androidx.compose.foundation.layout.RowScope // Allows screens to add TopAppBar action buttons.
 import androidx.compose.material3.ExperimentalMaterial3Api // Marks the existing TopAppBar API's opt-in requirement.
 import androidx.compose.material3.Scaffold // Arranges the app bar, content and snackbar host.
 import androidx.compose.material3.SnackbarHost // Displays one-shot feedback above the screen content.
@@ -20,6 +21,7 @@ fun ScreenScaffold( // Keeps the repeated screen frame readable without moving b
     title: String, // Displays the screen's resource-backed title.
     onBack: () -> Unit, // Invokes the navigation callback supplied by the graph.
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, // Allows a screen to provide its own feedback state.
+    actions: @Composable RowScope.() -> Unit = {}, // Optional TopAppBar actions such as renaming a chat.
     floatingActionButton: @Composable () -> Unit = {}, // Lets history display its explicit new-conversation action.
     content: @Composable (PaddingValues) -> Unit, // Lets the caller apply the app bar and system padding to its own layout.
 ) { // Starts the common screen frame.
@@ -30,6 +32,7 @@ fun ScreenScaffold( // Keeps the repeated screen frame readable without moving b
                 navigationIcon = { // Supplies the explicit return action.
                     TextButton(onClick = onBack) { Text(stringResource(R.string.navigation_back)) } // Pops the existing navigation entry through its callback.
                 }, // Ends the return action.
+                actions = actions, // Displays optional destination-specific actions.
             ) // Ends the screen app bar.
         }, // Ends the app bar slot.
         snackbarHost = { SnackbarHost(snackbarHostState) }, // Displays typed feedback requested by a screen.

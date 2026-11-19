@@ -21,6 +21,7 @@ import pt.isel.pdm.droidmentor.data.remote.GeminiRemoteDataSource // Sends valid
 import pt.isel.pdm.droidmentor.data.remote.toMessageErrorCategory // Reduces API failures to the safe enum saved in Room.
 import pt.isel.pdm.droidmentor.domain.Chat // Returns persisted domain metadata instead of entities.
 import pt.isel.pdm.droidmentor.domain.ChatSummary // Returns local chat-list previews.
+import pt.isel.pdm.droidmentor.domain.ChatTitleFormatter // Derives automatic titles from the first user message.
 import pt.isel.pdm.droidmentor.domain.HistoryPayloadBuilder // Validates saved exchanges before any API call.
 import pt.isel.pdm.droidmentor.domain.HistoryPayloadResult // Distinguishes prepared histories from local validation rejection.
 import pt.isel.pdm.droidmentor.domain.Message // Returns saved domain messages to observers.
@@ -85,11 +86,12 @@ class RoomChatRepository( // Receives every dependency manually without a framew
     /** Changes only the saved title when no operation currently owns this chat. */
     override suspend fun renameChat(chatId: String, title: String): ChatCommandResult { // Requires no network or key.
         currentCoroutineContext().ensureActive() // Preserves cancellation before acquiring the operation gate.
-        if (chatId.isBlank() || title.isBlank()) return ChatCommandResult.InvalidInput // Rejects incomplete local input.
+        val normalizedTitle = ChatTitleFormatter.normalize(title) // Collapses newlines and surrounding whitespace.
+        if (chatId.isBlank() || normalizedTitle.isBlank()) return ChatCommandResult.InvalidInput // Rejects incomplete local input.
         val lock = lock(chatId) // Uses the same operation gate as sends and retries.
         if (!lock.tryLock()) return ChatCommandResult.Busy // Refuses to race an active exchange.
         return try { // Contains local title persistence failures.
-            if (chats.updateTitle(chatId, title.trim(), clock()) == 1) ChatCommandResult.Stored else ChatCommandResult.NotFound // Reports only the actual affected row.
+            if (chats.updateTitle(chatId, normalizedTitle, clock()) == 1) ChatCommandResult.Stored else ChatCommandResult.NotFound // Reports only the actual affected row.
         } catch (error: CancellationException) { // Preserves caller cancellation.
             throw error // Leaves coroutine control flow intact.
         } catch (error: Exception) { // Contains ordinary database errors.
@@ -142,7 +144,7 @@ class RoomChatRepository( // Receives every dependency manually without a framew
             if (!isConnected()) return ChatCommandResult.Offline // Leaves the draft and local history unchanged when initially offline.
 
             val rejected = database.withTransaction { // Makes unresolved-row checks and optimistic insertion/reactivation indivisible.
-                if (chats.getById(chatId) == null) return@withTransaction ChatCommandResult.NotFound // Rechecks existence inside the preparation transaction.
+                val currentChat = chats.getById(chatId) ?: return@withTransaction ChatCommandResult.NotFound // Rechecks existence inside the preparation transaction.
                 val saved = messages.getMessages(chatId) // Reads every prior row in sequence order while preparation owns the transaction.
                 if (saved.any { it.text.contains(initialKey) }) return@withTransaction ChatCommandResult.InvalidHistory // Refuses to transmit configured credential text from legacy history.
                 val candidate: MessageEntity // Describes the one pending user that this attempt will own.
@@ -161,6 +163,9 @@ class RoomChatRepository( // Receives every dependency manually without a framew
                 pendingId = candidate.id // Records ownership before the suspend write so cancellation after commit can still settle the row.
                 if (retryId == null) { // Performs the optimistic new-user insertion.
                     messages.insert(candidate) // Lets the DAO allocate the sequence and update recency atomically.
+                    if (saved.isEmpty() && currentChat.title == ChatTitleFormatter.DEFAULT_TITLE) { // Auto-titles an untitled chat from its first user question.
+                        chats.updateTitle(chatId, ChatTitleFormatter.fromFirstMessage(candidate.text), candidate.createdAt) // Preserves any user-chosen manual title.
+                    } // Ends first-message auto-titling.
                 } else if (!messages.updateStatus(candidate.id, MessageStatus.SENDING)) { // Reactivates the same failed row in this transaction.
                     return@withTransaction ChatCommandResult.StorageError // Reports a failed guarded state change without sending.
                 } // Ends optimistic row persistence.

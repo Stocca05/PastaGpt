@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel // Uses the history model'
 import pt.isel.pdm.droidmentor.R // Supplies shared and history-specific resources.
 import pt.isel.pdm.droidmentor.domain.ChatSummary // Types the conversation awaiting delete confirmation.
 import pt.isel.pdm.droidmentor.ui.components.EventEffect // Consumes navigation and feedback events only while visible.
+import pt.isel.pdm.droidmentor.ui.components.RenameChatDialog // Shares the manual title-editing dialog.
 import pt.isel.pdm.droidmentor.ui.components.ScreenScaffold // Supplies the app bar, Back action, feedback and floating action.
 import pt.isel.pdm.droidmentor.ui.components.UiEvent // Distinguishes new-chat navigation from local feedback.
 import pt.isel.pdm.droidmentor.ui.components.messageResource // Converts safe typed notices to strings.
@@ -64,6 +65,7 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
     val context = LocalContext.current // Resolves notice strings inside suspend event handling.
     val newTitle = stringResource(R.string.history_new_title) // Supplies a translated initial title to the local creation command.
     var confirmingDelete by remember { mutableStateOf<ChatSummary?>(null) } // Tracks the conversation shown in the confirmation dialog.
+    var renamingChat by remember { mutableStateOf<ChatSummary?>(null) } // Tracks the conversation currently being manually renamed.
     EventEffect(model.events) { event -> // Handles command completion without inventing a saved row.
         when (event) { // Separates navigation from feedback.
             is UiEvent.OpenChat -> onOpenChat(event.chatId) // Navigates only after the repository acknowledges persistence.
@@ -99,6 +101,16 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
             }, // Ends dismiss action.
         ) // Ends delete confirmation dialog.
     } // Ends confirmation dialog check.
+    renamingChat?.let { target -> // Opens manual title editing for the selected conversation card.
+        RenameChatDialog( // Reuses the shared rename dialog.
+            initialTitle = target.chat.title, // Pre-fills the current saved title.
+            onConfirm = { newName -> // Saves the new title through the ViewModel.
+                renamingChat = null // Closes the dialog first.
+                model.renameChat(target.chat.id, newName) // Persists the renamed title in Room.
+            }, // Ends confirm handler.
+            onDismiss = { renamingChat = null }, // Closes without modifying Room.
+        ) // Ends rename dialog.
+    } // Ends rename dialog check.
     ScreenScaffold( // Supplies the history title and its return path.
         title = stringResource(R.string.navigation_chat_history), // Uses the shared destination label.
         onBack = { // Flushes any pending delete before returning to the main menu.
@@ -129,12 +141,13 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
                 verticalArrangement = Arrangement.spacedBy(DroidMentorSpacing.medium), // Separates selectable conversation cards.
             ) { // Adds one card per saved local conversation.
                 items(state.visibleChats, key = { it.chat.id }) { summary -> // Preserves list item identity when Room emits a new order.
-                    ChatSummaryItem( // Wraps each card with swipe-to-delete and an accessible delete button.
+                    ChatSummaryItem( // Wraps each card with swipe-to-delete and accessible rename/delete buttons.
                         summary = summary, // Supplies chat metadata and last-message preview.
                         onOpen = { // Commits any earlier pending delete before opening the selected chat.
                             model.flushPendingDelete() // Keeps pending deletes settled before navigating forward.
                             onOpenChat(summary.chat.id) // Passes only the selected Room ID to navigation.
                         }, // Ends open callback.
+                        onRename = { renamingChat = summary }, // Opens the manual rename dialog for this chat.
                         onDelete = { confirmingDelete = summary }, // Opens confirmation before scheduling deletion.
                     ) // Ends conversation list item.
                 } // Ends saved summary items.
@@ -143,10 +156,11 @@ fun ChatHistoryScreen( // Receives only the navigation actions required by histo
     } // Ends the history screen frame.
 } // Ends the Room-backed history screen.
 
-@Composable // Displays one conversation card with swipe-to-delete and an accessible delete icon.
+@Composable // Displays one conversation card with swipe-to-delete and accessible rename/delete icons.
 private fun ChatSummaryItem( // Keeps card layout and swipe gesture readable and self-contained.
     summary: ChatSummary, // Supplies the chat title, preview and timestamp.
     onOpen: () -> Unit, // Opens the selected conversation.
+    onRename: () -> Unit, // Opens manual rename for this conversation.
     onDelete: () -> Unit, // Requests confirmation before deleting this conversation.
 ) { // Starts the conversation summary card.
     val dismissState = rememberSwipeToDismissBoxState( // Detects an end-to-start swipe without removing the row before confirmation.
@@ -177,6 +191,9 @@ private fun ChatSummaryItem( // Keeps card layout and swipe gesture readable and
                     Text(summary.lastMessage?.text ?: stringResource(R.string.history_no_messages), maxLines = 2, overflow = TextOverflow.Ellipsis) // Shows a short preview while keeping full saved text untouched.
                     Text(DateUtils.getRelativeTimeSpanString(summary.chat.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(), style = MaterialTheme.typography.bodySmall) // Formats only the persisted recency timestamp.
                 } // Ends the saved metadata layout.
+                IconButton(onClick = onRename) { // Provides a 48dp accessible tap target for manual renaming.
+                    Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.chat_rename_action)) // Labels the action for screen readers and UI tests.
+                } // Ends rename button.
                 IconButton(onClick = onDelete) { // Provides a 48dp accessible tap target for deletion without requiring a swipe.
                     Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.history_delete_action)) // Labels the action for screen readers and UI tests.
                 } // Ends trailing delete button.

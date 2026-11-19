@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assert // Checks field semantics rather than its
 import androidx.compose.ui.test.assertIsEnabled // Checks available user actions.
 import androidx.compose.ui.test.assertIsNotEnabled // Checks blocked sends and retries.
 import androidx.compose.ui.test.hasSetTextAction // Finds the single input field without querying its value.
+import androidx.compose.ui.test.hasText // Disambiguates dialog input fields from the chat draft box.
 import androidx.compose.ui.test.junit4.createComposeRule // Hosts real screen content on the emulator.
 import androidx.compose.ui.test.onNodeWithContentDescription // Finds icon buttons by their accessible description.
 import androidx.compose.ui.test.onNodeWithText // Finds safe resource labels and harmless test messages.
@@ -280,6 +281,18 @@ class ScreenDeviceTest { // Uses an isolated in-memory database and generated fi
         compose.onNodeWithText("Delete").performClick() // Confirms without pressing Undo this time.
         compose.waitUntil(5_000) { runBlocking { database.chatDao().getById(created.chatId) == null } } // Confirms Room removed the chat after the undo window.
     } // Ends history deletion device verification.
+
+    /** Checks manual renaming works from the conversation screen app bar. */
+    @Test // Exercises M3-02 RenameChatDialog inside ActiveChatScreen.
+    fun activeChatCanBeRenamedManually() { // Starts with an existing isolated conversation.
+        val (id, model) = showChat() // Opens ActiveChatScreen with "UI test conversation".
+        compose.onNodeWithContentDescription("Rename conversation").performClick() // Opens the manual rename dialog.
+        compose.onNodeWithText("Rename conversation").assertExists() // Confirms the dialog opened.
+        compose.onNode(hasSetTextAction() and hasText("Title")).performTextInput(" Renamed") // Appends text to the prefilled title inside the dialog.
+        compose.onNodeWithText("Save").performClick() // Confirms the manual rename.
+        compose.waitUntil(5_000) { model.state.value.chat?.title == "UI test conversation Renamed" } // Waits for Room observation to update the TopAppBar title.
+        runBlocking { assertEquals("UI test conversation Renamed", database.chatDao().getById(id)?.title) } // Confirms Room persisted the renamed title.
+    } // Ends manual rename device verification.
 
     private fun showChat(): Pair<String, ActiveChatViewModel> { // Creates one isolated saved chat before displaying its real screen.
         val id = runBlocking { // Runs the suspend local insert on the JUnit worker.

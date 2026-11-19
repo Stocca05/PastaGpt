@@ -477,6 +477,21 @@ class ChatRepositoryTest { // Uses no real API key and no external HTTP endpoint
         assertEquals(ChatReadResult.StorageError, repository.observeChats().first()) // Checks a read error is not silently replaced with an empty list.
     } // Ends explicit storage failure verification.
 
+    /** Checks the first message auto-titles a default chat while preserving manual titles. */
+    @Test // Exercises M3-02 automatic and manual titling in RoomChatRepository.
+    fun firstMessageAutoTitlesDefaultChatWithoutOverwritingCustomTitle() = runBlocking { // Uses isolated Room and MockEngine.
+        val repository = repository() // Creates the production repository.
+        val untitled = (repository.createChat("New conversation") as ChatCommandResult.Created).chatId // Starts with the default placeholder title.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(untitled, "Explain Kotlin coroutines\nin simple terms")) // Sends the first message.
+        val autoTitled = database.chatDao().getById(untitled)?.title // Reads the persisted title from Room.
+        assertEquals("Explain Kotlin coroutines in simple ter…", autoTitled) // Confirms automatic formatting from the first message.
+
+        assertEquals(ChatCommandResult.Stored, repository.renameChat(untitled, "My custom title")) // Renames manually afterwards.
+        assertEquals("My custom title", database.chatDao().getById(untitled)?.title) // Confirms manual title persisted.
+        assertEquals(ChatCommandResult.Stored, repository.sendMessage(untitled, "Second question")) // Sends a follow-up question.
+        assertEquals("My custom title", database.chatDao().getById(untitled)?.title) // Confirms later messages never overwrite a manual title.
+    } // Ends auto-titling verification.
+
     private fun repository(preferences: SettingsRepository = settings, newId: () -> String = { UUID.randomUUID().toString() }): RoomChatRepository { // Builds production collaborators around a test-owned engine and selected preference implementation.
         val connected: suspend () -> Boolean = { onCheck(checks.incrementAndGet()); online } // Shares fresh prerequisite checks with repository and source.
         val engine = MockEngine.config { // Keeps actual request construction and decoding inside the test process.

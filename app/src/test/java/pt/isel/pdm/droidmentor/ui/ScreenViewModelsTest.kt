@@ -395,6 +395,28 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         assertEquals(listOf("chat-1"), fake.deletedIds) // Confirms chat-2 stayed untouched.
     } // Ends consecutive-delete verification.
 
+    /** Checks manual rename forwards the new title and surfaces blank-input notices cleanly. */
+    @Test // Verifies M3-02 manual rename in both History and Active Chat ViewModels.
+    fun manualRenameCallsRepositoryFromHistoryAndActiveChat() = runTest { // Uses the fake repository contract.
+        val fake = FakeChats() // Tracks rename calls without Room.
+        val history = own(ChatHistoryViewModel(fake)) // Creates the history ViewModel.
+        advanceUntilIdle() // Collects initial summaries.
+        history.renameChat("chat-1", "Renamed in history") // Requests rename from history.
+        advanceUntilIdle() // Runs suspend rename command.
+        assertEquals("chat-1" to "Renamed in history", fake.renamed) // Confirms target ID and title reached the repository.
+
+        val active = active(fake) // Creates the active chat ViewModel.
+        advanceUntilIdle() // Loads initial conversation state.
+        active.renameChat("Renamed in chat") // Requests rename from active chat.
+        advanceUntilIdle() // Runs suspend rename command.
+        assertEquals("saved" to "Renamed in chat", fake.renamed) // Confirms active chat ID and title reached the repository.
+
+        fake.commandResult = ChatCommandResult.InvalidInput // Simulates repository rejecting a blank manual title.
+        active.renameChat("   ") // Requests an invalid blank rename.
+        advanceUntilIdle() // Waits for notice emission.
+        assertEquals(UiEvent.Notice(UiNotice.INVALID_INPUT), active.events.first()) // Confirms typed notice is emitted.
+    } // Ends manual rename verification.
+
     private fun summary(id: String) = ChatSummary(Chat(id, "Chat $id", 1L, 1L), null) // Creates a simple chat summary for history tests.
 
     private fun active(fake: FakeChats): ActiveChatViewModel { // Supplies simple fake dependencies for active-chat cases.
@@ -437,12 +459,16 @@ class ScreenViewModelsTest { // Uses no Room file, DataStore file or HTTP client
         var commandResult: ChatCommandResult = ChatCommandResult.Stored // Controls send and retry acknowledgement outcomes.
         var sends = 0 // Counts requested send commands.
         var retriedId: String? = null // Records only the harmless local retry ID.
+        var renamed: Pair<String, String>? = null // Records the latest manual rename target and title.
         val deletedIds = mutableListOf<String>() // Records deleted chat IDs in order for M3-01 tests.
         override fun observeChats(): Flow<ChatReadResult<List<ChatSummary>>> = summaries // Supplies saved summary snapshots.
         override fun observeChat(chatId: String): Flow<ChatReadResult<Chat?>> = chat // Supplies saved conversation metadata.
         override fun observeMessages(chatId: String): Flow<ChatReadResult<List<Message>>> = messages // Supplies saved messages only.
         override suspend fun createChat(title: String): ChatCommandResult = ChatCommandResult.Created("saved") // Acknowledges a local ID without fabricating a list emission.
-        override suspend fun renameChat(chatId: String, title: String): ChatCommandResult = ChatCommandResult.Stored // Leaves unused local operations harmless.
+        override suspend fun renameChat(chatId: String, title: String): ChatCommandResult { // Records manual rename arguments for M3-02 tests.
+            renamed = chatId to title // Stores the requested chat ID and title.
+            return commandResult // Returns the controlled local acknowledgement.
+        } // Ends fake rename.
         override suspend fun deleteChat(chatId: String): ChatCommandResult { // Records the deleted chat ID and updates fake summaries.
             deletedIds.add(chatId) // Tracks which chat was committed to deletion.
             val current = summaries.value // Reads current fake summaries.

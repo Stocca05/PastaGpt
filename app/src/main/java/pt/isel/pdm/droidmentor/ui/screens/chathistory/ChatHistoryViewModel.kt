@@ -88,6 +88,19 @@ class ChatHistoryViewModel( // Performs no network call or credential operation.
         } // Ends the creation job.
     } // Ends the new-conversation event.
 
+    /** Renames one saved conversation manually without changing its messages. */
+    fun renameChat(chatId: String, title: String) { // Performs a local rename independent of network access.
+        viewModelScope.launch { // Runs the suspend repository rename off the UI thread.
+            try { // Keeps unexpected local storage failures safe and typed.
+                repository.renameChat(chatId, title).toUiNotice()?.let { eventChannel.send(UiEvent.Notice(it)) } // Surfaces invalid input, busy or storage notices.
+            } catch (cancelled: CancellationException) { // Preserves structured coroutine cancellation.
+                throw cancelled // Lets owner cancellation propagate.
+            } catch (_: Exception) { // Converts unexpected failures to a typed notice.
+                eventChannel.send(UiEvent.Notice(UiNotice.STORAGE_ERROR)) // Avoids leaking raw exception text.
+            } // Ends safe rename handling.
+        } // Ends rename coroutine.
+    } // Ends manual rename command.
+
     /**
      * Schedules deletion of [chatId] after a 5-second undo window.
      * Any earlier pending deletion is committed immediately so no confirmed delete is lost.

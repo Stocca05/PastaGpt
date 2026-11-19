@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.items // Uses persisted message IDs as s
 import androidx.compose.foundation.lazy.rememberLazyListState // Keeps scroll position across ordinary recomposition.
 import androidx.compose.material3.Button // Provides explicit send and same-row retry actions.
 import androidx.compose.material3.CircularProgressIndicator // Displays loading and in-flight progress.
+import androidx.compose.material3.Icon // Displays the TopAppBar rename icon.
+import androidx.compose.material3.IconButton // Provides one-tap manual rename in the app bar.
 import androidx.compose.material3.MaterialTheme // Supplies bubble colours, shapes and text styles.
 import androidx.compose.material3.OutlinedTextField // Displays the controlled in-memory draft.
 import androidx.compose.material3.SnackbarHostState // Displays safe local command feedback.
@@ -25,10 +27,13 @@ import androidx.compose.material3.Text // Displays saved text and resource-backe
 import androidx.compose.runtime.Composable // Describes the conversation UI.
 import androidx.compose.runtime.LaunchedEffect // Scrolls when the saved message list changes.
 import androidx.compose.runtime.getValue // Reads lifecycle-aware Compose state delegates.
+import androidx.compose.runtime.mutableStateOf // Tracks whether the manual rename dialog is open.
 import androidx.compose.runtime.remember // Owns the factory and feedback state for this selected ID.
+import androidx.compose.runtime.setValue // Opens and closes the manual rename dialog.
 import androidx.compose.ui.Alignment // Centres loading states and aligns draft controls.
 import androidx.compose.ui.Modifier // Describes layout size, padding and keyboard handling.
 import androidx.compose.ui.platform.LocalContext // Resolves safe notice strings in suspend event handlers.
+import androidx.compose.ui.res.painterResource // Loads the shared local edit vector icon.
 import androidx.compose.ui.res.stringResource // Reads all visible action and error labels.
 import androidx.compose.ui.unit.dp // Sizes bubbles and the small waiting indicator.
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observes immutable state only while this destination is active.
@@ -39,6 +44,7 @@ import pt.isel.pdm.droidmentor.domain.MessageErrorCategory // Supplies a safe fa
 import pt.isel.pdm.droidmentor.domain.MessageStatus // Distinguishes pending and failed saved turns.
 import pt.isel.pdm.droidmentor.domain.Role // Chooses bubble alignment and author labels.
 import pt.isel.pdm.droidmentor.ui.components.EventEffect // Collects local feedback with the destination lifecycle.
+import pt.isel.pdm.droidmentor.ui.components.RenameChatDialog // Shares the manual title-editing dialog.
 import pt.isel.pdm.droidmentor.ui.components.ScreenScaffold // Supplies the saved title and explicit Back action.
 import pt.isel.pdm.droidmentor.ui.components.UiEvent // Distinguishes safe local feedback events.
 import pt.isel.pdm.droidmentor.ui.components.messageResource // Resolves typed local notices into UI resources.
@@ -55,13 +61,36 @@ fun ActiveChatScreen( // Receives the local navigation argument and a manually c
     val snackbar = remember { SnackbarHostState() } // Owns local feedback for this conversation.
     val context = LocalContext.current // Resolves safe labels without putting Context in the ViewModel.
     val listState = rememberLazyListState() // Preserves ordinary list scroll state.
+    var renaming by remember { mutableStateOf(false) } // Controls visibility of the manual rename dialog.
     EventEffect(model.events) { event -> // Handles prerequisite or persistence feedback outside the layout.
         if (event is UiEvent.Notice) snackbar.showSnackbar(context.getString(event.notice.messageResource())) // Displays no direct API payload or raw exception text.
     } // Ends local event collection.
     LaunchedEffect(state.messages.size) { // Reacts only when saved rows are added or removed.
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex) // Keeps the latest saved turn in view without inventing a model reply.
     } // Ends saved-message scroll handling.
-    ScreenScaffold(state.chat?.title ?: stringResource(R.string.navigation_active_chat), onBack, snackbar) { padding -> // Displays saved conversation metadata.
+    val currentChat = state.chat // Captures the current conversation so the rename dialog uses a consistent snapshot.
+    if (renaming && currentChat != null) { // Displays manual title editing when requested from the TopAppBar.
+        RenameChatDialog( // Reuses the shared rename dialog.
+            initialTitle = currentChat.title, // Pre-fills the current conversation title.
+            onConfirm = { newTitle -> // Saves the new title via RoomChatRepository.
+                renaming = false // Dismisses the dialog first.
+                model.renameChat(newTitle) // Updates the stored title in Room.
+            }, // Ends confirm handler.
+            onDismiss = { renaming = false }, // Closes without changing Room.
+        ) // Ends rename dialog.
+    } // Ends rename dialog check.
+    ScreenScaffold( // Displays saved conversation metadata and manual rename action.
+        title = state.chat?.title ?: stringResource(R.string.navigation_active_chat), // Uses the live Room-backed chat title.
+        onBack = onBack, // Returns to the previous history destination.
+        snackbarHostState = snackbar, // Hosts safe local command feedback.
+        actions = { // Offers manual renaming whenever the conversation metadata is loaded.
+            if (state.chat != null && !state.working && !state.pending) { // Avoids renaming while a network exchange holds the chat lock.
+                IconButton(onClick = { renaming = true }) { // Opens the manual rename dialog.
+                    Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.chat_rename_action)) // Labels the action for accessibility.
+                } // Ends rename action button.
+            } // Ends loaded-chat action check.
+        }, // Ends TopAppBar actions.
+    ) { padding -> // Displays saved conversation metadata.
         Column( // Keeps the message body above the in-memory draft.
             modifier = Modifier // Builds keyboard and system-inset handling in readable steps.
                 .fillMaxSize() // Uses the full body area.

@@ -127,6 +127,19 @@ class ActiveChatViewModel( // Receives the selected ID and replaceable contracts
         perform(clearDraft = false) { repository.retryMessage(chatId, message.id) } // Sends the same saved row through the repository's guarded retry command.
     } // Ends explicit retry.
 
+    /** Renames the current conversation manually; Room observation updates the displayed title. */
+    fun renameChat(title: String) { // Does not require network access or an API key.
+        viewModelScope.launch { // Runs the suspend repository rename off the main dispatcher.
+            try { // Keeps unexpected storage failures safe and typed.
+                repository.renameChat(chatId, title).toUiNotice()?.let { eventChannel.send(UiEvent.Notice(it)) } // Reports busy, invalid input or storage failures.
+            } catch (cancelled: CancellationException) { // Preserves structured coroutine cancellation.
+                throw cancelled // Lets owner cancellation propagate.
+            } catch (_: Exception) { // Hides raw local exception text from the UI.
+                eventChannel.send(UiEvent.Notice(UiNotice.STORAGE_ERROR)) // Emits a safe local error notice.
+            } // Ends safe rename handling.
+        } // Ends rename coroutine.
+    } // Ends manual rename command.
+
     private fun perform(clearDraft: Boolean, command: suspend () -> ChatCommandResult) { // Shares the small command guard and safe local feedback handling.
         mutableState.update { it.copy(working = true) } // Prevents another event from starting before the coroutine executes.
         viewModelScope.launch { // Performs suspend repository coordination without IO in the Composable.

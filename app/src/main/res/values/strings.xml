@@ -53,6 +53,10 @@
     <string name="history_delete_cancel">Cancel</string>
     <string name="history_deleted_snackbar">Conversation deleted</string>
     <string name="history_undo_action">Undo</string>
+    <string name="chat_rename_action">Rename conversation</string>
+    <string name="chat_rename_dialog_title">Rename conversation</string>
+    <string name="chat_rename_label">Title</string>
+    <string name="chat_rename_save">Save</string>
     <string name="chat_read_error">Saved messages could not be read.</string>
     <string name="chat_empty">Ask your Android mentor a question.</string>
     <string name="chat_waiting">Waiting for a reply…</string>
